@@ -2,7 +2,6 @@ package com.example.freeplayerm.ui.features.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.freeplayerm.data.repository.UsuarioRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,7 +18,6 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val repositorio: UsuarioRepository
 ) : ViewModel() {
 
     // _estadoUi: Es un StateFlow mutable y privado. Contiene el estado actual de la pantalla.

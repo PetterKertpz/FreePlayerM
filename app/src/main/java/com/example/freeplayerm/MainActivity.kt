@@ -8,7 +8,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.example.freeplayerm.ui.features.login.PantallaLogin
-import com.example.freeplayerm.ui.features.login.PantallaLogin // <-- Importa nuestra nueva pantalla
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -22,7 +21,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // Aquí llamamos a nuestra pantalla de Login
+                    // Asegúrate de que aquí se llame a la función correcta
                     PantallaLogin()
                 }
             }
