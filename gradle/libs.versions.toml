@@ -2,16 +2,21 @@
 # --- Herramientas de Construcción ---
 # Usamos las últimas versiones estables que son compatibles entre sí.
 agp = "8.9.3"
+feather = "1.1.0"
+firebaseBom = "34.2.0"
+fontAwesome = "1.1.0"
 kotlin = "2.2.0" # Kotlin debe ser 2.0.0 o superior para usar KSP.
 ksp = "2.2.0-2.0.2" # KSP debe ser 2.0.0 o superior para Kotlin 2.2.0.
 hilt = "2.57.1" # Versión de Hilt estable y compatible con KSP.
 composeCompiler = "1.5.15" # Compilador de Compose para Kotlin 1.9.23.
+googleGmsPlugin = "4.4.3"
+playServicesAuth = "21.2.0"
 
 # --- Librerías de Jetpack y AndroidX ---
 coreKtx = "1.17.0"
-lifecycleKtx = "2.9.2"
+lifecycleKtx = "2.9.3"
 activityCompose = "1.10.1"
-composeBom = "2025.08.00" # El BOM nos asegura versiones de Compose compatibles.
+composeBom = "2025.08.01" # El BOM nos asegura versiones de Compose compatibles.
 room = "2.7.2"
 hiltNavigationCompose = "1.2.0"
 
@@ -21,6 +26,13 @@ androidxJunit = "1.3.0"
 espressoCore = "3.7.0"
 
 [libraries]
+
+# AÑADIDO: Definición de Firebase Auth (sin versión, la controla el BoM)
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth-ktx" }
+
+# AÑADIDO: Definición de Play Services Auth (con su propia versión)
+play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
+
 # AndroidX Core
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleKtx" }
@@ -40,6 +52,10 @@ androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = 
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 
 # Hilt (Inyección de Dependencias)
+feather = { module = "br.com.devsrsouza.compose.icons:feather", version.ref = "feather" }
+firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+font-awesome = { module = "br.com.devsrsouza.compose.icons:font-awesome", version.ref = "fontAwesome" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
@@ -57,3 +73,4 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+google-gms-google-services = { id = "com.google.gms.google-services", version.ref = "googleGmsPlugin" }

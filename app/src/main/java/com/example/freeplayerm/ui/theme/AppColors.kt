@@ -11,6 +11,10 @@ import androidx.compose.ui.graphics.Color
  */
 object AppColors {
 
+    val Negro = Color(0xFF000000)
+    val Blanco = Color(0xFFFFFFFF)
+    val Gris = Color(0xFF808080)
+
     // 🔷 Colores principales
     val Primario = Color(0xFF0A3D62)
     val PrimarioClaro = Color(0xFF3C6382)

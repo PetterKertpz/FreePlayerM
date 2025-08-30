@@ -1,39 +1,22 @@
 package com.example.freeplayerm.ui.features.login
 
-import android.graphics.drawable.Icon
-import androidx.annotation.ColorRes
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.AbsoluteRoundedCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButtonDefaults.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -42,13 +25,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Color.Companion.Black
-import androidx.compose.ui.graphics.Color.Companion.Blue
-import androidx.compose.ui.graphics.Color.Companion.Red
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.SemanticsActions.OnClick
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -57,7 +36,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.freeplayerm.R
 import com.example.freeplayerm.ui.theme.AppColors
 
 /**
@@ -95,9 +73,14 @@ fun PantallaLogin() {
                     text = "FreePlayer",
                     fontSize = 50.sp,
                     fontFamily = FontFamily.Default,
+                    style = TextStyle(
+                        shadow = Shadow(
+                            color = AppColors.PurpuraOscuro,
+                            blurRadius = 20f
+                    )),
                     fontStyle = FontStyle.Italic,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Red
+                    color = AppColors.PurpuraProfundo,
 
 
                 )
@@ -114,7 +97,7 @@ fun PantallaLogin() {
             ) {
                 Text(
                     "Iniciar Sesión",
-                    fontSize = 30.sp,
+                    fontSize = 35.sp,
                     fontFamily = FontFamily.SansSerif,
                     fontStyle = FontStyle.Italic,
                     textAlign = TextAlign.Center,
@@ -123,86 +106,111 @@ fun PantallaLogin() {
                     modifier = Modifier
 
                 )
-
+                var nombreUsuarioCorreo by remember { mutableStateOf("") }
                 TextField(
-                    value = "",
-                    onValueChange = {},
+                    isError = false,
+                    value = nombreUsuarioCorreo,
+                    onValueChange = {nombreUsuarioCorreo = it},
+                    textStyle = TextStyle(
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+
+                    ),
                     label = {
                         Text(
                             "Nombre de usuario o Correo Electrónico",
-                            fontSize = 15.sp,
-
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
 
                         )
                     },
-                    shape = RoundedCornerShape(15.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = TextFieldDefaults.colors(
                         //Linea inferior del texto
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent,
-                        errorIndicatorColor = Color.Red,
+                        errorIndicatorColor = Color.Transparent,
                         // colores de fondo
                         focusedContainerColor = AppColors.PurpuraMedio,
                         unfocusedContainerColor = AppColors.PurpuraClaro,
                         disabledContainerColor = Color.LightGray,
-                        errorContainerColor = Color.Red,
+                        errorContainerColor = AppColors.PurpuraClaro,
                         // Colores del texto
                         focusedTextColor = Color.Black,
                         unfocusedTextColor = Color.Black,
                         disabledTextColor = Color.DarkGray,
-                        errorTextColor = Color.White,
+                        errorTextColor = Color.Red,
                         // Colores de las etiquetas
                         unfocusedLabelColor = Color.Black,
                         focusedLabelColor = Color.Black,
                         disabledLabelColor = Color.DarkGray,
-                        errorLabelColor = Color.White,
+                        errorLabelColor = Color.Black,
 
-                        unfocusedPlaceholderColor = Color.Black,
-                        focusedPlaceholderColor = Color.Black,
-                        focusedSupportingTextColor = Color.Black,
+                        cursorColor = Color.Black,
+                        errorCursorColor = Color.Red,
                     ),
                     modifier = Modifier
                         .fillMaxWidth(0.9f)
-                        .border(0.5.dp, AppColors.PurpuraProfundo, shape = RoundedCornerShape(15.dp))
+                        .border(
+                            0.5.dp,
+                            AppColors.PurpuraProfundo,
+                            shape = RoundedCornerShape(15.dp)
+                        )
 
 
                 )
+                var contrasena by remember { mutableStateOf("") }
                 TextField(
-                    value = "",
-                    onValueChange = {},
-                    label = { Text("Contraseña") },
+                    isError = false,
+                    value = contrasena,
+                    onValueChange = {contrasena = it},
+                    textStyle = TextStyle(
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+
+                    ),
+                    label = {
+                        Text(
+                            "Contraseña",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    },
                     visualTransformation = PasswordVisualTransformation(),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = TextFieldDefaults.colors(
                         //Linea inferior del texto
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent,
-                        errorIndicatorColor = Color.Red,
+                        errorIndicatorColor = Color.Transparent,
                         // colores de fondo
                         focusedContainerColor = AppColors.PurpuraMedio,
                         unfocusedContainerColor = AppColors.PurpuraClaro,
                         disabledContainerColor = Color.LightGray,
-                        errorContainerColor = Color.Red,
+                        errorContainerColor = AppColors.PurpuraClaro,
                         // Colores del texto
                         focusedTextColor = Color.Black,
                         unfocusedTextColor = Color.Black,
                         disabledTextColor = Color.DarkGray,
-                        errorTextColor = Color.White,
+                        errorTextColor = Color.Red,
                         // Colores de las etiquetas
                         unfocusedLabelColor = Color.Black,
                         focusedLabelColor = Color.Black,
                         disabledLabelColor = Color.DarkGray,
-                        errorLabelColor = Color.White,
+                        errorLabelColor = Color.Black,
 
-                        unfocusedPlaceholderColor = Color.Black,
-                        focusedPlaceholderColor = Color.Black,
-                        focusedSupportingTextColor = Color.Black,
+                        cursorColor = Color.Black,
+                        errorCursorColor = Color.Red,
                     ),
                     modifier = Modifier
                         .fillMaxWidth(0.9f)
-                        .border(0.5.dp, AppColors.PurpuraProfundo, shape = RoundedCornerShape(15.dp))
+                        .border(
+                            0.5.dp,
+                            AppColors.PurpuraProfundo,
+                            shape = RoundedCornerShape(15.dp)
+                        )
                 )
 
                 Column(
@@ -214,42 +222,64 @@ fun PantallaLogin() {
                 ) {
                     // Botón Registro
                     Text(
-                        "¿No tienes una cuenta? Regístrate",
+
+                        "¿No tienes una cuenta?",
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black,
                         modifier = Modifier
+                            .clickable {
+                                println(
+                                    "Ir a Registro"
+                                )
+                            }
 
                     )
                     // Botón Olvidé mi contraseña
                     Text(
                         "¿Olvidaste tu contraseña?",
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black,
                         modifier = Modifier
+                            .clickable{
+                                println(
+                                    "Ir a Recuperar Contraseña"
+                                )
+                            }
 
                     )
 
                 }
 
                 Button(
-                    shape = AbsoluteRoundedCornerShape(10.dp),
+
                     onClick = { /* Acción login */ },
                     colors = ButtonColors(
-                        containerColor = Color.Black,
-                        contentColor = Color.White,
-                        disabledContainerColor = Color.Gray,
-                        disabledContentColor = Color.LightGray
+                        containerColor = AppColors.PurpuraProfundo,
+                        contentColor = AppColors.Negro,
+                        disabledContainerColor = AppColors.GrisProfundo,
+                        disabledContentColor = Color.White
                     ),
+                    //border
+                    border = BorderStroke(
+                        1.dp,
+                        AppColors.Negro
+                    ),
+                    shape = RoundedCornerShape(15.dp),
                     modifier = Modifier
                         .padding(0.dp)
 
 
+
                 ) {
                     Text(
-                        "Iniciar Sesión",
-                        color = Color.White,
+                        "Ingresar",
+                        color = AppColors.Blanco,
                         fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+
 
 
                     )
@@ -262,7 +292,7 @@ fun PantallaLogin() {
             // 🔹 FOOTER
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(0.dp),
+                verticalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight(0.15f)
@@ -276,15 +306,6 @@ fun PantallaLogin() {
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )
-
-//                Icon(
-//                    painter = painterResource(id = R.drawable.google_wordmark),
-//                    contentDescription = "Google Logo",
-//                    tint = Color.Unspecified,
-//                    modifier = Modifier
-//                        .size(100.dp)
-//
-//                )
 
             }
         }

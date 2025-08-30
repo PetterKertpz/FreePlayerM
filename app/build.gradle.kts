@@ -1,11 +1,11 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
+// Archivo build.gradle.kts del módulo de la aplicación
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.google.gms.google.services)
 }
 
 android {
@@ -24,7 +24,9 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+            )
         }
     }
     compileOptions {
@@ -50,6 +52,17 @@ kotlin {
 }
 
 dependencies {
+
+    // Firebase
+    // AÑADIDO: BoM de Firebase para gestionar versiones automáticamente
+    implementation(platform(libs.firebase.bom))
+    // AÑADIDO: Firebase Analytics (recomendado)
+    implementation(libs.firebase.analytics)
+    // AÑADIDO: Firebase Authentication para gestionar usuarios
+    implementation(libs.firebase.auth)
+    // AÑADIDO: Google Play Services Auth para la UI de "One Tap"
+    implementation(libs.play.services.auth)
+
     // Core y UI
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -59,6 +72,8 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.font.awesome)
+    implementation(libs.feather)
 
     // Room
     implementation(libs.androidx.room.runtime)
