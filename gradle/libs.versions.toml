@@ -10,7 +10,7 @@ ksp = "2.2.0-2.0.2" # KSP debe ser 2.0.0 o superior para Kotlin 2.2.0.
 hilt = "2.57.1" # Versión de Hilt estable y compatible con KSP.
 composeCompiler = "1.5.15" # Compilador de Compose para Kotlin 1.9.23.
 googleGmsPlugin = "4.4.3"
-playServicesAuth = "21.2.0"
+playServicesAuth = "21.4.0"
 
 # --- Librerías de Jetpack y AndroidX ---
 coreKtx = "1.17.0"
@@ -28,7 +28,8 @@ espressoCore = "3.7.0"
 [libraries]
 
 # AÑADIDO: Definición de Firebase Auth (sin versión, la controla el BoM)
-firebase-auth = { group = "com.google.firebase", name = "firebase-auth-ktx" }
+# CORRECTO
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
 
 # AÑADIDO: Definición de Play Services Auth (con su propia versión)
 play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }

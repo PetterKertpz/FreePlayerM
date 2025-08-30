@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1055393121843",
+    "project_id": "freeplayermobile",
+    "storage_bucket": "freeplayermobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1055393121843:android:72a919cb52d42699fa4546",
+        "android_client_info": {
+          "package_name": "com.example.freeplayerm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBsb0AZxkaXyvE7GGr4UPuI6MdNAGh3NHI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,5 +1,7 @@
 package com.example.freeplayerm.ui.features.login
 
+import BotonIngresarGoogleMejorado
+import TemaBotonGoogle
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -300,11 +302,10 @@ fun PantallaLogin() {
 
 
             ) {
-                Text(
-                    "Iniciar Sesión Con Google",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black
+                BotonIngresarGoogleMejorado(
+                    texto = "Acceder con Google",
+                    tema = TemaBotonGoogle.Oscuro,
+                    onClick = { /* ... tu lógica de login ... */ }
                 )
 
             }
