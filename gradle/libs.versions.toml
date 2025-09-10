@@ -2,6 +2,7 @@
 # --- Herramientas de Construcción ---
 # Usamos las últimas versiones estables que son compatibles entre sí.
 agp = "8.9.3"
+coilCompose = "2.5.0"
 feather = "1.1.0"
 firebaseBom = "34.2.0"
 fontAwesome = "1.1.0"
@@ -29,6 +30,7 @@ espressoCore = "3.7.0"
 
 # AÑADIDO: Definición de Firebase Auth (sin versión, la controla el BoM)
 # CORRECTO
+coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
 firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
 
 # AÑADIDO: Definición de Play Services Auth (con su propia versión)

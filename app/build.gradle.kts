@@ -53,6 +53,7 @@ kotlin {
 
 dependencies {
 
+    implementation(libs.coil.compose)
     // Firebase
     // AÑADIDO: BoM de Firebase para gestionar versiones automáticamente
     implementation(platform(libs.firebase.bom))

@@ -1,7 +1,5 @@
 package com.example.freeplayerm.ui.features.login
 
-import BotonIngresarGoogleMejorado
-import TemaBotonGoogle
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -40,13 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.freeplayerm.ui.theme.AppColors
 
-/**
- * Esta es nuestra pantalla principal. Por ahora, es solo un 'Box'.
- * Un Box es el contenedor más simple, como un lienzo en blanco.
- * Ocupa toda la pantalla (Modifier.fillMaxSize()) y tiene el color de fondo de nuestro tema.
- */
 @Composable
-fun PantallaLogin() {
+fun PantallaRegistro() {
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -79,13 +72,13 @@ fun PantallaLogin() {
                         shadow = Shadow(
                             color = AppColors.PurpuraOscuro,
                             blurRadius = 20f
-                    )),
+                        )),
                     fontStyle = FontStyle.Italic,
                     fontWeight = FontWeight.Bold,
                     color = AppColors.PurpuraProfundo,
 
 
-                )
+                    )
             }
 
             // 🔹 CONTENIDO CENTRAL
@@ -98,33 +91,86 @@ fun PantallaLogin() {
                     .border(1.dp, Color.Transparent, RoundedCornerShape(10.dp))
             ) {
                 Text(
-                    "Iniciar Sesión",
+                    "Crear Cuenta",
                     fontSize = 35.sp,
                     fontFamily = FontFamily.SansSerif,
                     fontStyle = FontStyle.Italic,
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Bold,
-
                     modifier = Modifier
 
                 )
-                var nombreUsuarioCorreo by remember { mutableStateOf("") }
+                var nombreUsuario by remember { mutableStateOf("") }
                 TextField(
                     isError = false,
-                    value = nombreUsuarioCorreo,
-                    onValueChange = {nombreUsuarioCorreo = it},
+                    value = nombreUsuario,
+                    onValueChange = {nombreUsuario = it},
                     textStyle = TextStyle(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Medium,
 
-                    ),
+                        ),
                     label = {
                         Text(
-                            "Nombre de usuario o Correo Electrónico",
+                            "Nombre de usuario",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
 
+                            )
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = TextFieldDefaults.colors(
+                        //Linea inferior del texto
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                        errorIndicatorColor = Color.Transparent,
+                        // colores de fondo
+                        focusedContainerColor = AppColors.PurpuraMedio,
+                        unfocusedContainerColor = AppColors.PurpuraClaro,
+                        disabledContainerColor = Color.LightGray,
+                        errorContainerColor = AppColors.PurpuraClaro,
+                        // Colores del texto
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        disabledTextColor = Color.DarkGray,
+                        errorTextColor = Color.Red,
+                        // Colores de las etiquetas
+                        unfocusedLabelColor = Color.Black,
+                        focusedLabelColor = Color.Black,
+                        disabledLabelColor = Color.DarkGray,
+                        errorLabelColor = Color.Black,
+
+                        cursorColor = Color.Black,
+                        errorCursorColor = Color.Red,
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .border(
+                            0.5.dp,
+                            AppColors.PurpuraProfundo,
+                            shape = RoundedCornerShape(15.dp)
                         )
+
+
+                )
+                var correo by remember { mutableStateOf("") }
+                TextField(
+                    isError = false,
+                    value = correo,
+                    onValueChange = {correo = it},
+                    textStyle = TextStyle(
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+
+                        ),
+                    label = {
+                        Text(
+                            "Correo Electrónico",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+
+                            )
                     },
                     shape = RoundedCornerShape(16.dp),
                     colors = TextFieldDefaults.colors(
@@ -171,7 +217,7 @@ fun PantallaLogin() {
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Medium,
 
-                    ),
+                        ),
                     label = {
                         Text(
                             "Contraseña",
@@ -225,28 +271,14 @@ fun PantallaLogin() {
                     // Botón Registro
                     Text(
 
-                        "¿No tienes una cuenta?",
+                        "¿Tienes una cuenta?",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black,
                         modifier = Modifier
                             .clickable {
                                 println(
-                                    "Ir a Registro"
-                                )
-                            }
-
-                    )
-                    // Botón Olvidé mi contraseña
-                    Text(
-                        "¿Olvidaste tu contraseña?",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black,
-                        modifier = Modifier
-                            .clickable{
-                                println(
-                                    "Ir a Recuperar Contraseña"
+                                    "Ir a Iniciar Sesión"
                                 )
                             }
 
@@ -256,7 +288,9 @@ fun PantallaLogin() {
 
                 Button(
 
-                    onClick = { /* Acción login */ },
+                    onClick = {
+                        println("Crear Cuenta Local")
+                    },
                     colors = ButtonColors(
                         containerColor = AppColors.PurpuraProfundo,
                         contentColor = AppColors.Negro,
@@ -276,7 +310,7 @@ fun PantallaLogin() {
 
                 ) {
                     Text(
-                        "Ingresar",
+                        "Registrarse",
                         color = AppColors.Blanco,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
@@ -302,29 +336,18 @@ fun PantallaLogin() {
 
 
             ) {
-                BotonIngresarGoogleMejorado(
-                    texto = "Acceder con Google",
-                    tema = TemaBotonGoogle.Oscuro,
-                    onClick = {
-                        println("Ingresar por Google")
-                    }
-                )
 
             }
         }
     }
 }
-
-
-/**
- * Esta es la vista previa para nuestro lienzo en blanco.
- * Nos permite ver la pantalla vacía en la ventana de diseño de Android Studio.
- */
 @Preview(
     showBackground = true,
-    showSystemUi = true
+    showSystemUi = true,
 )
 @Composable
-fun VistaPreviaPantallaLogin() {
-    PantallaLogin()
+fun PreviewPantallaRegistro () {
+    PantallaRegistro()
 }
+
+

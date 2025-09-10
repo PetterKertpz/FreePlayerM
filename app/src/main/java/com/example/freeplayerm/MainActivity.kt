@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.example.freeplayerm.ui.features.login.PantallaLogin
+import com.example.freeplayerm.ui.features.biblioteca.Biblioteca
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -22,7 +22,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     // Asegúrate de que aquí se llame a la función correcta
-                    PantallaLogin()
+                    Biblioteca()
                 }
             }
         }

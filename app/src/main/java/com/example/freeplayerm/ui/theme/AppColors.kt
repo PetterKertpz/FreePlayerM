@@ -14,6 +14,7 @@ object AppColors {
     val Negro = Color(0xFF000000)
     val Blanco = Color(0xFFFFFFFF)
     val Gris = Color(0xFF808080)
+    val Transparente = Color(0x00000000)
 
     // 🔷 Colores principales
     val Primario = Color(0xFF0A3D62)
