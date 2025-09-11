@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,6 +33,7 @@ enum class TemaBotonGoogle {
 fun BotonIngresarGoogleMejorado(
     modifier: Modifier = Modifier,
     texto: String = "Acceder con Google", // Puedes cambiarlo a "Continuar con Google", etc.
+    cargando: Boolean = false,
     tema: TemaBotonGoogle = TemaBotonGoogle.Oscuro,
     onClick: () -> Unit
 ) {
@@ -60,29 +62,48 @@ fun BotonIngresarGoogleMejorado(
         Row(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_google_logo),
-                contentDescription = "Logo de Google",
-                modifier = Modifier.size(20.dp), // Tamaño visualmente correcto
-                tint = Color.Unspecified,
+            if (cargando) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = colorTexto
+                )
+            } else {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_google_logo),
+                    contentDescription = "Logo de Google",
+                    modifier = Modifier.size(20.dp), // Tamaño visualmente correcto
+                    tint = Color.Unspecified,
 
 
-            )
-            Text(
-                text = texto,
-                fontFamily = familiaFuenteRoboto, // Fuente Roboto Medium
-                fontWeight = FontWeight.Medium,
-                fontSize = 14.sp, // Tamaño de fuente especificado [cite: 95]
-                color = colorTexto
-            )
+                    )
+                Text(
+                    text = texto,
+                    fontFamily = familiaFuenteRoboto, // Fuente Roboto Medium
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp, // Tamaño de fuente especificado [cite: 95]
+                    color = colorTexto
+                )
+            }
         }
     }
 }
 @Preview(showBackground = true)
 @Composable
-fun VistaPrevia() {
+fun VistaPreviaBotonCargando() {
     BotonIngresarGoogleMejorado(
         tema = TemaBotonGoogle.Oscuro,
+        cargando = true, // Así puedes previsualizar el estado de carga
+        onClick = {}
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun VistaPreviaBotonNormal() {
+    BotonIngresarGoogleMejorado(
+        tema = TemaBotonGoogle.Oscuro,
+        cargando = false,
         onClick = {}
     )
 }

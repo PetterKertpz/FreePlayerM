@@ -12,30 +12,20 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object AuthGoogleClient {
+object AuthModule {
 
-    /**
-     * Provee el CredentialManager, que es la API principal.
-     */
     @Provides
     @Singleton
     fun provideCredentialManager(@ApplicationContext context: Context): CredentialManager {
         return CredentialManager.create(context)
     }
 
-    /**
-     * Provee nuestro ayudante `GoogleAuthUiClient`, usando el CredentialManager
-     * que Hilt ya sabe cómo construir.
-     */
     @Provides
     @Singleton
     fun provideGoogleAuthUiClient(
         @ApplicationContext context: Context,
         credentialManager: CredentialManager
     ): GoogleAuthUiClient {
-        return GoogleAuthUiClient(
-            context = context,
-            credentialManager = credentialManager
-        )
+        return GoogleAuthUiClient(context, credentialManager)
     }
 }

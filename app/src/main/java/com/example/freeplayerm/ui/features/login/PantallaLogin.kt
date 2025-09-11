@@ -49,7 +49,7 @@ import com.example.freeplayerm.ui.theme.AppColors
 @Composable
 fun PantallaLogin(
     navController: NavController,
-    viewModel: LoginViewModel = hiltViewModel()
+    viewModel: LoginViewModel = hiltViewModel(),
 ) {
     //
     val estado by viewModel.estadoUi.collectAsState()
@@ -248,7 +248,8 @@ fun PantallaLogin(
                 )
                 if (estado.estaCargando) {
                     CircularProgressIndicator(
-
+                        modifier = Modifier
+                            .padding(16.dp)
                     )
                 }
 
@@ -271,7 +272,7 @@ fun PantallaLogin(
                                 println(
                                     "Ir a Registro"
                                 )
-                                navController.navigate("registro")
+                                navController.navigate(Rutas.Registro.ruta)
                             }
 
                     )
@@ -296,8 +297,8 @@ fun PantallaLogin(
 
                     onClick = {
                         viewModel.enEvento(LoginEvento.BotonLoginPresionado)
-                        navController.navigate("Biblioteca")
                     },
+                    enabled = !estado.estaCargando,
                     colors = ButtonColors(
                         containerColor = AppColors.PurpuraProfundo,
                         contentColor = AppColors.Negro,
@@ -345,11 +346,12 @@ fun PantallaLogin(
             ) {
                 BotonIngresarGoogleMejorado(
                     texto = "Acceder con Google",
+                    cargando = estado.estaCargando,
                     tema = TemaBotonGoogle.Oscuro,
                     onClick = {
                         println("Ingresar por Google")
                         viewModel.enEvento(LoginEvento.BotonGooglePresionado)
-                        navController.navigate(Rutas.Registro.ruta)
+
                     }
                 )
 
@@ -363,12 +365,14 @@ fun PantallaLogin(
  * Esta es la vista previa para nuestro lienzo en blanco.
  * Nos permite ver la pantalla vacía en la ventana de diseño de Android Studio.
  */
-@Preview(
-    showBackground = true,
-    showSystemUi = true
-)
+@Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun VistaPreviaPantallaLogin() {
+    // Para la previsualización, pasamos un NavController falso que no hace nada.
     val navControllerFalso = rememberNavController()
+    // Idealmente, para previsualizaciones complejas, crearías un ViewModel falso.
+    // Pero para una vista simple, podemos instanciar el Composable directamente.
+    // NOTA: Si `hiltViewModel()` causa problemas en la preview, necesitarás una estrategia
+    // más avanzada para previsualizar (crear un ViewModel falso).
     PantallaLogin(navController = navControllerFalso)
 }

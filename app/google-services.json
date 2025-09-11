@@ -12,7 +12,20 @@
           "package_name": "com.example.freeplayerm"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1055393121843-iruirtubfs1ou8di8v4av9k39kevsu6i.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.freeplayerm",
+            "certificate_hash": "320929943d3f9a7ed271f133020183d81d83715c"
+          }
+        },
+        {
+          "client_id": "1055393121843-71ib1ul418ljaofa942sggpv19kf17oa.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBsb0AZxkaXyvE7GGr4UPuI6MdNAGh3NHI"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1055393121843-71ib1ul418ljaofa942sggpv19kf17oa.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
