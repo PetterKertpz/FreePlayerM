@@ -1,5 +1,6 @@
 package com.example.freeplayerm.ui.features.login
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -14,19 +15,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -36,10 +38,40 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+import com.example.freeplayerm.ui.features.nav.Rutas
 import com.example.freeplayerm.ui.theme.AppColors
+import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 
 @Composable
-fun PantallaRegistro() {
+fun PantallaRegistro(
+    navController: NavController,
+    viewModel: LoginViewModel = hiltViewModel()
+) {
+    //
+    val estado by viewModel.estadoUi.collectAsState()
+    val contexto = LocalContext.current
+
+    LaunchedEffect(key1 = estado.registroExitoso, key2 = estado.error) {
+        if (estado.registroExitoso) {
+            Toast.makeText(contexto, "¡Registro exitoso!", Toast.LENGTH_SHORT).show()
+            navController.navigate(Rutas.Biblioteca.ruta) {
+                popUpTo(Rutas.Login.ruta) { inclusive = true }
+            }
+            viewModel.enEvento(LoginEvento.ConsumirEventoDeNavegacion)
+        }
+
+        estado.error?.let { mensajeError ->
+            Toast.makeText(contexto, mensajeError, Toast.LENGTH_LONG).show()
+        }
+    }
+
+
+
+
+    //
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -100,11 +132,12 @@ fun PantallaRegistro() {
                     modifier = Modifier
 
                 )
-                var nombreUsuario by remember { mutableStateOf("") }
                 TextField(
                     isError = false,
-                    value = nombreUsuario,
-                    onValueChange = {nombreUsuario = it},
+                    value = estado.nombreUsuario,
+                    onValueChange = {
+                        viewModel.enEvento(LoginEvento.NombreUsuarioCambiado(it))
+                    },
                     textStyle = TextStyle(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Medium,
@@ -118,6 +151,7 @@ fun PantallaRegistro() {
 
                             )
                     },
+                    singleLine = true,
                     shape = RoundedCornerShape(16.dp),
                     colors = TextFieldDefaults.colors(
                         //Linea inferior del texto
@@ -154,11 +188,13 @@ fun PantallaRegistro() {
 
 
                 )
-                var correo by remember { mutableStateOf("") }
+
                 TextField(
                     isError = false,
-                    value = correo,
-                    onValueChange = {correo = it},
+                    value = estado.correoOUsuario,
+                    onValueChange = {
+                        viewModel.enEvento(LoginEvento.CorreoOUsuarioCambiado(it))
+                    },
                     textStyle = TextStyle(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Medium,
@@ -172,6 +208,7 @@ fun PantallaRegistro() {
 
                             )
                     },
+                    singleLine = true,
                     shape = RoundedCornerShape(16.dp),
                     colors = TextFieldDefaults.colors(
                         //Linea inferior del texto
@@ -208,11 +245,13 @@ fun PantallaRegistro() {
 
 
                 )
-                var contrasena by remember { mutableStateOf("") }
+
                 TextField(
                     isError = false,
-                    value = contrasena,
-                    onValueChange = {contrasena = it},
+                    value = estado.contrasena,
+                    onValueChange = {
+                        viewModel.enEvento(LoginEvento.ContrasenaCambiada(it))
+                    },
                     textStyle = TextStyle(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Medium,
@@ -225,6 +264,7 @@ fun PantallaRegistro() {
                             fontWeight = FontWeight.Bold,
                         )
                     },
+                    singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     shape = RoundedCornerShape(16.dp),
                     colors = TextFieldDefaults.colors(
@@ -260,6 +300,11 @@ fun PantallaRegistro() {
                             shape = RoundedCornerShape(15.dp)
                         )
                 )
+                if (estado.estaCargando) {
+                    CircularProgressIndicator(
+
+                    )
+                }
 
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -280,6 +325,11 @@ fun PantallaRegistro() {
                                 println(
                                     "Ir a Iniciar Sesión"
                                 )
+                                navController.navigate("login") {
+                                    popUpTo("registro"){
+                                        inclusive = true
+                                    }
+                                }
                             }
 
                     )
@@ -290,7 +340,9 @@ fun PantallaRegistro() {
 
                     onClick = {
                         println("Crear Cuenta Local")
+                        viewModel.enEvento(LoginEvento.BotonRegistroPresionado)
                     },
+                    enabled = !estado.estaCargando,
                     colors = ButtonColors(
                         containerColor = AppColors.PurpuraProfundo,
                         contentColor = AppColors.Negro,
@@ -347,7 +399,11 @@ fun PantallaRegistro() {
 )
 @Composable
 fun PreviewPantallaRegistro () {
-    PantallaRegistro()
+    FreePlayerMTheme {
+        val navControllerFalso = rememberNavController()
+        PantallaRegistro(navController = navControllerFalso)
+    }
+
 }
 
 

@@ -1,14 +1,17 @@
 package com.example.freeplayerm.ui.features.biblioteca.components
 
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun ListaDeCanciones(
-    modifier: Modifier = Modifier
 ) {
+    LazyColumn (
 
+    ) {
+
+    }
 }
 
 @Composable

@@ -2,16 +2,20 @@
 # --- Herramientas de Construcción ---
 # Usamos las últimas versiones estables que son compatibles entre sí.
 agp = "8.9.3"
-coilCompose = "2.5.0"
-feather = "1.1.0"
+coilCompose = "2.7.0"
+feather = "1.1.1"
 firebaseBom = "34.2.0"
-fontAwesome = "1.1.0"
+fontAwesome = "1.1.1"
 kotlin = "2.2.0" # Kotlin debe ser 2.0.0 o superior para usar KSP.
 ksp = "2.2.0-2.0.2" # KSP debe ser 2.0.0 o superior para Kotlin 2.2.0.
 hilt = "2.57.1" # Versión de Hilt estable y compatible con KSP.
 composeCompiler = "1.5.15" # Compilador de Compose para Kotlin 1.9.23.
 googleGmsPlugin = "4.4.3"
 playServicesAuth = "21.4.0"
+navigationCompose = "2.9.4"
+bcrypt = "0.10.2"
+credentialManager = "1.5.0"
+googleId = "1.1.1"
 
 # --- Librerías de Jetpack y AndroidX ---
 coreKtx = "1.17.0"
@@ -28,13 +32,26 @@ espressoCore = "3.7.0"
 
 [libraries]
 
-# AÑADIDO: Definición de Firebase Auth (sin versión, la controla el BoM)
-# CORRECTO
-coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
-firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth"}
+firebase-auth-ktx = { group = "com.google.firebase", name = "firebase-auth-ktx" }
+firebase-analytics = { module = "com.google.firebase:firebase-analytics"}
+# BoM de Firebase
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 
 # AÑADIDO: Definición de Play Services Auth (con su propia versión)
 play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
+
+
+androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentialManager" }
+androidx-credentials-play-services-auth = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentialManager" }
+# AÑADE ESTA LÍNEA: La librería para el ID de Google
+google-id = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleId" }
+
+#Security
+bcrypt = { group = "at.favre.lib", name = "bcrypt", version = "0.10.2" }
+
+coil-compose = { module = "io.coil-kt:coil-compose", version = "2.7.0" }
+
 
 # AndroidX Core
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -43,11 +60,11 @@ androidx-activity-compose = { group = "androidx.activity", name = "activity-comp
 
 # Jetpack Compose
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
-androidx-ui = { group = "androidx.compose.ui", name = "ui" }
-androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
-androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
-androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
-androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-ui = { group = "androidx.compose.ui", name = "ui", version = "1.10.0-alpha03" }
+androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version = "1.10.0-alpha03" }
+androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview", version = "1.10.0-alpha03" }
+androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling", version = "1.10.0-alpha03" }
+androidx-material3 = { group = "androidx.compose.material3", name = "material3", version = "1.5.0-alpha04" }
 
 # Room (Base de Datos)
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
@@ -56,19 +73,18 @@ androidx-room-compiler = { group = "androidx.room", name = "room-compiler", vers
 
 # Hilt (Inyección de Dependencias)
 feather = { module = "br.com.devsrsouza.compose.icons:feather", version.ref = "feather" }
-firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
-firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+
 font-awesome = { module = "br.com.devsrsouza.compose.icons:font-awesome", version.ref = "fontAwesome" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
-
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxJunit" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
-androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
-androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4", version = "1.10.0-alpha03" }
+androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest", version = "1.9.1" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

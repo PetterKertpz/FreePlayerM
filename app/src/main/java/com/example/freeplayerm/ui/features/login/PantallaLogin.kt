@@ -2,6 +2,7 @@ package com.example.freeplayerm.ui.features.login
 
 import BotonIngresarGoogleMejorado
 import TemaBotonGoogle
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,19 +17,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -38,15 +40,41 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+import com.example.freeplayerm.ui.features.nav.Rutas
 import com.example.freeplayerm.ui.theme.AppColors
 
-/**
- * Esta es nuestra pantalla principal. Por ahora, es solo un 'Box'.
- * Un Box es el contenedor más simple, como un lienzo en blanco.
- * Ocupa toda la pantalla (Modifier.fillMaxSize()) y tiene el color de fondo de nuestro tema.
- */
 @Composable
-fun PantallaLogin() {
+fun PantallaLogin(
+    navController: NavController,
+    viewModel: LoginViewModel = hiltViewModel()
+) {
+    //
+    val estado by viewModel.estadoUi.collectAsState()
+    val contexto = LocalContext.current
+
+    // Este efecto se encarga de la navegación cuando el login es exitoso
+    LaunchedEffect(key1 = estado.loginExitoso) {
+        if (estado.loginExitoso) {
+            Toast.makeText(contexto, "¡Bienvenido!", Toast.LENGTH_SHORT).show()
+            navController.navigate(Rutas.Biblioteca.ruta) {
+                popUpTo(Rutas.Login.ruta) { inclusive = true }
+            }
+            // Le decimos al ViewModel que ya hemos manejado el evento
+            viewModel.enEvento(LoginEvento.ConsumirEventoDeNavegacion)
+        }
+    }
+
+    // Este efecto muestra los errores en un Toast
+    LaunchedEffect(key1 = estado.error) {
+        estado.error?.let { mensajeError ->
+            Toast.makeText(contexto, mensajeError, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    //
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -108,16 +136,18 @@ fun PantallaLogin() {
                     modifier = Modifier
 
                 )
-                var nombreUsuarioCorreo by remember { mutableStateOf("") }
                 TextField(
                     isError = false,
-                    value = nombreUsuarioCorreo,
-                    onValueChange = {nombreUsuarioCorreo = it},
+                    value = estado.correoOUsuario,
+                    onValueChange = {
+                        viewModel.enEvento(LoginEvento.CorreoOUsuarioCambiado(it))
+                    },
                     textStyle = TextStyle(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Medium,
 
                     ),
+                    singleLine = true,
                     label = {
                         Text(
                             "Nombre de usuario o Correo Electrónico",
@@ -162,16 +192,18 @@ fun PantallaLogin() {
 
 
                 )
-                var contrasena by remember { mutableStateOf("") }
                 TextField(
                     isError = false,
-                    value = contrasena,
-                    onValueChange = {contrasena = it},
+                    value = estado.contrasena,
+                    onValueChange = {
+                        viewModel.enEvento(LoginEvento.ContrasenaCambiada(it))
+                    },
                     textStyle = TextStyle(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Medium,
 
                     ),
+                    singleLine = true,
                     label = {
                         Text(
                             "Contraseña",
@@ -214,6 +246,11 @@ fun PantallaLogin() {
                             shape = RoundedCornerShape(15.dp)
                         )
                 )
+                if (estado.estaCargando) {
+                    CircularProgressIndicator(
+
+                    )
+                }
 
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -234,6 +271,7 @@ fun PantallaLogin() {
                                 println(
                                     "Ir a Registro"
                                 )
+                                navController.navigate("registro")
                             }
 
                     )
@@ -256,7 +294,10 @@ fun PantallaLogin() {
 
                 Button(
 
-                    onClick = { /* Acción login */ },
+                    onClick = {
+                        viewModel.enEvento(LoginEvento.BotonLoginPresionado)
+                        navController.navigate("Biblioteca")
+                    },
                     colors = ButtonColors(
                         containerColor = AppColors.PurpuraProfundo,
                         contentColor = AppColors.Negro,
@@ -307,6 +348,8 @@ fun PantallaLogin() {
                     tema = TemaBotonGoogle.Oscuro,
                     onClick = {
                         println("Ingresar por Google")
+                        viewModel.enEvento(LoginEvento.BotonGooglePresionado)
+                        navController.navigate(Rutas.Registro.ruta)
                     }
                 )
 
@@ -326,5 +369,6 @@ fun PantallaLogin() {
 )
 @Composable
 fun VistaPreviaPantallaLogin() {
-    PantallaLogin()
+    val navControllerFalso = rememberNavController()
+    PantallaLogin(navController = navControllerFalso)
 }

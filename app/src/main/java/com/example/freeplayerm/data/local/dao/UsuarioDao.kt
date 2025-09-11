@@ -19,8 +19,11 @@ interface UsuarioDao {
     suspend fun obtenerTodosLosUsuarios(): List<UsuarioEntity>
 
     // La consulta SQL ha sido corregida para buscar en la columna 'correo'.
-    @Query("SELECT * FROM usuarios WHERE correo = :correo")
+    @Query("SELECT * FROM usuarios WHERE correo = :correo LIMIT 1")
     suspend fun obtenerUsuarioPorCorreo(correo: String): UsuarioEntity?
+
+    @Query("SELECT * FROM usuarios WHERE nombre_usuario = :nombreUsuario LIMIT 1")
+    suspend fun obtenerUsuarioPorNombreUsuario(nombreUsuario: String): UsuarioEntity?
 
     @Update
     suspend fun actualizarUsuario(usuario: UsuarioEntity)

@@ -1,9 +1,7 @@
 package com.example.freeplayerm.ui.features.biblioteca
 
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.freeplayerm.ui.features.biblioteca.components.BarraDeReproduccion
 import com.example.freeplayerm.ui.features.biblioteca.components.ListaDeCanciones
@@ -16,7 +14,6 @@ fun Biblioteca() {
         topBar = {
             // Aquí irá nuestro Header
             SeccionEncabezado(
-                Modifier
 
             )
         },
@@ -29,8 +26,6 @@ fun Biblioteca() {
         // `paddingInterno` contiene el espacio necesario para que nuestra lista
         // no quede oculta detrás del Header y el Footer. Es crucial aplicarlo.
         ListaDeCanciones(
-            modifier = Modifier
-                .padding(paddingInterno)
         )
     }
 }

@@ -2,95 +2,99 @@ package com.example.freeplayerm.ui.features.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.freeplayerm.core.auth.GoogleAuthUiClient
+import com.example.freeplayerm.core.auth.SignInResult
+import com.example.freeplayerm.data.repository.UsuarioRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/**
- * @HiltViewModel: Anotación clave que le dice a Hilt que esta clase es un ViewModel
- * y que debe prepararse para inyectar dependencias en ella.
- *
- * @Inject constructor: Le decimos a Hilt que, para construir este ViewModel, debe buscar
- * en sus "recetas" (nuestro ModuloDeAplicacion) cómo construir un UsuarioRepositorio
- * y pasárselo automáticamente al constructor. Esta es la magia de la inyección de dependencias.
- */
 @HiltViewModel
 class LoginViewModel @Inject constructor(
+    private val repositorio: UsuarioRepository,
+    private val googleAuthCliente: GoogleAuthUiClient // ✅ Inyectamos nuestro "ayudante"
 ) : ViewModel() {
 
-    // _estadoUi: Es un StateFlow mutable y privado. Contiene el estado actual de la pantalla.
-    // Solo el ViewModel puede modificarlo.
     private val _estadoUi = MutableStateFlow(LoginEstado())
-
-    // estadoUi: Es la versión pública e inmutable del StateFlow. La UI "escuchará" los cambios
-    // en este objeto para redibujarse, pero no podrá modificarlo directamente.
     val estadoUi = _estadoUi.asStateFlow()
 
-    /**
-     * Esta es la única función pública que la UI llamará. Centraliza todos los eventos
-     * del usuario en un solo lugar, siguiendo un patrón de diseño moderno (MVI).
-     */
     fun enEvento(evento: LoginEvento) {
         when (evento) {
-            is LoginEvento.CorreoCambiado -> {
-                // Actualizamos el estado con el nuevo valor del correo
-                _estadoUi.value = _estadoUi.value.copy(correo = evento.valor)
+            is LoginEvento.CorreoOUsuarioCambiado -> {
+                _estadoUi.update { it.copy(correoOUsuario = evento.valor, error = null) }
             }
             is LoginEvento.ContrasenaCambiada -> {
-                // Actualizamos el estado con la nueva contraseña
-                _estadoUi.value = _estadoUi.value.copy(contrasena = evento.valor)
+                _estadoUi.update { it.copy(contrasena = evento.valor, error = null) }
+            }
+            is LoginEvento.NombreUsuarioCambiado -> {
+                _estadoUi.update { it.copy(nombreUsuario = evento.valor, error = null) }
             }
             LoginEvento.BotonLoginPresionado -> {
-                // Aquí iría la lógica para iniciar sesión
-                iniciarSesion()
+                // Lógica de inicio de sesión local...
             }
             LoginEvento.BotonRegistroPresionado -> {
-                // Aquí iría la lógica para registrarse
-                registrarse()
+                // Lógica de registro local...
             }
             LoginEvento.BotonGooglePresionado -> {
-                // Lógica para iniciar sesión con Google (lo veremos más adelante)
+                iniciarSesionConGoogle()
+            }
+            LoginEvento.ConsumirEventoDeNavegacion -> {
+                _estadoUi.update { it.copy(registroExitoso = false, loginExitoso = false, error = null) }
             }
         }
     }
-
-    private fun iniciarSesion() {
-        // La lógica de negocio se ejecuta en una coroutine para no bloquear la UI
+    private fun iniciarSesionConGoogle() {
         viewModelScope.launch {
-            // Lógica de inicio de sesión... (la implementaremos en el siguiente paso)
-        }
-    }
+            _estadoUi.update { it.copy(estaCargando = true) }
+            val resultadoSignIn = googleAuthCliente.iniciarSesion()
 
-    private fun registrarse() {
-        // La lógica de negocio se ejecuta en una coroutine
-        viewModelScope.launch {
-            // Lógica de registro... (la implementaremos en el siguiente paso)
+            when (resultadoSignIn) {
+                is SignInResult.Success -> {
+                    val datosUsuario = resultadoSignIn.data
+                    if (datosUsuario.correo == null) {
+                        _estadoUi.update { it.copy(error = "No se pudo obtener el correo de Google.", estaCargando = false) }
+                        return@launch
+                    }
+                    repositorio.buscarOCrearUsuarioGoogle(
+                        correo = datosUsuario.correo,
+                        nombreUsuario = datosUsuario.nombreUsuario ?: "Usuario"
+                    ).onSuccess {
+                        _estadoUi.update { it.copy(estaCargando = false, loginExitoso = true) }
+                    }.onFailure {
+                        _estadoUi.update { it.copy(estaCargando = false, error = "No se pudo guardar el usuario en la base de datos.") }
+                    }
+                }
+                is SignInResult.Error -> {
+                    _estadoUi.update { it.copy(error = resultadoSignIn.message, estaCargando = false) }
+                }
+                is SignInResult.Cancelled -> {
+                    _estadoUi.update { it.copy(estaCargando = false) }
+                }
+            }
         }
     }
 }
 
-/**
- * Representa el estado de la UI en un momento dado. Es una única clase que contiene
- * toda la información que la pantalla necesita para dibujarse.
- */
+// Clases de estado y evento
 data class LoginEstado(
-    val correo: String = "",
+    val nombreUsuario: String = "",
+    val correoOUsuario: String = "",
     val contrasena: String = "",
     val estaCargando: Boolean = false,
     val error: String? = null,
-    val registroExitoso: Boolean = false, // <-- AÑADE ESTA LÍNEA
+    val registroExitoso: Boolean = false,
     val loginExitoso: Boolean = false
 )
 
-/**
- * Representa todas las acciones que el usuario puede realizar en la pantalla.
- */
 sealed class LoginEvento {
-    data class CorreoCambiado(val valor: String) : LoginEvento()
+    data class NombreUsuarioCambiado(val valor: String) : LoginEvento()
+    data class CorreoOUsuarioCambiado(val valor: String) : LoginEvento()
     data class ContrasenaCambiada(val valor: String) : LoginEvento()
     object BotonLoginPresionado : LoginEvento()
     object BotonRegistroPresionado : LoginEvento()
     object BotonGooglePresionado : LoginEvento()
+    object ConsumirEventoDeNavegacion : LoginEvento()
 }

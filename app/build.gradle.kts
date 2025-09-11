@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.google.gms.google.services)
+
 }
 
 android {
@@ -52,23 +53,32 @@ kotlin {
 }
 
 dependencies {
-
-    implementation(libs.coil.compose)
-    // Firebase
-    // AÑADIDO: BoM de Firebase para gestionar versiones automáticamente
+    // --- Firebase ---
     implementation(platform(libs.firebase.bom))
-    // AÑADIDO: Firebase Analytics (recomendado)
     implementation(libs.firebase.analytics)
-    // AÑADIDO: Firebase Authentication para gestionar usuarios
     implementation(libs.firebase.auth)
-    // AÑADIDO: Google Play Services Auth para la UI de "One Tap"
-    implementation(libs.play.services.auth)
+    implementation(libs.firebase.auth.ktx)
 
-    // Core y UI
+    // --- Google Sign-In y Credential Manager ---
+    // Play Services Auth es necesario para la UI de Google
+    implementation(libs.play.services.auth)
+    // Credential Manager (API moderna)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    // Librería específica para el ID Token de Google
+    implementation(libs.google.id)
+
+    // --- Seguridad ---
+    implementation(libs.bcrypt)
+
+    // --- Imágenes ---
+    implementation(libs.coil.compose)
+
+    // --- Core y UI (Jetpack Compose) ---
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
+    implementation(platform(libs.androidx.compose.bom)) // BOM para Compose
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
@@ -76,17 +86,18 @@ dependencies {
     implementation(libs.font.awesome)
     implementation(libs.feather)
 
-    // Room
+    // --- Base de Datos (Room) ---
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler)
+    ksp(libs.androidx.room.compiler) // Procesador de anotaciones para Room
 
-    // Hilt
+    // --- Inyección de Dependencias (Hilt) y Navegación ---
     implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler) // Usamos el alias correcto del catálogo
+    ksp(libs.hilt.compiler) // Procesador de anotaciones para Hilt
     implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.androidx.navigation.compose)
 
-    // Testing
+    // --- Testing ---
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -94,6 +105,4 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-
-
 }

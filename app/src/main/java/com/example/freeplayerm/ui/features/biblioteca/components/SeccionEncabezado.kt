@@ -1,17 +1,14 @@
 package com.example.freeplayerm.ui.features.biblioteca.components
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -21,10 +18,8 @@ import androidx.compose.material3.TopAppBarColors
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -35,7 +30,6 @@ import com.example.freeplayerm.ui.theme.AppColors
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SeccionEncabezado(
-    modifier: Modifier = Modifier
 
 ) {
     var menus = listOf("Canciones", "Listas", "Álbumes", "Artistas", "Géneros", "Favoritos")
@@ -68,22 +62,7 @@ fun SeccionEncabezado(
                 )
             },
             actions = {
-                if (autenticado && urlImagenPerfil != null) {
-                    Image(
-                        painter = painterResource(),
-                        contentDescription = "",
-                        modifier = Modifier
 
-                    )
-                } else {
-                    Image(
-                        painter = painterResource(),
-                        contentDescription = "",
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                    )
-                }
             },
             colors = TopAppBarColors(
                 containerColor = AppColors.Transparente,

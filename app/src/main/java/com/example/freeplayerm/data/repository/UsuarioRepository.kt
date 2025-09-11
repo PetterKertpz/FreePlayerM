@@ -16,4 +16,13 @@ interface UsuarioRepository {
     suspend fun actualizarUsuario(usuario: UsuarioEntity)
 
     suspend fun eliminarUsuario(usuario: UsuarioEntity)
+
+    // Cambiamos el metodo: ahora recibe datos primitivos, no la entidad.
+    suspend fun registrarUsuarioLocal(
+        nombreUsuario: String,
+        correo: String,
+        contrasena: String
+    ): Result<Unit>
+    suspend fun iniciarSesionLocal(identificador: String, contrasena: String): Result<UsuarioEntity>
+    suspend fun buscarOCrearUsuarioGoogle(correo: String, nombreUsuario: String): Result<UsuarioEntity>
 }
