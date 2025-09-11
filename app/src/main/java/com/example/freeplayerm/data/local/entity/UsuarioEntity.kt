@@ -32,7 +32,7 @@ data class UsuarioEntity(
     val fechaRegistro: Date,
 
     @ColumnInfo(name = "foto_perfil_path_local")
-    val fotoPerfilPathLocal: String?,
+    val fotoPerfilPathLocal: String? = null,
 
     @ColumnInfo(name = "tipo_autenticacion")
     val tipoAutenticacion: String

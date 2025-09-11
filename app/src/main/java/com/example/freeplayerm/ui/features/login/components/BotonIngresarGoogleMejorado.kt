@@ -1,4 +1,4 @@
-
+package com.example.freeplayerm.ui.features.login.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues

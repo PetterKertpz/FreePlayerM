@@ -14,15 +14,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,45 +30,78 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
+import com.example.freeplayerm.ui.features.login.components.CampoDeTextoAutenticacion
 import com.example.freeplayerm.ui.features.nav.Rutas
 import com.example.freeplayerm.ui.theme.AppColors
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 
+
+/**
+ * =================================================================
+ * 1. El "Composable Inteligente" (Smart Composable)
+ * =================================================================
+ * Se encarga de la lógica: obtener el ViewModel, manejar los
+ * efectos secundarios (Toasts, navegación) y pasar el estado y
+ * los eventos a la UI.
+ */
 @Composable
 fun PantallaRegistro(
     navController: NavController,
-    viewModel: LoginViewModel = hiltViewModel()
+    viewModel: RegistroViewModel = hiltViewModel() // Inyectamos el ViewModel de Registro
 ) {
-    //
-    val estado by viewModel.estadoUi.collectAsState()
+    // Recolectamos el estado del ViewModel de forma segura para el ciclo de vida
+    val estado by viewModel.estadoUi.collectAsStateWithLifecycle()
     val contexto = LocalContext.current
 
+    // Este efecto se ejecuta cuando el estado de 'registroExitoso' o 'error' cambia
     LaunchedEffect(key1 = estado.registroExitoso, key2 = estado.error) {
         if (estado.registroExitoso) {
             Toast.makeText(contexto, "¡Registro exitoso!", Toast.LENGTH_SHORT).show()
             navController.navigate(Rutas.Biblioteca.ruta) {
                 popUpTo(Rutas.Login.ruta) { inclusive = true }
             }
-            viewModel.enEvento(LoginEvento.ConsumirEventoDeNavegacion)
-        }
-
+            // Limpiamos el evento para que no se dispare de nuevo
+            viewModel.enEvento(RegistroEvento.ConsumirEventoDeNavegacion)
+        } else
+        // Si hay un error, lo mostramos y lo limpiamos
         estado.error?.let { mensajeError ->
             Toast.makeText(contexto, mensajeError, Toast.LENGTH_LONG).show()
+            viewModel.enEvento(RegistroEvento.ConsumirError)
         }
     }
 
+    // Llamamos al Composable "Tonto" que solo se encarga de dibujar la UI
+    CuerpoPantallaRegistro(
+        estado = estado,
+        enEvento = viewModel::enEvento, // Pasamos la función para manejar eventos
+        onNavigateToLogin = {
+            navController.navigate(Rutas.Login.ruta) {
+                popUpTo("registro") { inclusive = true }
+            }
+        }
+    )
+}
 
-
-
-    //
+/**
+ * =================================================================
+ * 2. El "Composable Tonto" (Dumb Composable)
+ * =================================================================
+ * Solo recibe el estado y lambdas para notificar eventos.
+ * No tiene idea de ViewModels ni de navegación. Es 100% reutilizable y previsualizable.
+ */
+@Composable
+fun CuerpoPantallaRegistro(
+    estado: RegistroEstado,
+    enEvento: (RegistroEvento) -> Unit,
+    onNavigateToLogin: () -> Unit
+) {
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -79,22 +109,17 @@ fun PantallaRegistro(
     ) { innerPadding ->
 
         Column(
-            verticalArrangement = Arrangement.SpaceBetween, // 👈 divide en arriba, centro y abajo
+            verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-
         ) {
 
             // 🔹 HEADER
             Row(
                 horizontalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-
-
-
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
                     text = "FreePlayer",
@@ -104,13 +129,12 @@ fun PantallaRegistro(
                         shadow = Shadow(
                             color = AppColors.PurpuraOscuro,
                             blurRadius = 20f
-                        )),
+                        )
+                    ),
                     fontStyle = FontStyle.Italic,
                     fontWeight = FontWeight.Bold,
                     color = AppColors.PurpuraProfundo,
-
-
-                    )
+                )
             }
 
             // 🔹 CONTENIDO CENTRAL
@@ -128,253 +152,69 @@ fun PantallaRegistro(
                     fontFamily = FontFamily.SansSerif,
                     fontStyle = FontStyle.Italic,
                     textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-
-                )
-                TextField(
-                    isError = false,
-                    value = estado.nombreUsuario,
-                    onValueChange = {
-                        viewModel.enEvento(LoginEvento.NombreUsuarioCambiado(it))
-                    },
-                    textStyle = TextStyle(
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium,
-
-                        ),
-                    label = {
-                        Text(
-                            "Nombre de usuario",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-
-                            )
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = TextFieldDefaults.colors(
-                        //Linea inferior del texto
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent,
-                        errorIndicatorColor = Color.Transparent,
-                        // colores de fondo
-                        focusedContainerColor = AppColors.PurpuraMedio,
-                        unfocusedContainerColor = AppColors.PurpuraClaro,
-                        disabledContainerColor = Color.LightGray,
-                        errorContainerColor = AppColors.PurpuraClaro,
-                        // Colores del texto
-                        focusedTextColor = Color.Black,
-                        unfocusedTextColor = Color.Black,
-                        disabledTextColor = Color.DarkGray,
-                        errorTextColor = Color.Red,
-                        // Colores de las etiquetas
-                        unfocusedLabelColor = Color.Black,
-                        focusedLabelColor = Color.Black,
-                        disabledLabelColor = Color.DarkGray,
-                        errorLabelColor = Color.Black,
-
-                        cursorColor = Color.Black,
-                        errorCursorColor = Color.Red,
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth(0.9f)
-                        .border(
-                            0.5.dp,
-                            AppColors.PurpuraProfundo,
-                            shape = RoundedCornerShape(15.dp)
-                        )
-
-
+                    fontWeight = FontWeight.Bold
                 )
 
-                TextField(
-                    isError = false,
-                    value = estado.correoOUsuario,
-                    onValueChange = {
-                        viewModel.enEvento(LoginEvento.CorreoOUsuarioCambiado(it))
-                    },
-                    textStyle = TextStyle(
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium,
-
-                        ),
-                    label = {
-                        Text(
-                            "Correo Electrónico",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-
-                            )
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = TextFieldDefaults.colors(
-                        //Linea inferior del texto
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent,
-                        errorIndicatorColor = Color.Transparent,
-                        // colores de fondo
-                        focusedContainerColor = AppColors.PurpuraMedio,
-                        unfocusedContainerColor = AppColors.PurpuraClaro,
-                        disabledContainerColor = Color.LightGray,
-                        errorContainerColor = AppColors.PurpuraClaro,
-                        // Colores del texto
-                        focusedTextColor = Color.Black,
-                        unfocusedTextColor = Color.Black,
-                        disabledTextColor = Color.DarkGray,
-                        errorTextColor = Color.Red,
-                        // Colores de las etiquetas
-                        unfocusedLabelColor = Color.Black,
-                        focusedLabelColor = Color.Black,
-                        disabledLabelColor = Color.DarkGray,
-                        errorLabelColor = Color.Black,
-
-                        cursorColor = Color.Black,
-                        errorCursorColor = Color.Red,
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth(0.9f)
-                        .border(
-                            0.5.dp,
-                            AppColors.PurpuraProfundo,
-                            shape = RoundedCornerShape(15.dp)
-                        )
-
-
+                // ¡ADIÓS A 'remember' Y A LA LÓGICA DE ESTADO LOCAL!
+                // Usamos nuestro componente reutilizable y el estado del ViewModel.
+                CampoDeTextoAutenticacion(
+                    valor = estado.nombreUsuario,
+                    enCambioDeValor = { enEvento(RegistroEvento.NombreUsuarioCambiado(it)) },
+                    etiqueta = "Nombre de usuario"
                 )
 
-                TextField(
-                    isError = false,
-                    value = estado.contrasena,
-                    onValueChange = {
-                        viewModel.enEvento(LoginEvento.ContrasenaCambiada(it))
-                    },
-                    textStyle = TextStyle(
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium,
-
-                        ),
-                    label = {
-                        Text(
-                            "Contraseña",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = TextFieldDefaults.colors(
-                        //Linea inferior del texto
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent,
-                        errorIndicatorColor = Color.Transparent,
-                        // colores de fondo
-                        focusedContainerColor = AppColors.PurpuraMedio,
-                        unfocusedContainerColor = AppColors.PurpuraClaro,
-                        disabledContainerColor = Color.LightGray,
-                        errorContainerColor = AppColors.PurpuraClaro,
-                        // Colores del texto
-                        focusedTextColor = Color.Black,
-                        unfocusedTextColor = Color.Black,
-                        disabledTextColor = Color.DarkGray,
-                        errorTextColor = Color.Red,
-                        // Colores de las etiquetas
-                        unfocusedLabelColor = Color.Black,
-                        focusedLabelColor = Color.Black,
-                        disabledLabelColor = Color.DarkGray,
-                        errorLabelColor = Color.Black,
-
-                        cursorColor = Color.Black,
-                        errorCursorColor = Color.Red,
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth(0.9f)
-                        .border(
-                            0.5.dp,
-                            AppColors.PurpuraProfundo,
-                            shape = RoundedCornerShape(15.dp)
-                        )
+                CampoDeTextoAutenticacion(
+                    valor = estado.correo,
+                    enCambioDeValor = { enEvento(RegistroEvento.CorreoCambiado(it)) },
+                    etiqueta = "Correo Electrónico"
                 )
-                if (estado.estaCargando) {
-                    CircularProgressIndicator(
 
-                    )
-                }
+                CampoDeTextoAutenticacion(
+                    valor = estado.contrasena,
+                    enCambioDeValor = { enEvento(RegistroEvento.ContrasenaCambiada(it)) },
+                    etiqueta = "Contraseña",
+                    esCampoDeContrasena = true
+                )
+
+                // Mostramos el indicador de progreso si el estado lo indica
+
 
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    // separación de 5dp entre botones
                     verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Botón Registro
                     Text(
-
-                        "¿Tienes una cuenta?",
+                        text = "¿Tienes una cuenta?",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black,
-                        modifier = Modifier
-                            .clickable {
-                                println(
-                                    "Ir a Iniciar Sesión"
-                                )
-                                navController.navigate("login") {
-                                    popUpTo("registro"){
-                                        inclusive = true
-                                    }
-                                }
-                            }
-
-                    )
-
-                }
-
-                Button(
-
-                    onClick = {
-                        println("Crear Cuenta Local")
-                        viewModel.enEvento(LoginEvento.BotonRegistroPresionado)
-                    },
-                    enabled = !estado.estaCargando,
-                    colors = ButtonColors(
-                        containerColor = AppColors.PurpuraProfundo,
-                        contentColor = AppColors.Negro,
-                        disabledContainerColor = AppColors.GrisProfundo,
-                        disabledContentColor = Color.White
-                    ),
-                    //border
-                    border = BorderStroke(
-                        1.dp,
-                        AppColors.Negro
-                    ),
-                    shape = RoundedCornerShape(15.dp),
-                    modifier = Modifier
-                        .padding(0.dp)
-
-
-
-                ) {
-                    Text(
-                        "Registrarse",
-                        color = AppColors.Blanco,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-
-
-
+                        modifier = Modifier.clickable { onNavigateToLogin() }
                     )
                 }
-
-
-
+                if (!estado.estaCargando) {
+                    Button(
+                        onClick = { enEvento(RegistroEvento.BotonRegistroPresionado) },
+                        enabled = true,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AppColors.PurpuraProfundo,
+                            contentColor = AppColors.Blanco,
+                            disabledContainerColor = AppColors.GrisProfundo,
+                            disabledContentColor = Color.White
+                        ),
+                        border = BorderStroke(1.dp, AppColors.Negro),
+                        shape = RoundedCornerShape(15.dp),
+                    ) {
+                        Text(
+                            "Registrarse",
+                            color = AppColors.Blanco,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                } else {
+                    CircularProgressIndicator(modifier = Modifier.padding(vertical = 8.dp))
+                }
             }
 
             // 🔹 FOOTER
@@ -385,25 +225,33 @@ fun PantallaRegistro(
                     .fillMaxWidth()
                     .fillMaxHeight(0.15f)
                     .background(Color.Transparent)
-
-
             ) {
-
+                // Footer vacío como en tu diseño original
             }
         }
     }
 }
-@Preview(
-    showBackground = true,
-    showSystemUi = true,
-)
+
+
+/**
+ * =================================================================
+ * 3. Previsualización
+ * =================================================================
+ * La preview ahora llama al Composable "Tonto", pasándole un estado de ejemplo.
+ * Funciona perfectamente sin necesidad de ejecutar toda la app.
+ */
+@Preview(showBackground = true, showSystemUi = true)
 @Composable
-fun PreviewPantallaRegistro () {
+fun PreviewPantallaRegistro() {
     FreePlayerMTheme {
-        val navControllerFalso = rememberNavController()
-        PantallaRegistro(navController = navControllerFalso)
+        CuerpoPantallaRegistro(
+            estado = RegistroEstado(
+                nombreUsuario = "Test",
+                correo = "test@test.com",
+                contrasena = "1234"
+            ),
+            enEvento = {},
+            onNavigateToLogin = {}
+        )
     }
-
 }
-
-

@@ -53,6 +53,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(libs.androidx.lifecycle.runtime.compose)
     // --- Firebase ---
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
