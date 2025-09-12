@@ -61,19 +61,15 @@ fun PantallaRegistro(
     val contexto = LocalContext.current
 
     // Este efecto se ejecuta cuando el estado de 'registroExitoso' o 'error' cambia
-    LaunchedEffect(key1 = estado.registroExitoso, key2 = estado.error) {
-        if (estado.registroExitoso) {
+    LaunchedEffect(key1 = estado.usuarioIdExitoso) { // <-- Observa el ID
+        estado.usuarioIdExitoso?.let { id -> // <-- Reacciona cuando el ID no es nulo
             Toast.makeText(contexto, "¡Registro exitoso!", Toast.LENGTH_SHORT).show()
-            navController.navigate(Rutas.Biblioteca.ruta) {
+            // Navega usando el ID
+            navController.navigate(Rutas.Biblioteca.crearRuta(id)) {
                 popUpTo(Rutas.Login.ruta) { inclusive = true }
             }
-            // Limpiamos el evento para que no se dispare de nuevo
+            // Limpia el estado
             viewModel.enEvento(RegistroEvento.ConsumirEventoDeNavegacion)
-        } else
-        // Si hay un error, lo mostramos y lo limpiamos
-        estado.error?.let { mensajeError ->
-            Toast.makeText(contexto, mensajeError, Toast.LENGTH_LONG).show()
-            viewModel.enEvento(RegistroEvento.ConsumirError)
         }
     }
 
@@ -240,15 +236,32 @@ fun CuerpoPantallaRegistro(
  * La preview ahora llama al Composable "Tonto", pasándole un estado de ejemplo.
  * Funciona perfectamente sin necesidad de ejecutar toda la app.
  */
-@Preview(showBackground = true, showSystemUi = true)
+@Preview(name = "Estado Normal", showBackground = true, showSystemUi = true)
 @Composable
-fun PreviewPantallaRegistro() {
+fun PreviewPantallaRegistroNormal() {
     FreePlayerMTheme {
         CuerpoPantallaRegistro(
             estado = RegistroEstado(
-                nombreUsuario = "Test",
-                correo = "test@test.com",
-                contrasena = "1234"
+                nombreUsuario = "Usuario de Prueba",
+                correo = "test@ejemplo.com",
+                contrasena = "123456"
+            ),
+            enEvento = {},
+            onNavigateToLogin = {}
+        )
+    }
+}
+
+@Preview(name = "Estado Cargando", showBackground = true, showSystemUi = true)
+@Composable
+fun PreviewPantallaRegistroCargando() {
+    FreePlayerMTheme {
+        CuerpoPantallaRegistro(
+            estado = RegistroEstado(
+                nombreUsuario = "Usuario de Prueba",
+                correo = "test@ejemplo.com",
+                contrasena = "123456",
+                estaCargando = true // <-- Activamos el estado de carga
             ),
             enEvento = {},
             onNavigateToLogin = {}

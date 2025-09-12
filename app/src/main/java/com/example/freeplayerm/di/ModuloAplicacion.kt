@@ -6,6 +6,7 @@ import androidx.room.Room
 import com.example.freeplayerm.core.auth.GoogleAuthUiClient
 import com.example.freeplayerm.data.local.AppDatabase
 import com.example.freeplayerm.data.local.dao.UsuarioDao
+import com.example.freeplayerm.data.repository.SessionRepository // <-- Importante
 import com.example.freeplayerm.data.repository.UsuarioRepository
 import com.example.freeplayerm.data.repository.UsuarioRepositoryImpl
 import dagger.Module
@@ -35,13 +36,18 @@ object ModuloAplicacion {
         return appDatabase.usuarioDao()
     }
 
+    // --- CAMBIO CLAVE AQUÍ ---
+    // La función ahora recibe SessionRepository como parámetro.
+    // Hilt ya sabe cómo proveerlo porque tiene la anotación @Inject.
     @Provides
     @Singleton
-    fun provideUsuarioRepository(usuarioDao: UsuarioDao): UsuarioRepository {
-        return UsuarioRepositoryImpl(usuarioDao)
+    fun provideUsuarioRepository(
+        usuarioDao: UsuarioDao,
+        sessionRepository: SessionRepository
+    ): UsuarioRepository {
+        return UsuarioRepositoryImpl(usuarioDao, sessionRepository)
     }
 
-    // ✅ AÑADIDO: Recetas para la autenticación
     @Provides
     @Singleton
     fun provideCredentialManager(@ApplicationContext context: Context): CredentialManager {

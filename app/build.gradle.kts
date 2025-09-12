@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.google.gms.google.services)
+    kotlin("kapt")
 
 }
 
@@ -53,6 +54,14 @@ kotlin {
 }
 
 dependencies {
+
+    implementation(libs.hilt.android)
+    //kapt(libs.hilt.compiler)
+
+    implementation(libs.androidx.hilt.navigation.compose)
+    kapt(libs.androidx.hilt.compiler)
+
+    implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.lifecycle.runtime.compose)
     // --- Firebase ---
     implementation(platform(libs.firebase.bom))

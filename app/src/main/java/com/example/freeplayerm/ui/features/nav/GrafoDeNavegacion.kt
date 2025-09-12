@@ -1,40 +1,43 @@
-// app/src/main/java/com/example/freeplayerm/ui/navigation/GrafoDeNavegacion.kt
-
+// app/src/main/java/com/example/freeplayerm/ui/features/nav/GrafoDeNavegacion.kt
 package com.example.freeplayerm.ui.features.nav
 
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.freeplayerm.ui.features.biblioteca.Biblioteca
 import com.example.freeplayerm.ui.features.login.PantallaLogin
 import com.example.freeplayerm.ui.features.login.PantallaRegistro
 import com.example.freeplayerm.ui.features.splash.PantallaDeCarga
 
 @Composable
-fun GrafoDeNavegacion() {
-    // NavController: Es el cerebro de la navegación. Se encarga de gestionar
-    // la pila de pantallas (back stack) y nos permite navegar entre ellas.
-    val controladorDeNavegacion = rememberNavController()
-
-    // NavHost: Es el contenedor que alojará todas las pantallas navegables.
-    // Define el punto de partida de la navegación con `startDestination`.
+fun GrafoDeNavegacion(
+    navController: NavHostController,
+    rutaDeInicio: String
+) {
     NavHost(
-        navController = controladorDeNavegacion,
-        startDestination = Rutas.PantallaDeCarga.ruta // Empezamos en la pantalla de carga
+        navController = navController,
+        startDestination = rutaDeInicio // Usamos la ruta de inicio que nos pasan
     ) {
-        // composable(ruta) { ... }: Define una pantalla para una ruta específica.
+        // La pantalla de carga ya no está en el grafo principal si se decide en MainActivity
+        // La dejamos por si la necesitas para otra cosa, pero la ruta de inicio ya la controla.
         composable(Rutas.PantallaDeCarga.ruta) {
-            PantallaDeCarga(controladorDeNavegacion)
+            PantallaDeCarga(navController)
         }
         composable(Rutas.Login.ruta) {
-            PantallaLogin(controladorDeNavegacion)
+            PantallaLogin(navController)
         }
         composable(Rutas.Registro.ruta) {
-            PantallaRegistro(controladorDeNavegacion)
+            PantallaRegistro(navController)
         }
-        composable(Rutas.Biblioteca.ruta) {
-            Biblioteca() // La biblioteca no necesita el controlador por ahora
+        composable(
+            route = Rutas.Biblioteca.ruta,
+            arguments = listOf(navArgument("usuarioId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val usuarioId = backStackEntry.arguments?.getInt("usuarioId") ?: -1
+            Biblioteca(usuarioId = usuarioId)
         }
     }
 }

@@ -1,28 +1,33 @@
 package com.example.freeplayerm.data.repository
 
 import com.example.freeplayerm.data.local.entity.UsuarioEntity
+import kotlinx.coroutines.flow.Flow // <-- Importante añadir
 
-/**
- * Esta interfaz define el "contrato" para nuestro Repositorio de Usuarios.
- * Describe las operaciones de datos que nuestra aplicación puede realizar relacionadas con los usuarios,
- * abstrayendo los detalles de la fuente de datos (en este caso, Room).
- */
 interface UsuarioRepository {
 
     suspend fun insertarUsuario(usuario: UsuarioEntity)
-
     suspend fun obtenerUsuarioPorCorreo(correo: String): UsuarioEntity?
-
     suspend fun actualizarUsuario(usuario: UsuarioEntity)
-
     suspend fun eliminarUsuario(usuario: UsuarioEntity)
+    suspend fun obtenerUsuarioPorId(id: Int): UsuarioEntity?
 
-    // Cambiamos el metodo: ahora recibe datos primitivos, no la entidad.
+    // --- NUEVA FUNCIÓN AÑADIDA A LA INTERFAZ ---
+    fun obtenerUsuarioPorIdFlow(id: Int): Flow<UsuarioEntity?>
+
     suspend fun registrarUsuarioLocal(
         nombreUsuario: String,
         correo: String,
         contrasena: String
-    ): Result<Unit>
-    suspend fun iniciarSesionLocal(identificador: String, contrasena: String): Result<UsuarioEntity>
-    suspend fun buscarOCrearUsuarioGoogle(correo: String, nombreUsuario: String): Result<UsuarioEntity>
+    ): Result<UsuarioEntity>
+
+    suspend fun iniciarSesionLocal(
+        identificador:String,
+        contrasena: String
+    ): Result<UsuarioEntity>
+
+    suspend fun buscarOCrearUsuarioGoogle(
+        correo: String,
+        nombreUsuario: String,
+        fotoUrl: String?
+    ): Result<UsuarioEntity>
 }

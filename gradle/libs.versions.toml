@@ -1,9 +1,11 @@
 [versions]
 # --- Herramientas de Construcción ---
 agp = "8.9.3"
+datastorePreferences = "1.1.7"
 kotlin = "2.2.0"
 ksp = "2.2.0-2.0.2"
 hilt = "2.57.1" # Versión actualizada y estable
+androidx-hilt = "1.3.0"
 composeCompiler = "1.5.15"
 googleGmsPlugin = "4.4.3"
 
@@ -34,7 +36,11 @@ androidxJunit = "1.3.0"
 espressoCore = "3.7.0"
 
 [libraries]
+
+
+androidx-hilt-compiler = { module = "androidx.hilt:hilt-compiler", version.ref = "androidx-hilt" }
 # --- Firebase y Google ---
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferences" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycleKtx" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics", version = "23.0.0" }

@@ -1,34 +1,36 @@
-// petterkertpz/freeplayerm/FreePlayerM-bd9d6ee82a89fc2c742c9ea4a386bd47da80145d/app/src/main/java/com/example/freeplayerm/data/local/Converters.kt
-
+// en: app/src/main/java/com/example/freeplayerm/data/local/Converters.kt
 package com.example.freeplayerm.data.local
 
 import androidx.room.TypeConverter
 import java.util.Date
 
 /**
- * Los TypeConverters le enseñan a Room a convertir tipos de datos que no soporta
- * de forma nativa (como Date) a tipos que sí soporta (como Long).
+ * Esta clase le dice a Room cómo convertir tipos de datos complejos que no soporta de forma nativa.
+ * En este caso, le enseñamos a convertir un objeto 'Date' a 'Long' y viceversa.
  */
 class Converters {
+
     /**
-     * Convierte un timestamp (un número Long que representa milisegundos desde 1970)
-     * a un objeto Date. Room usará esto cuando lea datos de la base de datos.
-     * @param valor El número Long de la base de datos.
-     * @return Un objeto Date, o null si el valor era nulo.
+     * Convierte un Long (milisegundos desde la época) a un objeto Date.
+     * Room usará esta función cuando lea datos de la base de datos.
+     * @param value El valor numérico de la base de datos.
+     * @return Un objeto Date, o null si el valor de la base de datos es nulo.
      */
     @TypeConverter
-    fun desdeTimestamp(valor: Long?): Date? {
-        return valor?.let { Date(it) }
+    fun fromTimestamp(value: Long?): Date? {
+        // Si el valor no es nulo, crea un nuevo objeto Date con él.
+        return value?.let { Date(it) }
     }
 
     /**
-     * Convierte un objeto Date a un timestamp (Long). Room usará esto
-     * cuando escriba datos en la base de datos.
-     * @param fecha El objeto Date a convertir.
-     * @return Un Long que representa la fecha, o null si la fecha era nula.
+     * Convierte un objeto Date a un Long (milisegundos).
+     * Room usará esta función cuando escriba datos en la base de datos.
+     * @param date El objeto Date de nuestra entidad.
+     * @return Un Long que representa la fecha, o null si el objeto Date es nulo.
      */
     @TypeConverter
-    fun fechaATimestamp(fecha: Date?): Long? {
-        return fecha?.time
+    fun dateToTimestamp(date: Date?): Long? {
+        // Devuelve los milisegundos de la fecha.
+        return date?.time
     }
 }
