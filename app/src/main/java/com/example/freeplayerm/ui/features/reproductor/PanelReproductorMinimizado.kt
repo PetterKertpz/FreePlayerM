@@ -1,6 +1,7 @@
 // en: app/src/main/java/com/example/freeplayerm/ui/features/reproductor/PanelReproductorMinimizado.kt
 package com.example.freeplayerm.ui.features.reproductor
 
+import android.annotation.SuppressLint
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -48,6 +49,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.freeplayerm.R
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations.CancionEntity
+import com.example.freeplayerm.ui.theme.AppColors
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,9 +71,14 @@ fun PanelReproductorMinimizado(
             modifier = Modifier
                 .background(
                     brush = Brush.horizontalGradient(
-                        colors = listOf(Color.Black, Color(0xFF6A1B9A))
+                        colorStops = arrayOf(
+                            0.1f to Color.Black,   // empieza en negro
+                            0.325f to Color.Black,   // mantenemos negro hasta el 60%
+                            0.60f to Color(0xFF6A1B9A) // de ahí al final se mezcla al morado
+                        )
                     )
                 )
+
                 .fillMaxSize()
                 .padding(
                     vertical = 5.dp,
@@ -101,7 +109,7 @@ fun PanelReproductorMinimizado(
                     Text(
                         text = cancion.titulo,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 40.sp,
+                        fontSize = 35.sp,
                         color = Color.White,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -117,105 +125,11 @@ fun PanelReproductorMinimizado(
 
 
                     // --- Controles de reproducción ---
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp, bottom = 4.dp)
-                    ) {
-                        // Controles centrados
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(5.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.align(Alignment.Center)
-                        ) {
-                            val iconSize = 20.dp   // 🔑 tamaño de los íconos
-                            val buttonSize = 20.dp // 🔑 tamaño del área de cada botón
-
-                            // Aleatorio / Orden
-                            IconButton(
-                                onClick = { enEvento(ReproductorEvento.CambiarModoReproduccion) },
-                                modifier = Modifier.size(buttonSize)
-                            ) {
-                                Icon(
-                                    imageVector = IconosReproductor.Aleatorio,
-                                    contentDescription = "Modo reproducción",
-                                    tint = if (estado.modoReproduccion == ModoReproduccion.ALEATORIO) Color.Magenta else Color.White,
-                                    modifier = Modifier.size(iconSize)
-                                )
-                            }
-
-                            // Canción anterior
-                            IconButton(
-                                onClick = { enEvento(ReproductorEvento.CancionAnterior) },
-                                modifier = Modifier.size(buttonSize)
-                            ) {
-                                Icon(
-                                    imageVector = IconosReproductor.Anterior,
-                                    contentDescription = "Anterior",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(iconSize)
-                                )
-                            }
-
-                            // Play / Pausa
-                            IconButton(
-                                onClick = { enEvento(ReproductorEvento.ReproducirPausar) },
-                                modifier = Modifier.size(buttonSize + 8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (estado.estaReproduciendo) IconosReproductor.Pausa else IconosReproductor.Reproducir,
-                                    contentDescription = "Play/Pause",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(iconSize + 4.dp)
-                                )
-                            }
-
-                            // Siguiente
-                            IconButton(
-                                onClick = { enEvento(ReproductorEvento.SiguienteCancion) },
-                                modifier = Modifier.size(buttonSize)
-                            ) {
-                                Icon(
-                                    imageVector = IconosReproductor.Siguiente,
-                                    contentDescription = "Siguiente",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(iconSize)
-                                )
-                            }
-
-                            // Repetición
-                            IconButton(
-                                onClick = { enEvento(ReproductorEvento.CambiarModoRepeticion) },
-                                modifier = Modifier.size(buttonSize)
-                            ) {
-                                val iconoRepeticion = when (estado.modoRepeticion) {
-                                    ModoRepeticion.NO_REPETIR -> IconosReproductor.NoRepetir
-                                    ModoRepeticion.REPETIR_LISTA -> IconosReproductor.RepetirLista
-                                    ModoRepeticion.REPETIR_CANCION -> IconosReproductor.RepetirCancion
-                                }
-                                Icon(
-                                    imageVector = iconoRepeticion,
-                                    contentDescription = "Repetición",
-                                    tint = if (estado.modoRepeticion != ModoRepeticion.NO_REPETIR) Color.Magenta else Color.White,
-                                    modifier = Modifier.size(iconSize)
-                                )
-                            }
-                        }
-
-                        // Corazón a la derecha
-                        IconButton(
-                            onClick = { enEvento(ReproductorEvento.AlternarFavorito) },
-                            modifier = Modifier
-                                .align(Alignment.CenterEnd)
-                                .size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (estado.esFavorita) IconosReproductor.Favorito else IconosReproductor.NoFavorito,
-                                contentDescription = "Favorito",
-                                tint = if (estado.esFavorita) Color.Magenta else Color.White
-                            )
-                        }
-                    }
+                    ControlesConTiempo(
+                        estado = estado,
+                        enEvento = enEvento,
+                        duracionTotalMs = (cancion.duracionSegundos * 1000).toLong()
+                    )
 
                     // Slider
                     Slider(
@@ -236,6 +150,84 @@ fun PanelReproductorMinimizado(
             }
         }
     }
+}
+
+@Composable
+private fun ControlesConTiempo(
+    estado: ReproductorEstado,
+    enEvento: (ReproductorEvento) -> Unit,
+    duracionTotalMs: Long
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        // --- Contador de tiempo actual ---
+        Text(
+            text = formatTiempo(estado.progresoActualMs),
+            color = Color.White,
+            fontSize = 12.sp
+        )
+
+        // --- Botones de control (ocupan el espacio central) ---
+        Row(
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            val iconSize = 22.dp
+            val buttonSize = 24.dp
+
+            // Aleatorio
+            IconButton(onClick = { enEvento(ReproductorEvento.CambiarModoReproduccion) }, modifier = Modifier.size(buttonSize)) {
+                Icon(
+                    imageVector = IconosReproductor.Aleatorio,
+                    contentDescription = "Modo reproducción",
+                    tint = if (estado.modoReproduccion == ModoReproduccion.ALEATORIO) AppColors.AcentoRosa else Color.White,
+                    modifier = Modifier.size(iconSize)
+                )
+            }
+            // Anterior
+            IconButton(onClick = { enEvento(ReproductorEvento.CancionAnterior) }, modifier = Modifier.size(buttonSize)) {
+                Icon(imageVector = IconosReproductor.Anterior, contentDescription = "Anterior", tint = Color.White, modifier = Modifier.size(iconSize))
+            }
+            // Play/Pausa
+            IconButton(onClick = { enEvento(ReproductorEvento.ReproducirPausar) }, modifier = Modifier.size(buttonSize + 12.dp)) {
+                Icon(
+                    imageVector = if (estado.estaReproduciendo) IconosReproductor.Pausa else IconosReproductor.Reproducir,
+                    contentDescription = "Play/Pause", tint = Color.White, modifier = Modifier.size(iconSize + 12.dp)
+                )
+            }
+            // Siguiente
+            IconButton(onClick = { enEvento(ReproductorEvento.SiguienteCancion) }, modifier = Modifier.size(buttonSize)) {
+                Icon(imageVector = IconosReproductor.Siguiente, contentDescription = "Siguiente", tint = Color.White, modifier = Modifier.size(iconSize))
+            }
+            // Repetir
+            IconButton(onClick = { enEvento(ReproductorEvento.CambiarModoRepeticion) }, modifier = Modifier.size(buttonSize)) {
+                val (icono, color) = when (estado.modoRepeticion) {
+                    ModoRepeticion.NO_REPETIR -> IconosReproductor.RepetirLista to Color.White
+                    ModoRepeticion.REPETIR_LISTA -> IconosReproductor.RepetirLista to AppColors.AcentoRosa
+                    ModoRepeticion.REPETIR_CANCION -> IconosReproductor.RepetirCancion to AppColors.AcentoRosa
+                }
+                Icon(imageVector = icono, contentDescription = "Repetir", tint = color, modifier = Modifier.size(iconSize))
+            }
+        }
+
+        // --- Contador de tiempo total ---
+        Text(
+            text = formatTiempo(duracionTotalMs),
+            color = Color.White,
+            fontSize = 12.sp
+        )
+    }
+}
+
+@SuppressLint("DefaultLocale")
+private fun formatTiempo(milisegundos: Long): String {
+    val minutos = TimeUnit.MILLISECONDS.toMinutes(milisegundos)
+    val segundos = TimeUnit.MILLISECONDS.toSeconds(milisegundos) % 60
+    return String.format("%02d:%02d", minutos, segundos)
 }
 
 @Composable
