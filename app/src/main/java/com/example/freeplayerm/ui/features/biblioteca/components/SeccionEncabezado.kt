@@ -32,15 +32,25 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.freeplayerm.data.local.entity.UsuarioEntity
+import com.example.freeplayerm.ui.features.biblioteca.TipoDeCuerpoBiblioteca
 import com.example.freeplayerm.ui.theme.AppColors
 import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SeccionEncabezado(
-    usuario: UsuarioEntity? // <-- CAMBIO CLAVE 1: Recibe el usuario como parámetro.
+    usuario: UsuarioEntity?, // <-- CAMBIO CLAVE 1: Recibe el usuario como parámetro
+    cuerpoActual: TipoDeCuerpoBiblioteca, // <-- NUEVO: Para saber qué botón resaltar
+    onMenuClick: (TipoDeCuerpoBiblioteca) -> Unit // <-- NUEVO: Callback para notificar clics
 ) {
-    val menus = listOf("Canciones", "Listas", "Álbumes", "Artistas", "Géneros", "Favoritos")
+    val menus = listOf(
+        "Canciones" to TipoDeCuerpoBiblioteca.CANCIONES,
+        "Álbumes" to TipoDeCuerpoBiblioteca.ALBUMES,
+        "Artistas" to TipoDeCuerpoBiblioteca.ARTISTAS,
+        "Géneros" to TipoDeCuerpoBiblioteca.GENEROS,
+        "Listas" to TipoDeCuerpoBiblioteca.LISTAS,
+        "Favoritos" to TipoDeCuerpoBiblioteca.FAVORITOS
+    )
     Column (
         modifier = Modifier
             .background(
@@ -98,17 +108,19 @@ fun SeccionEncabezado(
             ),
             modifier = Modifier.fillMaxWidth()
         ) {
-            items(menus) { menu ->
+            items(menus) { (nombreMenu, tipoDeCuerpo) ->
+                val estaSeleccionado = cuerpoActual == tipoDeCuerpo
                 Button(
-                    onClick = { /* Lógica de clic del menú */ },
+                    onClick = { onMenuClick(tipoDeCuerpo) }, // Notificamos qué menú se seleccionó
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = AppColors.Negro.copy(alpha = 0.5f), // Semitransparente
+                        // Cambia de color si es el menú activo
+                        containerColor = if (estaSeleccionado) AppColors.Negro else AppColors.Negro.copy(alpha = 0.5f),
                         contentColor = AppColors.Blanco
                     ),
                     border = BorderStroke(width = 1.dp, color = AppColors.GrisProfundo),
                 ) {
                     Text(
-                        text = menu,
+                        text = nombreMenu,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -118,18 +130,21 @@ fun SeccionEncabezado(
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
+@Preview(showBackground = true)
 @Composable
-fun PreviewSeccionEncabezado() { // Renombrada para claridad
-    // <-- CAMBIO CLAVE 3: Arreglamos la Preview dándole datos de ejemplo.
+fun PreviewSeccionEncabezado() {
     val usuarioDePrueba = UsuarioEntity(
         id = 1,
         nombreUsuario = "Preview User",
         correo = "preview@test.com",
         contrasenaHash = "",
         fechaRegistro = Date(),
-        fotoPerfilUrl = "https://ui-avatars.com/api/?name=PU", // URL de prueba
+        fotoPerfilUrl = "",
         tipoAutenticacion = "LOCAL"
     )
-    SeccionEncabezado(usuario = usuarioDePrueba)
+    SeccionEncabezado(
+        usuario = usuarioDePrueba,
+        cuerpoActual = TipoDeCuerpoBiblioteca.CANCIONES,
+        onMenuClick = {}
+    )
 }
