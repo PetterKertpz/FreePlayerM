@@ -50,6 +50,7 @@ import coil.compose.AsyncImage
 import com.example.freeplayerm.R
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations.CancionEntity
 import com.example.freeplayerm.ui.theme.AppColors
+import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -293,5 +294,33 @@ fun PreviewPanelReproductorEstado() {
 
     MaterialTheme {
         PanelReproductorMinimizado(estado = estadoDemo, enEvento = {})
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun PreviewPanelReproductorMinimizado() {
+    val cancionDePrueba = CancionEntity(
+        idCancion = 1,
+        titulo = "El Sol no Regresa",
+        idArtista = 1,
+        idAlbum = 1,
+        idGenero = 1,
+        duracionSegundos = 227,
+        portadaUrl = "",
+        origen = "LOCAL",
+        archivoPath = null
+    )
+    FreePlayerMTheme {
+        PanelReproductorMinimizado(
+            estado = ReproductorEstado(
+                cancionActual = cancionDePrueba,
+                estaReproduciendo = true,
+                progresoActualMs = 75000, // 1 minuto y 15 segundos
+                modoReproduccion = ModoReproduccion.ALEATORIO,
+                modoRepeticion = ModoRepeticion.REPETIR_CANCION
+            ),
+            enEvento = {}
+        )
     }
 }
