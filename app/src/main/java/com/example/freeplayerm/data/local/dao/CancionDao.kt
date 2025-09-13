@@ -5,7 +5,8 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations.CancionEntity
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.AlbumEntity
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -20,6 +21,11 @@ interface CancionDao {
     @Query("SELECT * FROM canciones WHERE id_cancion = :id")
     fun obtenerCancionPorId(id: Int): Flow<CancionEntity?>
 
+    @Query("SELECT * FROM albumes ORDER BY anio DESC")
+    fun obtenerTodosLosAlbumes(): Flow<List<AlbumEntity>>
+
+    @Query("SELECT * FROM canciones WHERE id_album = :albumId ORDER BY titulo ASC")
+    fun obtenerCancionesPorAlbumId(albumId: Int): Flow<List<CancionEntity>>
     // Aquí podemos añadir más consultas en el futuro, como:
     // - Obtener canciones por artista
     // - Obtener canciones de un álbum

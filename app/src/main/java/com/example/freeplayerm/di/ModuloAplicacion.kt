@@ -5,8 +5,9 @@ import androidx.credentials.CredentialManager
 import androidx.room.Room
 import com.example.freeplayerm.core.auth.GoogleAuthUiClient
 import com.example.freeplayerm.data.local.AppDatabase
+import com.example.freeplayerm.data.local.dao.CancionDao // <-- Importante
 import com.example.freeplayerm.data.local.dao.UsuarioDao
-import com.example.freeplayerm.data.repository.SessionRepository // <-- Importante
+import com.example.freeplayerm.data.repository.SessionRepository
 import com.example.freeplayerm.data.repository.UsuarioRepository
 import com.example.freeplayerm.data.repository.UsuarioRepositoryImpl
 import dagger.Module
@@ -27,7 +28,11 @@ object ModuloAplicacion {
             context,
             AppDatabase::class.java,
             "freeplayer_database"
-        ).build()
+        )
+            // AÑADIDO: Permite a Room destruir y recrear la BD si las migraciones fallan
+            // Es útil durante el desarrollo, pero para producción se necesitaría un plan de migración.
+            .fallbackToDestructiveMigration(false)
+            .build()
     }
 
     @Provides
@@ -36,9 +41,14 @@ object ModuloAplicacion {
         return appDatabase.usuarioDao()
     }
 
-    // --- CAMBIO CLAVE AQUÍ ---
-    // La función ahora recibe SessionRepository como parámetro.
-    // Hilt ya sabe cómo proveerlo porque tiene la anotación @Inject.
+    // --- ¡RECETA AÑADIDA AQUÍ! ---
+    // Le decimos a Hilt cómo crear un CancionDao.
+    @Provides
+    @Singleton
+    fun provideCancionDao(appDatabase: AppDatabase): CancionDao {
+        return appDatabase.cancionDao() // Simplemente lo pedimos a nuestra base de datos.
+    }
+
     @Provides
     @Singleton
     fun provideUsuarioRepository(

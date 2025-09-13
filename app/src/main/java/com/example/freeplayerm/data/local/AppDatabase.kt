@@ -4,13 +4,13 @@ package com.example.freeplayerm.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations.AlbumEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations.ArtistaEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations.CancionEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations.DetalleListaReproduccion
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations.Favorito
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations.GeneroEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations.ListaReproduccionEntity
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.AlbumEntity
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ArtistaEntity
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.DetalleListaReproduccionEntity
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.FavoritoEntity
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.GeneroEntity
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ListaReproduccionEntity
 import com.example.freeplayerm.data.local.dao.CancionDao
 import com.example.freeplayerm.data.local.dao.UsuarioDao
 import com.example.freeplayerm.data.local.entity.UsuarioEntity
@@ -25,8 +25,8 @@ import com.example.freeplayerm.data.local.entity.UsuarioEntity
         GeneroEntity::class,
         CancionEntity::class,
         ListaReproduccionEntity::class,
-        DetalleListaReproduccion::class,
-        Favorito::class
+        DetalleListaReproduccionEntity::class,
+        FavoritoEntity::class
     ],
     version = 2, // ¡IMPORTANTE! Se incrementa la versión por el cambio de esquema
     exportSchema = false

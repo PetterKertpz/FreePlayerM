@@ -45,10 +45,10 @@ fun SeccionEncabezado(
 ) {
     val menus = listOf(
         "Canciones" to TipoDeCuerpoBiblioteca.CANCIONES,
+        "Listas" to TipoDeCuerpoBiblioteca.LISTAS,
         "Álbumes" to TipoDeCuerpoBiblioteca.ALBUMES,
         "Artistas" to TipoDeCuerpoBiblioteca.ARTISTAS,
         "Géneros" to TipoDeCuerpoBiblioteca.GENEROS,
-        "Listas" to TipoDeCuerpoBiblioteca.LISTAS,
         "Favoritos" to TipoDeCuerpoBiblioteca.FAVORITOS
     )
     Column (

@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations.CancionEntity
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
 import com.example.freeplayerm.ui.features.biblioteca.BibliotecaEstado
 import com.example.freeplayerm.ui.features.biblioteca.BibliotecaEvento
 import com.example.freeplayerm.ui.features.reproductor.ReproductorEvento

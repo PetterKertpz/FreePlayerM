@@ -1,17 +1,17 @@
 // en: app/src/main/java/com/example/freeplayerm/ui/features/biblioteca/BibliotecaViewModel.kt
 package com.example.freeplayerm.ui.features.biblioteca
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations.AlbumEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations.ArtistaEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations.CancionEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations.GeneroEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations.ListaReproduccionEntity
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.AlbumEntity
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ArtistaEntity
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.GeneroEntity
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ListaReproduccionEntity
 import com.example.freeplayerm.data.local.dao.CancionDao
 import com.example.freeplayerm.data.local.entity.UsuarioEntity
 import com.example.freeplayerm.data.repository.UsuarioRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -63,6 +63,7 @@ sealed class BibliotecaEvento {
     data class CambiarCuerpo(val nuevoCuerpo: TipoDeCuerpoBiblioteca) : BibliotecaEvento()
     data class TextoDeBusquedaCambiado(val texto: String) : BibliotecaEvento()
     data class FiltroCambiado(val filtro: TipoDeFiltro) : BibliotecaEvento()
+    data class AlbumSeleccionado(val album: AlbumEntity) : BibliotecaEvento()
 }
 
 @HiltViewModel
@@ -77,11 +78,12 @@ class BibliotecaViewModel @Inject constructor(
 
     // Flow que contiene el texto de búsqueda actual
     private val textoDeBusqueda = MutableStateFlow("")
+    private var jobDeDatos: Job? = null // Para gestionar las corrutinas de carga
 
     init {
         // Al iniciar, cargamos la vista por defecto (Canciones)
-        cambiarCuerpo(TipoDeCuerpoBiblioteca.CANCIONES)
         observarCambiosEnCanciones()
+        enEvento(BibliotecaEvento.CambiarCuerpo(TipoDeCuerpoBiblioteca.CANCIONES))
     }
 
     /**
@@ -89,14 +91,19 @@ class BibliotecaViewModel @Inject constructor(
      */
     fun enEvento(evento: BibliotecaEvento) {
         when (evento) {
-            is BibliotecaEvento.CambiarCuerpo -> cambiarCuerpo(evento.nuevoCuerpo)
+            // --- CORRECCIÓN AQUÍ ---
+            // Le pasamos 'null' explícitamente para el parámetro 'album'
+            // ya que este evento solo cambia el menú principal.
+            is BibliotecaEvento.CambiarCuerpo -> cambiarCuerpo(evento.nuevoCuerpo, album = null)
             is BibliotecaEvento.TextoDeBusquedaCambiado -> {
                 textoDeBusqueda.value = evento.texto
                 _estadoUi.update { it.copy(textoDeBusqueda = evento.texto) }
             }
             is BibliotecaEvento.FiltroCambiado -> {
                 _estadoUi.update { it.copy(filtroActual = evento.filtro) }
-                // Aquí podrías relanzar la observación si el filtro requiere una nueva consulta a la BD
+            }
+            is BibliotecaEvento.AlbumSeleccionado -> {
+                cambiarCuerpo(TipoDeCuerpoBiblioteca.CANCIONES_DE_ALBUM, evento.album)
             }
         }
     }
@@ -127,7 +134,7 @@ class BibliotecaViewModel @Inject constructor(
      * Función pública que la UI llamará para cambiar la sección visible.
      * @param nuevoCuerpo El tipo de cuerpo que se desea mostrar.
      */
-    fun cambiarCuerpo(nuevoCuerpo: TipoDeCuerpoBiblioteca) {
+    fun cambiarCuerpo(nuevoCuerpo: TipoDeCuerpoBiblioteca, album: AlbumEntity?) {
         viewModelScope.launch {
             _estadoUi.update { it.copy(cuerpoActual = nuevoCuerpo) }
 
@@ -135,13 +142,33 @@ class BibliotecaViewModel @Inject constructor(
             when (nuevoCuerpo) {
                 TipoDeCuerpoBiblioteca.CANCIONES -> {
                     _estadoUi.update { it.copy(tituloDelCuerpo = "Canciones") }
-                    cancionDao.obtenerTodasLasCanciones().collectLatest { lista ->
-                        _estadoUi.update { it.copy(canciones = lista) }
-                    }
+                    cancionDao.obtenerTodasLasCanciones()
+                        .combine(textoDeBusqueda) { canciones, busqueda ->
+                            if (busqueda.isBlank()) canciones
+                            else canciones.filter { it.titulo.contains(busqueda, ignoreCase = true) }
+                        }.collectLatest { lista ->
+                            _estadoUi.update { it.copy(canciones = lista) }
+                        }
                 }
+                // --- ¡NUEVA LÓGICA AÑADIDA! ---
                 TipoDeCuerpoBiblioteca.ALBUMES -> {
                     _estadoUi.update { it.copy(tituloDelCuerpo = "Álbumes") }
-                    // TODO: Cargar lista de álbumes desde el repositorio
+                    cancionDao.obtenerTodosLosAlbumes().collectLatest { lista ->
+                        _estadoUi.update { it.copy(albumes = lista) }
+                    }
+                }
+                // --- ¡NUEVO CASO! ---
+                TipoDeCuerpoBiblioteca.CANCIONES_DE_ALBUM -> {
+                    if (true) {
+                        if (album != null) {
+                            _estadoUi.update { it.copy(tituloDelCuerpo = album.titulo) }
+                        }
+                        if (album != null) {
+                            cancionDao.obtenerCancionesPorAlbumId(album.idAlbum).collectLatest { lista ->
+                                _estadoUi.update { it.copy(canciones = lista) }
+                            }
+                        }
+                    }
                 }
                 TipoDeCuerpoBiblioteca.ARTISTAS -> {
                     _estadoUi.update { it.copy(tituloDelCuerpo = "Artistas") }
@@ -151,6 +178,7 @@ class BibliotecaViewModel @Inject constructor(
                     _estadoUi.update { it.copy(tituloDelCuerpo = "Géneros") }
                     // TODO: Cargar lista de géneros desde el repositorio
                 }
+
                 // ... añadir casos para las otras secciones (Listas, Favoritos, etc.)
                 else -> {
                     // Por defecto, no hacer nada o cargar la lista de canciones

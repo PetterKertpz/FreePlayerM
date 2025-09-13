@@ -1,7 +1,7 @@
 // en: app/src/main/java/com/example/freeplayerm/ui/features/reproductor/ReproductorEstado.kt
 package com.example.freeplayerm.ui.features.reproductor
 
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations.CancionEntity
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
 
 // Representa los posibles modos de reproducción de la lista de canciones.
 enum class ModoReproduccion {

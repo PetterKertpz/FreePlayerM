@@ -1,4 +1,4 @@
-package com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations
+package com.example.freeplayerm.com.example.freeplayerm.data.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
@@ -22,7 +22,7 @@ import androidx.room.ForeignKey
         )
     ]
 )
-data class DetalleListaReproduccion(
+data class DetalleListaReproduccionEntity(
     @ColumnInfo(name = "id_lista")
     val idLista: Int,
 

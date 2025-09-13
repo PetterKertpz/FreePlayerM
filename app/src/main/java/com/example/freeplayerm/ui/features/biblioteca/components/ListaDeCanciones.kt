@@ -28,7 +28,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations.CancionEntity
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 import java.util.concurrent.TimeUnit
 

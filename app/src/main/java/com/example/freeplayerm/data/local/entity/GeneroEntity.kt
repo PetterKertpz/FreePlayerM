@@ -1,5 +1,5 @@
 // en: app/src/main/java/com/example/freeplayerm/data/local/entity/GeneroEntity.kt
-package com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations
+package com.example.freeplayerm.com.example.freeplayerm.data.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity

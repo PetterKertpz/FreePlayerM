@@ -1,4 +1,4 @@
-package com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations
+package com.example.freeplayerm.com.example.freeplayerm.data.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
@@ -23,7 +23,7 @@ import com.example.freeplayerm.data.local.entity.UsuarioEntity
         )
     ]
 )
-data class Favorito(
+data class FavoritoEntity(
     @ColumnInfo(name = "id_usuario")
     val idUsuario: Int,
 
