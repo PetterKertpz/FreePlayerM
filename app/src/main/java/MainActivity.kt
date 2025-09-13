@@ -1,3 +1,5 @@
+// en: app/src/main/java/com/example/freeplayerm/MainActivity.kt
+
 package com.example.freeplayerm
 
 import android.os.Bundle
@@ -13,20 +15,25 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.example.freeplayerm.ui.features.nav.GrafoDeNavegacion
 import com.example.freeplayerm.ui.features.nav.Rutas
+import com.example.freeplayerm.ui.features.reproductor.ReproductorViewModel
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    private val viewModel: MainViewModel by viewModels()
+    // Inyectamos el MainViewModel para la lógica de sesión
+    private val mainViewModel: MainViewModel by viewModels()
+    // --- CAMBIO CLAVE ---
+    // Inyectamos el ReproductorViewModel a nivel de Actividad.
+    // Su estado persistirá mientras la actividad esté viva.
+    private val reproductorViewModel: ReproductorViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             FreePlayerMTheme {
-                val usuario by viewModel.usuarioActual.collectAsStateWithLifecycle()
+                val usuario by mainViewModel.usuarioActual.collectAsStateWithLifecycle()
 
-                // La ruta de inicio ahora puede ser Login o Biblioteca
                 val rutaDeInicio = if (usuario != null) {
                     Rutas.Biblioteca.crearRuta(usuario!!.id)
                 } else {
@@ -38,8 +45,13 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    // Esta llamada ahora es correcta porque coincide con la nueva firma de GrafoDeNavegacion
-                    GrafoDeNavegacion(navController = navController, rutaDeInicio = rutaDeInicio)
+
+                    // Pasamos la instancia del ReproductorViewModel a nuestro grafo de navegación
+                    GrafoDeNavegacion(
+                        navController = navController,
+                        rutaDeInicio = rutaDeInicio,
+                        reproductorViewModel = reproductorViewModel // <-- ¡NUEVO!
+                    )
                 }
             }
         }

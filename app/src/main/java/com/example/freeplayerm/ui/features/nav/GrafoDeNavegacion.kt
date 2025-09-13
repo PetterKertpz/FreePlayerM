@@ -1,4 +1,4 @@
-// app/src/main/java/com/example/freeplayerm/ui/features/nav/GrafoDeNavegacion.kt
+// en: app/src/main/java/com/example/freeplayerm/ui/features/nav/GrafoDeNavegacion.kt
 package com.example.freeplayerm.ui.features.nav
 
 import androidx.compose.runtime.Composable
@@ -10,22 +10,20 @@ import androidx.navigation.navArgument
 import com.example.freeplayerm.ui.features.biblioteca.Biblioteca
 import com.example.freeplayerm.ui.features.login.PantallaLogin
 import com.example.freeplayerm.ui.features.login.PantallaRegistro
-import com.example.freeplayerm.ui.features.splash.PantallaDeCarga
+import com.example.freeplayerm.ui.features.reproductor.ReproductorViewModel
 
+
+// --- CAMBIO CLAVE AQUÍ ---
 @Composable
 fun GrafoDeNavegacion(
     navController: NavHostController,
-    rutaDeInicio: String
+    rutaDeInicio: String,
+    reproductorViewModel: ReproductorViewModel // <-- Aceptamos el ViewModel compartido
 ) {
     NavHost(
         navController = navController,
-        startDestination = rutaDeInicio // Usamos la ruta de inicio que nos pasan
+        startDestination = rutaDeInicio
     ) {
-        // La pantalla de carga ya no está en el grafo principal si se decide en MainActivity
-        // La dejamos por si la necesitas para otra cosa, pero la ruta de inicio ya la controla.
-        composable(Rutas.PantallaDeCarga.ruta) {
-            PantallaDeCarga(navController)
-        }
         composable(Rutas.Login.ruta) {
             PantallaLogin(navController)
         }
@@ -37,7 +35,11 @@ fun GrafoDeNavegacion(
             arguments = listOf(navArgument("usuarioId") { type = NavType.IntType })
         ) { backStackEntry ->
             val usuarioId = backStackEntry.arguments?.getInt("usuarioId") ?: -1
-            Biblioteca(usuarioId = usuarioId)
+            // Se lo pasamos a la pantalla Biblioteca
+            Biblioteca(
+                usuarioId = usuarioId,
+                reproductorViewModel = reproductorViewModel // <-- ¡NUEVO!
+            )
         }
     }
 }

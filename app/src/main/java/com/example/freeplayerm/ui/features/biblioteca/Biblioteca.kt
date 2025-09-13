@@ -1,4 +1,4 @@
-// app/src/main/java/com/example/freeplayerm/ui/features/biblioteca/Biblioteca.kt
+// en: app/src/main/java/com/example/freeplayerm/ui/features/biblioteca/Biblioteca.kt
 package com.example.freeplayerm.ui.features.biblioteca
 
 import androidx.compose.foundation.layout.padding
@@ -11,27 +11,40 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.freeplayerm.ui.features.biblioteca.components.ListaDeCanciones
 import com.example.freeplayerm.ui.features.biblioteca.components.SeccionEncabezado
+import com.example.freeplayerm.ui.features.reproductor.PanelReproductorMinimizado // <-- Importamos el nuevo panel
+import com.example.freeplayerm.ui.features.reproductor.ReproductorViewModel
 
+// --- CAMBIO CLAVE AQUÍ ---
 @Composable
 fun Biblioteca(
-    usuarioId: Int, // Recibe el ID desde el grafo de navegación
-    viewModel: BibliotecaViewModel = hiltViewModel()
+    usuarioId: Int,
+    bibliotecaViewModel: BibliotecaViewModel = hiltViewModel(),
+    reproductorViewModel: ReproductorViewModel // <-- Recibimos el ViewModel compartido
 ) {
-    val estado by viewModel.estadoUi.collectAsStateWithLifecycle()
+    val estadoBiblioteca by bibliotecaViewModel.estadoUi.collectAsStateWithLifecycle()
+    val estadoReproductor by reproductorViewModel.estadoUi.collectAsStateWithLifecycle() // Observamos su estado
 
-    // Usamos LaunchedEffect para cargar los datos del usuario solo cuando el ID cambie
     LaunchedEffect(usuarioId) {
-        viewModel.cargarDatosDeUsuario(usuarioId)
+        bibliotecaViewModel.cargarDatosDeUsuario(usuarioId)
     }
 
     Scaffold(
         topBar = {
             SeccionEncabezado(
-                usuario = estado.usuarioActual
+                usuario = estadoBiblioteca.usuarioActual
             )
+        },
+        // --- LÓGICA DEL PANEL INFERIOR ---
+        bottomBar = {
+            // Solo mostramos el panel si hay una canción cargada en el reproductor
+            if (estadoReproductor.cancionActual != null) {
+                PanelReproductorMinimizado(
+                    estado = estadoReproductor,
+                    enEvento = reproductorViewModel::enEvento
+                )
+            }
         }
     ) { paddingInterno ->
-        // SOLUCIÓN: Aplicamos el padding al contenido principal
         ListaDeCanciones(
             modifier = Modifier.padding(paddingInterno)
         )

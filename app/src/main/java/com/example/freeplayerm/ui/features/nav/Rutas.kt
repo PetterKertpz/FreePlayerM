@@ -11,5 +11,4 @@ sealed class Rutas(val ruta: String) {
     object Registro : Rutas("registro")
     object Biblioteca : Rutas("biblioteca/{usuarioId}")
         fun crearRuta(usuarioId: Int) = "biblioteca/$usuarioId"
-    object PantallaDeCarga : Rutas("pantalla_de_carga")
 }

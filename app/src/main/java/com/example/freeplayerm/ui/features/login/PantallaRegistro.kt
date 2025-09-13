@@ -34,14 +34,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.freeplayerm.ui.features.login.components.CampoDeTextoAutenticacion
 import com.example.freeplayerm.ui.features.nav.Rutas
 import com.example.freeplayerm.ui.theme.AppColors
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme
-
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 
 /**
  * =================================================================
