@@ -11,6 +11,7 @@ import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relatio
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations.Favorito
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations.GeneroEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.relations.ListaReproduccionEntity
+import com.example.freeplayerm.data.local.dao.CancionDao
 import com.example.freeplayerm.data.local.dao.UsuarioDao
 import com.example.freeplayerm.data.local.entity.UsuarioEntity
 
