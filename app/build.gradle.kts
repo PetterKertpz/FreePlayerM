@@ -54,12 +54,22 @@ kotlin {
 }
 
 dependencies {
+    implementation(libs.composeIcons.cssGg)
+    implementation(libs.composeIcons.weatherIcons)
+    implementation(libs.composeIcons.evaIcons)
+    implementation(libs.composeIcons.feather)
+    implementation(libs.composeIcons.fontAwesome)
+    implementation(libs.composeIcons.lineAwesome)
+    implementation(libs.composeIcons.linea)
+    implementation(libs.composeIcons.octicons)
+    implementation(libs.composeIcons.simpleIcons)
+    implementation(libs.composeIcons.tablerIcons)
 
+    implementation(libs.androidx.material.icons.extended)
     implementation(libs.hilt.android)
-    //kapt(libs.hilt.compiler)
+
 
     implementation(libs.androidx.hilt.navigation.compose)
-    kapt(libs.androidx.hilt.compiler)
 
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.lifecycle.runtime.compose)
@@ -93,20 +103,18 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.font.awesome)
-    implementation(libs.feather)
 
     // --- Base de Datos (Room) ---
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler) // Procesador de anotaciones para Room
-
+    ksp(libs.hilt.compiler)
     // --- Inyección de Dependencias (Hilt) y Navegación ---
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler) // Procesador de anotaciones para Hilt
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.navigation.compose)
-
+    ksp(libs.androidx.hilt.compiler)
     // --- Testing ---
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

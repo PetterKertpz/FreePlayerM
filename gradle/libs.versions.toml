@@ -24,18 +24,30 @@ room = "2.8.0"
 navigationCompose = "2.9.4"
 hiltNavigationCompose = "1.3.0"
 
+
 # --- Otras Librerías ---
 coilCompose = "2.7.0"
 bcrypt = "0.10.2"
-feather = "1.1.1"
-fontAwesome = "1.1.1"
+
 
 # --- Testing ---
 junit = "4.13.2"
 androidxJunit = "1.3.0"
-espressoCore = "3.7.0"
 
 [libraries]
+composeIcons-cssGg = { module = "br.com.devsrsouza.compose.icons:css-gg", version = "1.1.1" }
+composeIcons-weatherIcons = { module = "br.com.devsrsouza.compose.icons:erikflowers-weather-icons", version = "1.1.1" }
+composeIcons-evaIcons = { module = "br.com.devsrsouza.compose.icons:eva-icons", version = "1.1.1" }
+composeIcons-feather = { module = "br.com.devsrsouza.compose.icons:feather", version = "1.1.1" }
+composeIcons-fontAwesome = { module = "br.com.devsrsouza.compose.icons:font-awesome", version = "1.1.1" }
+composeIcons-lineAwesome = { module = "br.com.devsrsouza.compose.icons:line-awesome", version = "1.1.1" }
+composeIcons-linea = { module = "br.com.devsrsouza.compose.icons:linea", version = "1.1.1" }
+composeIcons-octicons = { module = "br.com.devsrsouza.compose.icons:octicons", version = "1.1.1" }
+composeIcons-simpleIcons = { module = "br.com.devsrsouza.compose.icons:simple-icons", version = "1.1.1" }
+composeIcons-tablerIcons = { module = "br.com.devsrsouza.compose.icons:tabler-icons", version = "1.1.1" }
+
+androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended", version = "1.7.8" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 
 
 androidx-hilt-compiler = { module = "androidx.hilt:hilt-compiler", version.ref = "androidx-hilt" }
@@ -54,8 +66,6 @@ google-id = { group = "com.google.android.libraries.identity.googleid", name = "
 # --- Seguridad y UI ---
 bcrypt = { group = "at.favre.lib", name = "bcrypt", version.ref = "bcrypt" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
-feather = { module = "br.com.devsrsouza.compose.icons:feather", version.ref = "feather" }
-font-awesome = { module = "br.com.devsrsouza.compose.icons:font-awesome", version.ref = "fontAwesome" }
 
 # --- Core, Compose, Navegación ---
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -66,8 +76,7 @@ androidx-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
-androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
-androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+androidx-material3 = { group = "androidx.compose.material3", name = "material3", version = "1.5.0-alpha04" }
 
 # --- Base de Datos (Room) ---
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
@@ -82,7 +91,7 @@ androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navig
 # --- Testing ---
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxJunit" }
-androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version = "3.7.0" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 
