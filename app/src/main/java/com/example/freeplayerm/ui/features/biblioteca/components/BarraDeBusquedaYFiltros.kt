@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
@@ -83,10 +84,25 @@ fun BarraDeBusquedaYFiltros(
                 // Iteramos sobre todos los valores del enum TipoDeFiltro
                 TipoDeFiltro.entries.forEach { filtro ->
                     DropdownMenuItem(
-                        text = { Text(filtro.etiqueta) },
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = filtro.etiqueta,
+                                    color = if (filtro == filtroActual) AppColors.PurpuraProfundo else Color.Unspecified
+                                )
+                                if (filtro == filtroActual) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Filtro seleccionado",
+                                        tint = AppColors.PurpuraProfundo,
+                                        modifier = Modifier.padding(start = 8.dp)
+                                    )
+                                }
+                            }
+                        },
                         onClick = {
                             enEvento(BibliotecaEvento.FiltroCambiado(filtro))
-                            menuExpandido = false // Cerramos el menú al seleccionar
+                            menuExpandido = false
                         }
                     )
                 }
