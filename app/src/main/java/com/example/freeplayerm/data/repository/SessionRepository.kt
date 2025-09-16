@@ -19,7 +19,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 @Singleton
 class SessionRepository @Inject constructor(
     // Inyectamos el contexto de la aplicación para mayor seguridad.
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) {
     // Definimos una llave tipada para guardar el ID del usuario.
     // Usar un objeto companion es una buena práctica para mantener las llaves organizadas.
@@ -37,12 +37,6 @@ class SessionRepository @Inject constructor(
             preferences[ID_USUARIO_ACTIVO]
         }
 
-    /**
-     * Guarda el ID de un usuario en DataStore para persistir la sesión.
-     * Esta es la función que faltaba. Es 'suspend' porque DataStore opera de forma asíncrona.
-     *
-     * @param usuario La entidad del usuario que acaba de iniciar sesión o registrarse.
-     */
     // En SessionRepository.kt
     suspend fun guardarIdDeUsuario(idDeUsuario: Int) { // <-- Acepta un Int
         context.dataStore.edit { preferences ->

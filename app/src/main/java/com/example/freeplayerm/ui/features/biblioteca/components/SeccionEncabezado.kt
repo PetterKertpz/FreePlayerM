@@ -12,9 +12,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -41,7 +46,9 @@ import java.util.Date
 fun SeccionEncabezado(
     usuario: UsuarioEntity?, // <-- CAMBIO CLAVE 1: Recibe el usuario como parámetro
     cuerpoActual: TipoDeCuerpoBiblioteca, // <-- NUEVO: Para saber qué botón resaltar
-    onMenuClick: (TipoDeCuerpoBiblioteca) -> Unit // <-- NUEVO: Callback para notificar clics
+    escaneoManualEnProgreso: Boolean,
+    onMenuClick: (TipoDeCuerpoBiblioteca) -> Unit, // <-- NUEVO: Callback para notificar clics
+    onReescanearClick: () -> Unit
 ) {
     val menus = listOf(
         "Canciones" to TipoDeCuerpoBiblioteca.CANCIONES,
@@ -78,6 +85,26 @@ fun SeccionEncabezado(
             actions = {
                 // <-- CAMBIO CLAVE 2: Usamos el parámetro 'usuario'.
                 // La llamada segura '?.' protege contra un valor nulo mientras cargan los datos.
+                IconButton(
+                    onClick = onReescanearClick,
+                    enabled = !escaneoManualEnProgreso
+                ) {
+                    // Si el escaneo manual está activo, muestra un indicador de carga.
+                    if (escaneoManualEnProgreso) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp), // Un tamaño adecuado para la barra de título
+                            color = AppColors.Blanco,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        // Si no, muestra el icono de refrescar.
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Actualizar biblioteca",
+                            tint = AppColors.Blanco
+                        )
+                    }
+                }
                 AsyncImage(
                     model = usuario?.fotoPerfilUrl,
                     contentDescription = "Foto de perfil",
@@ -145,6 +172,29 @@ fun PreviewSeccionEncabezado() {
     SeccionEncabezado(
         usuario = usuarioDePrueba,
         cuerpoActual = TipoDeCuerpoBiblioteca.CANCIONES,
-        onMenuClick = {}
+        onMenuClick = {},
+        onReescanearClick = {},
+        escaneoManualEnProgreso = false
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewSeccionEncabezadoEscaneoActivo() {
+    val usuarioDePrueba = UsuarioEntity(
+        id = 1,
+        nombreUsuario = "Preview User",
+        correo = "preview@test.com",
+        contrasenaHash = "",
+        fechaRegistro = Date(),
+        fotoPerfilUrl = "",
+        tipoAutenticacion = "LOCAL"
+    )
+    SeccionEncabezado(
+        usuario = usuarioDePrueba,
+        cuerpoActual = TipoDeCuerpoBiblioteca.CANCIONES,
+        onMenuClick = {},
+        onReescanearClick = {},
+        escaneoManualEnProgreso = true
     )
 }

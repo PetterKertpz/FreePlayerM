@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.KeyboardDoubleArrowDown
+import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -27,7 +29,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.freeplayerm.ui.features.biblioteca.BibliotecaEvento
-import com.example.freeplayerm.ui.features.biblioteca.TipoDeFiltro
+import com.example.freeplayerm.ui.features.biblioteca.CriterioDeOrdenamiento
+import com.example.freeplayerm.ui.features.biblioteca.DireccionDeOrdenamiento
 import com.example.freeplayerm.ui.theme.AppColors
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 
@@ -35,7 +38,8 @@ import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 fun BarraDeBusquedaYFiltros(
     modifier: Modifier = Modifier,
     textoDeBusqueda: String,
-    filtroActual: TipoDeFiltro,
+    criterioDeOrdenamiento: CriterioDeOrdenamiento,
+    direccionDeOrdenamiento: DireccionDeOrdenamiento,
     enEvento: (BibliotecaEvento) -> Unit
 ) {
     // Estado para controlar si el menú desplegable está visible o no
@@ -66,34 +70,45 @@ fun BarraDeBusquedaYFiltros(
                 unfocusedIndicatorColor = Color.Transparent
             )
         )
-
+        IconButton(onClick = { enEvento(BibliotecaEvento.DireccionDeOrdenamientoCambiada) }) {
+            Icon(
+                // El icono cambia dinámicamente según la dirección actual
+                imageVector = if (direccionDeOrdenamiento == DireccionDeOrdenamiento.ASCENDENTE) {
+                    Icons.Default.KeyboardDoubleArrowUp
+                } else {
+                    Icons.Default.KeyboardDoubleArrowDown
+                },
+                contentDescription = "Cambiar dirección de ordenamiento",
+                tint = Color.Black
+            )
+        }
         // --- LÓGICA DEL MENÚ DE FILTROS ---
         Box {
-            IconButton(onClick = { menuExpandido = true }) {
+            IconButton(onClick = { menuExpandido = !menuExpandido }) {
                 Icon(
                     imageVector = Icons.Default.FilterList,
-                    contentDescription = "Filtrar",
-                    // Cambiamos el color si hay un filtro activo para dar feedback visual
-                    tint = if (filtroActual != TipoDeFiltro.NINGUNO) AppColors.PurpuraProfundo else Color.Black
+                    contentDescription = "Ordenar por",
+                    tint = if (criterioDeOrdenamiento != CriterioDeOrdenamiento.NINGUNO) AppColors.PurpuraProfundo else Color.Black
                 )
             }
             DropdownMenu(
                 expanded = menuExpandido,
-                onDismissRequest = { menuExpandido = false }
+                onDismissRequest = {}
             ) {
                 // Iteramos sobre todos los valores del enum TipoDeFiltro
-                TipoDeFiltro.entries.forEach { filtro ->
+                CriterioDeOrdenamiento.entries.forEach { criterio ->
                     DropdownMenuItem(
                         text = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = filtro.etiqueta,
-                                    color = if (filtro == filtroActual) AppColors.PurpuraProfundo else Color.Unspecified
+                                    text = criterio.etiqueta,
+                                    // Comparamos con el nuevo estado
+                                    color = if (criterio == criterioDeOrdenamiento) AppColors.PurpuraProfundo else Color.Unspecified
                                 )
-                                if (filtro == filtroActual) {
+                                if (criterio == criterioDeOrdenamiento) {
                                     Icon(
                                         imageVector = Icons.Default.Check,
-                                        contentDescription = "Filtro seleccionado",
+                                        contentDescription = "Criterio seleccionado",
                                         tint = AppColors.PurpuraProfundo,
                                         modifier = Modifier.padding(start = 8.dp)
                                     )
@@ -101,7 +116,8 @@ fun BarraDeBusquedaYFiltros(
                             }
                         },
                         onClick = {
-                            enEvento(BibliotecaEvento.FiltroCambiado(filtro))
+                            // Enviamos el nuevo evento
+                            enEvento(BibliotecaEvento.CriterioDeOrdenamientoCambiado(criterio))
                             menuExpandido = false
                         }
                     )
@@ -116,9 +132,11 @@ fun BarraDeBusquedaYFiltros(
 @Composable
 fun PreviewBarraDeBusquedaYFiltros() {
     FreePlayerMTheme {
+        // --- CAMBIO #5: ACTUALIZAMOS LA PREVISUALIZACIÓN ---
         BarraDeBusquedaYFiltros(
             textoDeBusqueda = "Mi búsqueda",
-            filtroActual = TipoDeFiltro.POR_ARTISTA,
+            criterioDeOrdenamiento = CriterioDeOrdenamiento.POR_ARTISTA,
+            direccionDeOrdenamiento = DireccionDeOrdenamiento.DESCENDENTE,
             enEvento = {}
         )
     }

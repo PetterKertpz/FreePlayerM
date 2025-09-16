@@ -54,6 +54,9 @@ kotlin {
 }
 
 dependencies {
+    
+    implementation(libs.accompanist.permissions)
+
     implementation(libs.composeIcons.cssGg)
     implementation(libs.composeIcons.weatherIcons)
     implementation(libs.composeIcons.evaIcons)

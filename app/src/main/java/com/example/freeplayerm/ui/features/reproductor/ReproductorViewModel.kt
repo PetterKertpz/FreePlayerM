@@ -13,7 +13,9 @@ class ReproductorViewModel @Inject constructor(
     // Aquí más adelante inyectaremos los repositorios de música
 ) : ViewModel() {
 
-    private val _estadoUi = MutableStateFlow(ReproductorEstado())
+    private val _estadoUi = MutableStateFlow(ReproductorEstado(
+        cancionActual = null
+    ))
     val estadoUi = _estadoUi.asStateFlow()
 
     fun enEvento(evento: ReproductorEvento) {

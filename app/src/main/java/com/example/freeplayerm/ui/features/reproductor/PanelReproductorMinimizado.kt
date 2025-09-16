@@ -9,6 +9,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,7 +42,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.freeplayerm.R
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
+import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
 import com.example.freeplayerm.ui.theme.AppColors
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 import java.util.concurrent.TimeUnit
@@ -58,7 +59,7 @@ import java.util.concurrent.TimeUnit
 fun PanelReproductorMinimizado(
     estado: ReproductorEstado, enEvento: (ReproductorEvento) -> Unit
 ) {
-    val cancion = estado.cancionActual ?: return
+    val cancionConArtista = estado.cancionActual
 
     Surface(
         modifier = Modifier
@@ -95,11 +96,13 @@ fun PanelReproductorMinimizado(
 
             ) {
                 // --- Vinilo giratorio ---
-                ViniloConPortada(
-                    urlPortada = cancion.portadaUrl ?: "",
-                    estaReproduciendo = estado.estaReproduciendo,
-                    size = 130.dp
-                )
+                if (cancionConArtista != null) {
+                    ViniloConPortada(
+                        urlPortada = cancionConArtista.cancion.portadaUrl?: "",
+                        estaReproduciendo = estado.estaReproduciendo,
+                        size = 130.dp
+                    )
+                }
 
                 Spacer(modifier = Modifier.width(5.dp))
 
@@ -107,45 +110,57 @@ fun PanelReproductorMinimizado(
                 Column(
                     modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center
                 ) {
-                    Text(
-                        text = cancion.titulo,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 35.sp,
-                        color = Color.White,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = "Artista ${cancion.idArtista}", // TODO: nombre real del artista desde relación
-                        fontSize = 20.sp,
-                        color = Color.White,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    if (cancionConArtista != null) {
+                        Text(
+                            // Accedemos al título a través de .cancion.titulo
+                            text = cancionConArtista.cancion.titulo,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 35.sp,
+                            color = Color.White,
+                            modifier = Modifier
+                                .basicMarquee()
+                        )
+                    }
+                    if (cancionConArtista != null) {
+                        Text(
+                            // Significa: "Usa 'artistaNombre'. Si es nulo, usa 'Artista Desconocido' en su lugar".
+                            text = cancionConArtista.artistaNombre ?: "Artista Desconocido",
+                            fontSize = 20.sp,
+                            color = Color.White,
+                            modifier = Modifier
+                                .basicMarquee()
+                        )
+                    }
 
 
 
                     // --- Controles de reproducción ---
-                    ControlesConTiempo(
-                        estado = estado,
-                        enEvento = enEvento,
-                        duracionTotalMs = (cancion.duracionSegundos * 1000).toLong()
-                    )
+                    if (cancionConArtista != null) {
+                        ControlesConTiempo(
+                            estado = estado,
+                            enEvento = enEvento,
+                            // La duración también se obtiene desde el objeto anidado
+                            duracionTotalMs = (cancionConArtista.cancion.duracionSegundos * 1000).toLong()
+                        )
+                    }
 
                     // Slider
-                    Slider(
-                        value = estado.progresoActualMs.toFloat(),
-                        onValueChange = { nuevoProgreso ->
-                            enEvento(ReproductorEvento.ActualizarProgreso(nuevoProgreso))
-                        },
-                        valueRange = 0f..(cancion.duracionSegundos * 1000).toFloat(),
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = SliderDefaults.colors(
-                            thumbColor = Color.White,
-                            activeTrackColor = Color.White,
-                            inactiveTrackColor = Color.Gray
+                    if (cancionConArtista != null) {
+                        Slider(
+                            value = estado.progresoActualMs.toFloat(),
+                            onValueChange = { nuevoProgreso ->
+                                enEvento(ReproductorEvento.ActualizarProgreso(nuevoProgreso))
+                            },
+                            // El rango también se obtiene desde el objeto anidado
+                            valueRange = 0f..(cancionConArtista.cancion.duracionSegundos * 1000).toFloat(),
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = SliderDefaults.colors(
+                                thumbColor = Color.White,
+                                activeTrackColor = Color.White,
+                                inactiveTrackColor = Color.Gray
+                            )
                         )
-                    )
+                    }
 
                 }
             }
@@ -241,7 +256,7 @@ private fun ViniloConPortada(
         initialValue = 0f,
         targetValue = if (estaReproduciendo) 360f else 0f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 6000, easing = LinearEasing)
+            animation = tween(durationMillis = 8000, easing = LinearEasing)
         ),
         label = "rotacion"
     )
@@ -271,16 +286,21 @@ private fun ViniloConPortada(
 @Preview(showBackground = true)
 @Composable
 fun PreviewPanelReproductorEstado() {
-    val cancionDemo = CancionEntity(
-        idCancion = 1,
-        titulo = "Canción de Prueba",
-        idArtista = 1,
-        idAlbum = 1,
-        idGenero = 1,
-        duracionSegundos = 240,
-        portadaUrl = "",
-        origen = "LOCAL",
-        archivoPath = null
+    val cancionDemo = CancionConArtista(
+        cancion = CancionEntity(
+            idCancion = 1,
+            titulo = "Canción de Prueba",
+            idArtista = 1,
+            idAlbum = 1,
+            idGenero = 1,
+            duracionSegundos = 240,
+            portadaUrl = "",
+            origen = "LOCAL",
+            archivoPath = null
+        ),
+        artistaNombre = "Lil peep aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", // <-- Añadimos el nombre
+        albumNombre = "Álbum de Prueba",
+        generoNombre = "Pop"
     )
 
     val estadoDemo = ReproductorEstado(
@@ -300,21 +320,26 @@ fun PreviewPanelReproductorEstado() {
 @Preview(showBackground = true)
 @Composable
 private fun PreviewPanelReproductorMinimizado() {
-    val cancionDePrueba = CancionEntity(
-        idCancion = 1,
-        titulo = "El Sol no Regresa",
-        idArtista = 1,
-        idAlbum = 1,
-        idGenero = 1,
-        duracionSegundos = 227,
-        portadaUrl = "",
-        origen = "LOCAL",
-        archivoPath = null
+    val cancionDemo = CancionConArtista(
+        cancion = CancionEntity(
+            idCancion = 1,
+            titulo = "Canción de Prueba",
+            idArtista = 1,
+            idAlbum = 1,
+            idGenero = 1,
+            duracionSegundos = 240,
+            portadaUrl = "",
+            origen = "LOCAL",
+            archivoPath = null
+        ),
+        artistaNombre = "Artista de Prueba", // <-- Añadimos el nombre
+        albumNombre = "Álbum de Prueba",
+        generoNombre = "Pop"
     )
     FreePlayerMTheme {
         PanelReproductorMinimizado(
             estado = ReproductorEstado(
-                cancionActual = cancionDePrueba,
+                cancionActual = cancionDemo,
                 estaReproduciendo = true,
                 progresoActualMs = 75000, // 1 minuto y 15 segundos
                 modoReproduccion = ModoReproduccion.ALEATORIO,
