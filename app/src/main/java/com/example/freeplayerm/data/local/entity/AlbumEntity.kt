@@ -37,6 +37,6 @@ data class AlbumEntity(
     @ColumnInfo(name = "anio")
     val anio: Int?,
 
-    @ColumnInfo(name = "portada_url")
-    val portadaUrl: String?
+    @ColumnInfo(name = "portada_path")
+    val portadaPath: String?
 )

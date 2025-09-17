@@ -19,11 +19,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
 import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
 import com.example.freeplayerm.ui.features.biblioteca.BibliotecaEstado
 import com.example.freeplayerm.ui.features.biblioteca.BibliotecaEvento
 import com.example.freeplayerm.ui.features.reproductor.ReproductorEvento
+import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 
 @Composable
 fun CuerpoCanciones(
@@ -34,11 +37,24 @@ fun CuerpoCanciones(
 ) {
     if (estado.canciones.isEmpty()) {
         if (estado.textoDeBusqueda.isNotBlank()) {
-            Box(contentAlignment = Alignment.Center, modifier = modifier.fillMaxSize().padding(16.dp)) {
-                Text("No se encontraron resultados para \"${estado.textoDeBusqueda}\"", textAlign = TextAlign.Center)
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    "No se encontraron resultados para \"${estado.textoDeBusqueda}\"",
+                    textAlign = TextAlign.Center
+                )
             }
         } else {
-            Box(contentAlignment = Alignment.Center, modifier = modifier.fillMaxSize().padding(16.dp)) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
                 Text("Esta sección está vacía.", textAlign = TextAlign.Center)
             }
         }
@@ -100,5 +116,80 @@ private fun CancionItem(
         }
     }
 }
+@Preview(showBackground = true, name = "Con Datos")
+@Composable
+private fun CuerpoCancionesConDatosPreview() {
+    // 1. Creación de datos de prueba
+    val listaDeCancionesDePrueba = (1..20).map { i ->
+        CancionConArtista(
+            cancion = CancionEntity(
+                idCancion = i.toInt(),
+                titulo = "Una Canción Muy Larga Para Probar El Efecto Marquee Número $i",
+                idArtista = (i % 5).toInt(), // 5 artistas diferentes
+                idAlbum = (i % 3).toInt(),   // 3 álbumes diferentes
+                duracionSegundos = 210,
+                archivoPath = "/path/to/song$i.mp3",
+                origen = "LOCAL",
+                portadaUrl = null,
+                idGenero = null
+            ),
+            artistaNombre = "Artista ${(i % 5) + 1}",
+            albumNombre = null,
+            generoNombre = null
+        )
+    }
 
-// ... (Preview sin cambios)
+    val estadoDePrueba = BibliotecaEstado(
+        canciones = listaDeCancionesDePrueba,
+        textoDeBusqueda = ""
+    )
+
+    // 2. Envolvemos el Composable en nuestro tema para que se vea correctamente
+    FreePlayerMTheme {
+        CuerpoCanciones(
+            estado = estadoDePrueba,
+            onBibliotecaEvento = {},
+            onReproductorEvento = {}
+        )
+    }
+}
+
+/**
+ * Vista previa para el Composable CuerpoCanciones cuando no hay canciones.
+ */
+@Preview(showBackground = true, name = "Estado Vacío")
+@Composable
+private fun CuerpoCancionesVacioPreview() {
+    val estadoDePrueba = BibliotecaEstado(
+        canciones = emptyList(), // Lista vacía
+        textoDeBusqueda = ""
+    )
+
+    FreePlayerMTheme {
+        CuerpoCanciones(
+            estado = estadoDePrueba,
+            onBibliotecaEvento = {},
+            onReproductorEvento = {}
+        )
+    }
+}
+
+/**
+ * Vista previa para CuerpoCanciones cuando una búsqueda no devuelve resultados.
+ */
+@Preview(showBackground = true, name = "Búsqueda Sin Resultados")
+@Composable
+private fun CuerpoCancionesBusquedaSinResultadosPreview() {
+    val estadoDePrueba = BibliotecaEstado(
+        canciones = emptyList(), // Lista vacía
+        textoDeBusqueda = "Una canción que no existe" // Texto de búsqueda activo
+    )
+
+    FreePlayerMTheme {
+        CuerpoCanciones(
+            estado = estadoDePrueba,
+            onBibliotecaEvento = {},
+            onReproductorEvento = {}
+        )
+    }
+}

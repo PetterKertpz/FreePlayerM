@@ -119,7 +119,70 @@ class BibliotecaViewModel @Inject constructor(
         // Ya no pre-cargamos la vista de canciones aquí. Solo nos aseguramos de que el sistema
         // esté listo para reaccionar a los cambios en la fuente de canciones.
         observarYFiltrarCancionesActuales()
+        observarYFiltrarAlbumes()
+        observarYFiltrarArtistas()
+        observarYFiltrarGeneros()
+        observarYFiltrarListas()
         // La UI ahora es responsable de solicitar la primera vista al componerse.
+    }
+
+    private fun observarYFiltrarAlbumes() {
+        viewModelScope.launch {
+            val textoDeBusqueda = _estadoUi.map { it.textoDeBusqueda }.distinctUntilChanged()
+            cancionDao.obtenerTodosLosAlbumes()
+                .combine(textoDeBusqueda) { albumes, busqueda ->
+                    if (busqueda.isBlank()) albumes
+                    else {
+                        val busquedaNormalizada = normalizarTexto(busqueda)
+                        albumes.filter { normalizarTexto(it.titulo).contains(busquedaNormalizada) }
+                    }
+                }
+                .collectLatest { _estadoUi.update { s -> s.copy(albumes = it) } }
+        }
+    }
+
+    private fun observarYFiltrarArtistas() {
+        viewModelScope.launch {
+            val textoDeBusqueda = _estadoUi.map { it.textoDeBusqueda }.distinctUntilChanged()
+            cancionDao.obtenerTodosLosArtistas()
+                .combine(textoDeBusqueda) { artistas, busqueda ->
+                    if (busqueda.isBlank()) artistas
+                    else {
+                        val busquedaNormalizada = normalizarTexto(busqueda)
+                        artistas.filter { normalizarTexto(it.nombre).contains(busquedaNormalizada) }
+                    }
+                }
+                .collectLatest { _estadoUi.update { s -> s.copy(artistas = it) } }
+        }
+    }
+
+    private fun observarYFiltrarGeneros() {
+        viewModelScope.launch {
+            val textoDeBusqueda = _estadoUi.map { it.textoDeBusqueda }.distinctUntilChanged()
+            cancionDao.obtenerTodosLosGeneros()
+                .combine(textoDeBusqueda) { generos, busqueda ->
+                    if (busqueda.isBlank()) generos
+                    else {
+                        val busquedaNormalizada = normalizarTexto(busqueda)
+                        generos.filter { normalizarTexto(it.nombre).contains(busquedaNormalizada) }
+                    }
+                }
+                .collectLatest { _estadoUi.update { s -> s.copy(generos = it) } }
+        }
+    }
+
+    private fun observarYFiltrarListas() {
+        viewModelScope.launch {
+            _estadoUi.map { it.usuarioActual?.id }.distinctUntilChanged().flatMapLatest { usuarioId ->
+                if (usuarioId != null) cancionDao.obtenerListasPorUsuarioId(usuarioId) else flowOf(emptyList())
+            }.combine(_estadoUi.map { it.textoDeBusqueda }.distinctUntilChanged()) { listas, busqueda ->
+                if (busqueda.isBlank()) listas
+                else {
+                    val busquedaNormalizada = normalizarTexto(busqueda)
+                    listas.filter { normalizarTexto(it.nombre).contains(busquedaNormalizada) }
+                }
+            }.collectLatest { _estadoUi.update { s -> s.copy(listas = it) } }
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
@@ -255,92 +318,67 @@ class BibliotecaViewModel @Inject constructor(
         genero: GeneroEntity? = null,
         lista: ListaReproduccionEntity? = null
     ) {
-        // Cancelamos cualquier carga de entidades (álbumes, artistas) que estuviera en curso.
-        jobDeCargaDeEntidades?.cancel()
+        // Ya no necesitamos el 'jobDeCargaDeEntidades' porque todo es manejado por observadores.
 
-        // Actualizamos el estado de la UI en una sola operación atómica.
+        // 1. Actualizamos el estado de la UI para la nueva vista y limpiamos la búsqueda.
         _estadoUi.update {
             it.copy(
                 cuerpoActual = nuevoCuerpo,
-                textoDeBusqueda = "", // Siempre limpiamos la búsqueda
-                // Limpiamos TODAS las listas de datos para evitar mostrar datos viejos.
-                canciones = emptyList(),
-                albumes = emptyList(),
-                artistas = emptyList(),
-                generos = emptyList(),
-                listas = emptyList()
+                textoDeBusqueda = ""
             )
         }
 
-        // Variable para la nueva fuente de canciones.
         var nuevaFuente: Flow<List<CancionConArtista>>? = null
 
-        // Este job se usará solo para vistas que NO son listas de canciones.
-        jobDeCargaDeEntidades = viewModelScope.launch {
-            when (nuevoCuerpo) {
-                // CASOS QUE MUESTRAN OTRAS ENTIDADES (ÁLBUMES, ARTISTAS, ETC.)
-                TipoDeCuerpoBiblioteca.ALBUMES -> {
-                    _estadoUi.update { it.copy(tituloDelCuerpo = "Álbumes") }
-                    cancionDao.obtenerTodosLosAlbumes().collectLatest { _estadoUi.update { s -> s.copy(albumes = it) } }
-                }
-                TipoDeCuerpoBiblioteca.ARTISTAS -> {
-                    _estadoUi.update { it.copy(tituloDelCuerpo = "Artistas") }
-                    cancionDao.obtenerTodosLosArtistas().collectLatest { _estadoUi.update { s -> s.copy(artistas = it) } }
-                }
-                TipoDeCuerpoBiblioteca.GENEROS -> {
-                    _estadoUi.update { it.copy(tituloDelCuerpo = "Géneros") }
-                    cancionDao.obtenerTodosLosGeneros().collectLatest { _estadoUi.update { s -> s.copy(generos = it) } }
-                }
-                TipoDeCuerpoBiblioteca.LISTAS -> {
-                    _estadoUi.update { it.copy(tituloDelCuerpo = "Mis Listas") }
-                    val usuarioId = _estadoUi.value.usuarioActual?.id ?: -1
-                    if (usuarioId != -1) {
-                        cancionDao.obtenerListasPorUsuarioId(usuarioId).collectLatest { _estadoUi.update { s -> s.copy(listas = it) } }
-                    }
-                }
+        // 2. Simplemente actualizamos el título y, si es una vista de canciones,
+        //    le decimos al observador de canciones cuál es su nueva fuente de datos.
+        when (nuevoCuerpo) {
+            // CASOS QUE NO SON LISTAS DE CANCIONES (SOLO CAMBIAN EL TÍTULO)
+            TipoDeCuerpoBiblioteca.ALBUMES -> _estadoUi.update { it.copy(tituloDelCuerpo = "Álbumes") }
+            TipoDeCuerpoBiblioteca.ARTISTAS -> _estadoUi.update { it.copy(tituloDelCuerpo = "Artistas") }
+            TipoDeCuerpoBiblioteca.GENEROS -> _estadoUi.update { it.copy(tituloDelCuerpo = "Géneros") }
+            TipoDeCuerpoBiblioteca.LISTAS -> _estadoUi.update { it.copy(tituloDelCuerpo = "Mis Listas") }
 
-                // CASOS QUE MUESTRAN LISTAS DE CANCIONES
-                // Aquí, en lugar de colectar el flow, lo ASIGNAMOS a nuestra variable 'nuevaFuente'.
-                TipoDeCuerpoBiblioteca.CANCIONES -> {
-                    _estadoUi.update { it.copy(tituloDelCuerpo = "Canciones") }
-                    nuevaFuente = cancionDao.obtenerCancionesConArtista()
+            // CASOS QUE SÍ SON LISTAS DE CANCIONES (CAMBIAN EL TÍTULO Y LA FUENTE)
+            TipoDeCuerpoBiblioteca.CANCIONES -> {
+                _estadoUi.update { it.copy(tituloDelCuerpo = "Canciones") }
+                nuevaFuente = cancionDao.obtenerCancionesConArtista()
+            }
+            TipoDeCuerpoBiblioteca.CANCIONES_DE_ALBUM -> {
+                album?.let {
+                    _estadoUi.update { estado -> estado.copy(tituloDelCuerpo = it.titulo) }
+                    nuevaFuente = cancionDao.obtenerCancionesDeAlbumConArtista(it.idAlbum)
                 }
-                TipoDeCuerpoBiblioteca.CANCIONES_DE_ALBUM -> {
-                    album?.let {
-                        _estadoUi.update { estado -> estado.copy(tituloDelCuerpo = it.titulo) }
-                        nuevaFuente = cancionDao.obtenerCancionesDeAlbumConArtista(it.idAlbum)
-                    }
+            }
+            TipoDeCuerpoBiblioteca.CANCIONES_DE_ARTISTA -> {
+                artista?.let {
+                    _estadoUi.update { estado -> estado.copy(tituloDelCuerpo = it.nombre) }
+                    nuevaFuente = cancionDao.obtenerCancionesDeArtistaConArtista(it.idArtista)
                 }
-                TipoDeCuerpoBiblioteca.CANCIONES_DE_ARTISTA -> {
-                    artista?.let {
-                        _estadoUi.update { estado -> estado.copy(tituloDelCuerpo = it.nombre) }
-                        nuevaFuente = cancionDao.obtenerCancionesDeArtistaConArtista(it.idArtista)
-                    }
+            }
+            TipoDeCuerpoBiblioteca.CANCIONES_DE_GENERO -> {
+                genero?.let {
+                    _estadoUi.update { estado -> estado.copy(tituloDelCuerpo = it.nombre) }
+                    nuevaFuente = cancionDao.obtenerCancionesDeGeneroConArtista(it.idGenero)
                 }
-                TipoDeCuerpoBiblioteca.CANCIONES_DE_GENERO -> {
-                    genero?.let {
-                        _estadoUi.update { estado -> estado.copy(tituloDelCuerpo = it.nombre) }
-                        nuevaFuente = cancionDao.obtenerCancionesDeGeneroConArtista(it.idGenero)
-                    }
+            }
+            TipoDeCuerpoBiblioteca.CANCIONES_DE_LISTA -> {
+                lista?.let {
+                    _estadoUi.update { estado -> estado.copy(tituloDelCuerpo = it.nombre) }
+                    nuevaFuente = cancionDao.obtenerCancionesDeListaConArtista(it.idLista)
                 }
-                TipoDeCuerpoBiblioteca.CANCIONES_DE_LISTA -> {
-                    lista?.let {
-                        _estadoUi.update { estado -> estado.copy(tituloDelCuerpo = it.nombre) }
-                        nuevaFuente = cancionDao.obtenerCancionesDeListaConArtista(it.idLista)
-                    }
-                }
-                TipoDeCuerpoBiblioteca.FAVORITOS -> {
-                    _estadoUi.update { it.copy(tituloDelCuerpo = "Favoritos") }
-                    val usuarioId = _estadoUi.value.usuarioActual?.id ?: -1
-                    if (usuarioId != -1) {
-                        nuevaFuente = cancionDao.obtenerCancionesFavoritasConArtista(usuarioId)
-                    }
+            }
+            TipoDeCuerpoBiblioteca.FAVORITOS -> {
+                _estadoUi.update { it.copy(tituloDelCuerpo = "Favoritos") }
+                val usuarioId = _estadoUi.value.usuarioActual?.id ?: -1
+                if (usuarioId != -1) {
+                    nuevaFuente = cancionDao.obtenerCancionesFavoritasConArtista(usuarioId)
                 }
             }
         }
 
-        // Si se asignó una nueva fuente de canciones, la emitimos a nuestro observador dinámico.
-        // Si no (porque la vista era de álbumes, por ej.), emitimos un flow vacío para limpiar la lista.
+        // 3. Actualizamos el 'interruptor' de la fuente de canciones.
+        // Si la nueva vista no es de canciones, le pasamos un flow vacío para limpiar la lista.
         fuenteDeCancionesActiva.value = nuevaFuente ?: flowOf(emptyList())
     }
 

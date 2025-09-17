@@ -165,13 +165,17 @@ fun CuerpoBiblioteca(
         Column(modifier = Modifier.padding(paddingInterno).fillMaxSize()) {
             val mostrarBarraDeBusqueda = when (estadoBiblioteca.cuerpoActual) {
                 TipoDeCuerpoBiblioteca.CANCIONES,
+                TipoDeCuerpoBiblioteca.LISTAS,
+                TipoDeCuerpoBiblioteca.ALBUMES,
+                TipoDeCuerpoBiblioteca.ARTISTAS,
+                TipoDeCuerpoBiblioteca.GENEROS,
                 TipoDeCuerpoBiblioteca.CANCIONES_DE_LISTA,
                 TipoDeCuerpoBiblioteca.CANCIONES_DE_ALBUM,
                 TipoDeCuerpoBiblioteca.CANCIONES_DE_ARTISTA,
                 TipoDeCuerpoBiblioteca.CANCIONES_DE_GENERO,
                 TipoDeCuerpoBiblioteca.FAVORITOS -> true
                 // Las vistas como 'Álbumes' o 'Artistas' por ahora no tendrán buscador.
-                else -> false
+
             }
 
             if (mostrarBarraDeBusqueda) {

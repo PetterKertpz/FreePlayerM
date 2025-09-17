@@ -1,20 +1,26 @@
 // en: app/src/main/java/com/example/freeplayerm/ui/features/biblioteca/components/CuerpoAlbumes.kt
 package com.example.freeplayerm.ui.features.biblioteca.components
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.MarqueeSpacing
+import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,15 +28,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
+import com.example.freeplayerm.R
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.AlbumEntity
+import com.example.freeplayerm.ui.theme.AppColors
 
 /**
  * Muestra una cuadrícula de álbumes.
@@ -69,46 +79,107 @@ fun CuerpoAlbumes(
 }
 
 @Composable
-private fun AlbumItem(
+fun AlbumItem(
     album: AlbumEntity,
     onClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
-            .width(160.dp) // Ancho fijo para cada item de la cuadrícula
-            .clickable(onClick = onClick)
+            .width(200.dp)
+            .clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Portada del álbum con sombra
-        AsyncImage(
-            model = album.portadaUrl,
-            contentDescription = "Portada de ${album.titulo}",
-            modifier = Modifier
-                .aspectRatio(1f) // Mantiene la proporción cuadrada
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp)),
-            contentScale = ContentScale.Crop
-        )
+        Row (
 
-        Spacer(modifier = Modifier.height(8.dp))
+        ) {
+            Box(
 
-        // Información del álbum
-        Text(
-            text = album.titulo,
-            fontWeight = FontWeight.Bold,
-            fontSize = 15.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            color = Color.Black
-        )
-        Text(
-            text = "Artista ${album.idArtista}", // TODO: Obtener nombre del artista
-            fontSize = 13.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            color = Color.Gray
-        )
+                modifier = Modifier
+                    .aspectRatio(1f)
+                    .fillMaxWidth()
+
+            ) {
+
+                //vinilo
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .padding(
+                            start = 60.dp,
+                        ) // hace que se vea sobresaliendo a la derecha
+                        .align(Alignment.CenterEnd)
+
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.vinilo_foreground), // tu PNG del vinilo sin fondo
+                        contentDescription = null,
+                        modifier = Modifier
+                            .zIndex(0f)
+                            .fillMaxSize()
+                            .padding(0.dp),
+                        contentScale = ContentScale.Fit,
+                        alpha = 1f
+                    )
+                    // Label central del vinilo (portada en círculo)
+                    AsyncImage(
+                        model = album.portadaUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .align(Alignment.Center)
+                            .clip(CircleShape)
+                            .background(AppColors.GrisMedio)
+                            .padding(0.dp),
+                        contentScale = ContentScale.Crop,
+                        alpha = 1f
+                    )
+                }
+                //Carton
+                AsyncImage(
+                    model = album.portadaUrl,
+                    contentDescription = "Portada de ${album.titulo}",
+                    modifier = Modifier
+                        .shadow(8.dp,RoundedCornerShape(4.dp), clip = false)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(AppColors.GrisProfundo)
+                        .align(Alignment.CenterStart)
+                        .fillMaxSize(0.75f)
+                        .zIndex(1f),
+                    contentScale = ContentScale.Crop,
+                    alpha = 1f
+                )
+
+            }
+        }
+        Column (
+            horizontalAlignment = Alignment.Start,
+            verticalArrangement = Arrangement.spacedBy(0.dp)
+        ) {
+
+            // ℹ️ Información del álbum
+            Text(
+                text = album.titulo,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = Color.Black,
+                modifier = Modifier
+                    .basicMarquee(
+                        spacing = MarqueeSpacing(0.dp)
+                    )
+
+            )
+            Text(
+                text = "Artista ${album.idArtista}", // reemplaza con el nombre real
+                fontSize = 15.sp,
+                color = Color.Black,
+                modifier = Modifier
+                    .basicMarquee()
+            )
+        }
+
     }
 }
+
 
 
 @Preview(showBackground = true)
