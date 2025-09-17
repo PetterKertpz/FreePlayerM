@@ -8,13 +8,22 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,36 +51,33 @@ fun CuerpoCanciones(
     onBibliotecaEvento: (BibliotecaEvento) -> Unit,
     onReproductorEvento: (ReproductorEvento) -> Unit
 ) {
+    // --- CAMBIO #1: LA LÓGICA DE EVENTOS SE MANEJA AQUÍ, EN EL NIVEL SUPERIOR ---
     if (estado.canciones.isEmpty()) {
-        if (estado.textoDeBusqueda.isNotBlank()) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                Text(
-                    "No se encontraron resultados para \"${estado.textoDeBusqueda}\"",
-                    textAlign = TextAlign.Center
-                )
-            }
+        val mensaje = if (estado.textoDeBusqueda.isNotBlank()) {
+            "No se encontraron resultados para \"${estado.textoDeBusqueda}\""
         } else {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                Text("Esta sección está vacía.", textAlign = TextAlign.Center)
-            }
+            "Esta sección está vacía."
+        }
+        Box(contentAlignment = Alignment.Center, modifier = modifier.fillMaxSize().padding(16.dp)) {
+            Text(mensaje, textAlign = TextAlign.Center)
         }
     } else {
         ListaDeCanciones(
             canciones = estado.canciones,
-            onCancionClick = { cancionConArtistaSeleccionada ->
-                onReproductorEvento(
-                    ReproductorEvento.SeleccionarCancion(cancionConArtistaSeleccionada)
-                )
+            // El clic en la canción se traduce en un evento para el reproductor
+            onCancionClick = { cancionSeleccionada ->
+                onReproductorEvento(ReproductorEvento.SeleccionarCancion(cancionSeleccionada))
+            },
+            // El clic en el favorito se traduce en un evento para la biblioteca
+            onFavoritoClick = { cancionSeleccionada ->
+                onBibliotecaEvento(BibliotecaEvento.AlternarFavorito(cancionSeleccionada))
+            },
+            // Los otros eventos se pueden conectar de la misma forma en el futuro
+            onAddToPlaylistClick = { cancionSeleccionada ->
+                /* TODO: onBibliotecaEvento(BibliotecaEvento.AbrirDialogoPlaylist(cancionSeleccionada)) */
+            },
+            onEditClick = { cancionSeleccionada ->
+                /* TODO: onBibliotecaEvento(BibliotecaEvento.AbrirEditorDeCancion(cancionSeleccionada)) */
             }
         )
     }
@@ -80,7 +86,12 @@ fun CuerpoCanciones(
 @Composable
 private fun ListaDeCanciones(
     canciones: List<CancionConArtista>,
-    onCancionClick: (CancionConArtista) -> Unit
+    // --- CAMBIO #2: PARÁMETROS SIMPLIFICADOS Y CLAROS ---
+    // Esta función solo se preocupa de notificar QUÉ canción fue seleccionada para cada acción.
+    onCancionClick: (CancionConArtista) -> Unit,
+    onFavoritoClick: (CancionConArtista) -> Unit,
+    onAddToPlaylistClick: (CancionConArtista) -> Unit,
+    onEditClick: (CancionConArtista) -> Unit
 ) {
     LazyColumn {
         items(
@@ -89,7 +100,11 @@ private fun ListaDeCanciones(
         ) { cancionConArtista ->
             CancionItem(
                 cancionConArtista = cancionConArtista,
-                onClick = { onCancionClick(cancionConArtista) }
+                // --- CAMBIO #3: PASAMOS EL EVENTO HACIA ARRIBA CON EL OBJETO COMPLETO ---
+                onClick = { onCancionClick(cancionConArtista) },
+                onFavoritoClick = { onFavoritoClick(cancionConArtista) },
+                onAddToPlaylistClick = { onAddToPlaylistClick(cancionConArtista) },
+                onEditClick = { onEditClick(cancionConArtista) }
             )
         }
     }
@@ -99,25 +114,30 @@ private fun ListaDeCanciones(
 @Composable
 private fun CancionItem(
     cancionConArtista: CancionConArtista,
-    onClick: () -> Unit
+    // --- CAMBIO #4: ESTE COMPOSABLE ES EL MÁS SIMPLE ---
+    // Solo se preocupa de avisar que "se hizo clic", no sabe qué canción es.
+    onClick: () -> Unit,
+    onFavoritoClick: () -> Unit,
+    onAddToPlaylistClick: () -> Unit,
+    onEditClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
             .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
-        // --- CORRECCIÓN: Accedemos directamente a la propiedad en CancionConArtista ---
-        model = cancionConArtista.portadaPath,
-        contentDescription = "Portada de ${cancionConArtista.albumNombre}",
-        modifier = Modifier
-            .size(56.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(AppColors.GrisProfundo),
-        contentScale = ContentScale.Crop
+            model = cancionConArtista.portadaPath,
+            contentDescription = "Portada de ${cancionConArtista.albumNombre}",
+            modifier = Modifier
+                .size(56.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(AppColors.GrisProfundo),
+            contentScale = ContentScale.Crop
         )
+        Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = cancionConArtista.cancion.titulo,
@@ -130,6 +150,22 @@ private fun CancionItem(
                 color = Color.Gray,
                 modifier = Modifier.basicMarquee()
             )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Row {
+            IconButton(onClick = onFavoritoClick, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    imageVector = if (cancionConArtista.esFavorita) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = "Marcar como Favorito",
+                    tint = if (cancionConArtista.esFavorita) AppColors.AcentoRosa else Color.Gray
+                )
+            }
+            IconButton(onClick = onAddToPlaylistClick, modifier = Modifier.size(36.dp)) {
+                Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir a playlist", tint = Color.Gray)
+            }
+            IconButton(onClick = onEditClick, modifier = Modifier.size(36.dp)) {
+                Icon(imageVector = Icons.Default.Edit, contentDescription = "Editar información", tint = Color.Gray)
+            }
         }
     }
 }

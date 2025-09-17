@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.AlbumEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ArtistaEntity
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.FavoritoEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.GeneroEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ListaReproduccionEntity
 import com.example.freeplayerm.data.local.dao.CancionDao
@@ -85,6 +86,7 @@ sealed class BibliotecaEvento {
     data class ArtistaSeleccionado(val artista: ArtistaEntity) : BibliotecaEvento()
     data class GeneroSeleccionado(val genero: GeneroEntity) : BibliotecaEvento()
     data class ListaSeleccionada(val lista: ListaReproduccionEntity) : BibliotecaEvento()
+    data class AlternarFavorito(val cancionConArtista: CancionConArtista) : BibliotecaEvento()
 }
 
 
@@ -122,21 +124,6 @@ class BibliotecaViewModel @Inject constructor(
         observarYFiltrarGeneros()
         observarYFiltrarListas()
         // La UI ahora es responsable de solicitar la primera vista al componerse.
-    }
-
-    private fun observarYFiltrarAlbumes() {
-        viewModelScope.launch {
-            val textoDeBusqueda = _estadoUi.map { it.textoDeBusqueda }.distinctUntilChanged()
-            cancionDao.obtenerTodosLosAlbumes()
-                .combine(textoDeBusqueda) { albumes, busqueda ->
-                    if (busqueda.isBlank()) albumes
-                    else {
-                        val busquedaNormalizada = normalizarTexto(busqueda)
-                        albumes.filter { normalizarTexto(it.titulo).contains(busquedaNormalizada) }
-                    }
-                }
-                .collectLatest { _estadoUi.update { s -> s.copy(albumes = it) } }
-        }
     }
 
     private fun observarYFiltrarArtistas() {
@@ -186,6 +173,21 @@ class BibliotecaViewModel @Inject constructor(
     @RequiresApi(Build.VERSION_CODES.R)
     fun enEvento(evento: BibliotecaEvento) {
         when (evento) {
+            is BibliotecaEvento.AlternarFavorito -> {
+                viewModelScope.launch {
+                    val usuarioId = _estadoUi.value.usuarioActual?.id ?: return@launch
+                    val cancionId = evento.cancionConArtista.cancion.idCancion
+
+                    if (evento.cancionConArtista.esFavorita) {
+                        // Si ya es favorita, la quitamos
+                        cancionDao.quitarDeFavoritos(usuarioId, cancionId)
+                    } else {
+                        // Si no es favorita, la añadimos
+                        val nuevoFavorito = FavoritoEntity(idUsuario = usuarioId, idCancion = cancionId)
+                        cancionDao.anadirAFavoritos(nuevoFavorito)
+                    }
+                }
+            }
             is BibliotecaEvento.ForzarReescaneo -> {
                 // El escaneo forzado es iniciado por el usuario.
                 escanearAlmacenamientoLocal(esIniciadoPorUsuario = true)
@@ -218,6 +220,20 @@ class BibliotecaViewModel @Inject constructor(
 
             }
 
+        }
+    }
+    private fun observarYFiltrarAlbumes() {
+        viewModelScope.launch {
+            val textoDeBusqueda = _estadoUi.map { it.textoDeBusqueda }.distinctUntilChanged()
+            cancionDao.obtenerTodosLosAlbumes()
+                .combine(textoDeBusqueda) { albumes, busqueda ->
+                    if (busqueda.isBlank()) albumes
+                    else {
+                        val busquedaNormalizada = normalizarTexto(busqueda)
+                        albumes.filter { normalizarTexto(it.titulo).contains(busquedaNormalizada) }
+                    }
+                }
+                .collectLatest { _estadoUi.update { s -> s.copy(albumes = it) } }
         }
     }
 
