@@ -49,9 +49,6 @@ data class CancionEntity(
     @ColumnInfo(name = "duracion_segundos")
     val duracionSegundos: Int,
 
-    @ColumnInfo(name = "portada_url")
-    val portadaUrl: String?,
-
     @ColumnInfo(name = "origen")
     val origen: String, // "LOCAL", "REMOTA"
 

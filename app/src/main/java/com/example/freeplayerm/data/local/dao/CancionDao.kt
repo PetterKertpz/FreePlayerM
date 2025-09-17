@@ -49,16 +49,16 @@ interface CancionDao {
 
 
     @Query("""
-        SELECT c.*,
-               a.nombre AS artistaNombre,
-               al.titulo AS albumNombre,
-               g.nombre AS generoNombre
+        SELECT c.*, a.nombre AS artistaNombre, al.titulo AS albumNombre, g.nombre AS generoNombre,
+               (f.id_usuario IS NOT NULL) as esFavorita,
+               al.portada_path AS portadaPath
         FROM canciones AS c
         LEFT JOIN artistas AS a ON c.id_artista = a.id_artista
         LEFT JOIN albumes AS al ON c.id_album = al.id_album
         LEFT JOIN generos AS g ON c.id_genero = g.id_genero
+        LEFT JOIN favoritos AS f ON c.id_cancion = f.id_cancion AND f.id_usuario = :usuarioId
     """)
-    fun obtenerCancionesConArtista(): Flow<List<CancionConArtista>>
+    fun obtenerCancionesConArtista(usuarioId: Int): Flow<List<CancionConArtista>>
 
     @Query("SELECT * FROM canciones WHERE id_cancion = :id")
     fun obtenerCancionPorId(id: Int): Flow<CancionEntity?>
@@ -101,52 +101,66 @@ interface CancionDao {
     fun obtenerCancionesFavoritas(usuarioId: Int): Flow<List<CancionEntity>>
 
     @Query("""
-        SELECT c.*, a.nombre AS artistaNombre, al.titulo AS albumNombre, g.nombre AS generoNombre
+        SELECT c.*, a.nombre AS artistaNombre, al.titulo AS albumNombre, g.nombre AS generoNombre,
+               (f.id_usuario IS NOT NULL) as esFavorita,
+               al.portada_path AS portadaPath
         FROM canciones AS c
         LEFT JOIN artistas AS a ON c.id_artista = a.id_artista
         LEFT JOIN albumes AS al ON c.id_album = al.id_album
         LEFT JOIN generos AS g ON c.id_genero = g.id_genero
+        LEFT JOIN favoritos AS f ON c.id_cancion = f.id_cancion AND f.id_usuario = :usuarioId
         WHERE c.id_album = :albumId
     """)
-    fun obtenerCancionesDeAlbumConArtista(albumId: Int): Flow<List<CancionConArtista>>
+    fun obtenerCancionesDeAlbumConArtista(albumId: Int, usuarioId: Int): Flow<List<CancionConArtista>>
 
     // 3. NUEVA: Para las canciones de un artista
     @Query("""
-        SELECT c.*, a.nombre AS artistaNombre, al.titulo AS albumNombre, g.nombre AS generoNombre
+        SELECT c.*, a.nombre AS artistaNombre, al.titulo AS albumNombre, g.nombre AS generoNombre,
+               (f.id_usuario IS NOT NULL) as esFavorita,
+               al.portada_path AS portadaPath
         FROM canciones AS c
         LEFT JOIN artistas AS a ON c.id_artista = a.id_artista
         LEFT JOIN albumes AS al ON c.id_album = al.id_album
         LEFT JOIN generos AS g ON c.id_genero = g.id_genero
+        LEFT JOIN favoritos AS f ON c.id_cancion = f.id_cancion AND f.id_usuario = :usuarioId
         WHERE c.id_artista = :artistaId
     """)
-    fun obtenerCancionesDeArtistaConArtista(artistaId: Int): Flow<List<CancionConArtista>>
+    fun obtenerCancionesDeArtistaConArtista(artistaId: Int, usuarioId: Int): Flow<List<CancionConArtista>>
 
     // 4. NUEVA: Para las canciones de un género
     @Query("""
-        SELECT c.*, a.nombre AS artistaNombre, al.titulo AS albumNombre, g.nombre AS generoNombre
+        SELECT c.*, a.nombre AS artistaNombre, al.titulo AS albumNombre, g.nombre AS generoNombre,
+               (f.id_usuario IS NOT NULL) as esFavorita,
+               al.portada_path AS portadaPath
         FROM canciones AS c
         LEFT JOIN artistas AS a ON c.id_artista = a.id_artista
         LEFT JOIN albumes AS al ON c.id_album = al.id_album
         LEFT JOIN generos AS g ON c.id_genero = g.id_genero
+        LEFT JOIN favoritos AS f ON c.id_cancion = f.id_cancion AND f.id_usuario = :usuarioId
         WHERE c.id_genero = :generoId
     """)
-    fun obtenerCancionesDeGeneroConArtista(generoId: Int): Flow<List<CancionConArtista>>
+    fun obtenerCancionesDeGeneroConArtista(generoId: Int, usuarioId: Int): Flow<List<CancionConArtista>>
 
     // 5. NUEVA: Para las canciones de una lista de reproducción
     @Query("""
-        SELECT c.*, a.nombre as artistaNombre, al.titulo AS albumNombre, g.nombre AS generoNombre
+        SELECT c.*, a.nombre as artistaNombre, al.titulo AS albumNombre, g.nombre AS generoNombre,
+               (f.id_usuario IS NOT NULL) as esFavorita,
+               al.portada_path AS portadaPath
         FROM canciones c
         LEFT JOIN artistas a ON c.id_artista = a.id_artista
         LEFT JOIN albumes AS al ON c.id_album = al.id_album
         LEFT JOIN generos AS g ON c.id_genero = g.id_genero
+        LEFT JOIN favoritos AS f ON c.id_cancion = f.id_cancion AND f.id_usuario = :usuarioId
         INNER JOIN detalle_lista_reproduccion d ON c.id_cancion = d.id_cancion
         WHERE d.id_lista = :listaId
     """)
-    fun obtenerCancionesDeListaConArtista(listaId: Int): Flow<List<CancionConArtista>>
+    fun obtenerCancionesDeListaConArtista(listaId: Int, usuarioId: Int): Flow<List<CancionConArtista>>
 
     // 6. NUEVA: Para las canciones favoritas de un usuario
     @Query("""
-        SELECT c.*, a.nombre as artistaNombre, al.titulo AS albumNombre, g.nombre AS generoNombre
+        SELECT c.*, a.nombre as artistaNombre, al.titulo AS albumNombre, g.nombre AS generoNombre,
+               (f.id_usuario IS NOT NULL) as esFavorita,
+               al.portada_path AS portadaPath
         FROM canciones c
         LEFT JOIN artistas a ON c.id_artista = a.id_artista
         LEFT JOIN albumes AS al ON c.id_album = al.id_album

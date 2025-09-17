@@ -122,7 +122,7 @@ fun AlbumItem(
                     )
                     // Label central del vinilo (portada en círculo)
                     AsyncImage(
-                        model = album.portadaUrl,
+                        model = album.portadaPath,
                         contentDescription = null,
                         modifier = Modifier
                             .size(40.dp)
@@ -136,7 +136,7 @@ fun AlbumItem(
                 }
                 //Carton
                 AsyncImage(
-                    model = album.portadaUrl,
+                    model = album.portadaPath,
                     contentDescription = "Portada de ${album.titulo}",
                     modifier = Modifier
                         .shadow(8.dp,RoundedCornerShape(4.dp), clip = false)

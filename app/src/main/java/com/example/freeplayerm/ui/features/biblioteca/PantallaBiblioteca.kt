@@ -354,7 +354,6 @@ fun PreviewBiblioteca() {
         idGenero = 1,
         titulo = "El Sol no Regresa",
         duracionSegundos = 227,
-        portadaUrl = "",
         origen = "LOCAL",
         archivoPath = ""
     )
@@ -366,7 +365,9 @@ fun PreviewBiblioteca() {
             cancion = cancionEntityDePrueba,
             artistaNombre = "La Quinta Estación", // Reemplaza TODO()
             albumNombre = "Flores de Alquiler", // Reemplaza TODO()
-            generoNombre = "Pop Rock"            // Reemplaza TODO()
+            generoNombre = "Pop Rock",
+            esFavorita = false,
+            portadaPath = null            // Reemplaza TODO()
         )
 
     // Datos de prueba para la lista de álbumes

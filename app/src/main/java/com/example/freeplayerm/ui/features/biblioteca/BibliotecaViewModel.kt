@@ -16,7 +16,6 @@ import com.example.freeplayerm.data.repository.RepositorioDeMusicaLocal
 import com.example.freeplayerm.data.repository.UsuarioRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -112,7 +111,6 @@ class BibliotecaViewModel @Inject constructor(
         MutableStateFlow<Flow<List<CancionConArtista>>>(flowOf(emptyList()))
 
     // Mantenemos este Job para las cargas que no son de canciones (álbumes, artistas, etc.)
-    private var jobDeCargaDeEntidades: Job? = null
 
     init {
         // --- CAMBIO #3: 'init' AHORA SOLO INICIA EL OBSERVADOR ---
@@ -333,6 +331,7 @@ class BibliotecaViewModel @Inject constructor(
         // 2. Simplemente actualizamos el título y, si es una vista de canciones,
         //    le decimos al observador de canciones cuál es su nueva fuente de datos.
         when (nuevoCuerpo) {
+
             // CASOS QUE NO SON LISTAS DE CANCIONES (SOLO CAMBIAN EL TÍTULO)
             TipoDeCuerpoBiblioteca.ALBUMES -> _estadoUi.update { it.copy(tituloDelCuerpo = "Álbumes") }
             TipoDeCuerpoBiblioteca.ARTISTAS -> _estadoUi.update { it.copy(tituloDelCuerpo = "Artistas") }
@@ -342,30 +341,55 @@ class BibliotecaViewModel @Inject constructor(
             // CASOS QUE SÍ SON LISTAS DE CANCIONES (CAMBIAN EL TÍTULO Y LA FUENTE)
             TipoDeCuerpoBiblioteca.CANCIONES -> {
                 _estadoUi.update { it.copy(tituloDelCuerpo = "Canciones") }
-                nuevaFuente = cancionDao.obtenerCancionesConArtista()
+                val usuarioId = _estadoUi.value.usuarioActual?.id
+                if (usuarioId != null) {
+                    nuevaFuente = cancionDao.obtenerCancionesConArtista(usuarioId.toInt())
+                }
             }
             TipoDeCuerpoBiblioteca.CANCIONES_DE_ALBUM -> {
                 album?.let {
                     _estadoUi.update { estado -> estado.copy(tituloDelCuerpo = it.titulo) }
-                    nuevaFuente = cancionDao.obtenerCancionesDeAlbumConArtista(it.idAlbum)
+                    val usuarioId = _estadoUi.value.usuarioActual?.id
+
+                    // Verificamos que el ID no sea nulo antes de llamar a la función.
+                    if (usuarioId != null) {
+                        nuevaFuente =
+                            cancionDao.obtenerCancionesDeAlbumConArtista(it.idAlbum, usuarioId)
+                    }
                 }
             }
             TipoDeCuerpoBiblioteca.CANCIONES_DE_ARTISTA -> {
                 artista?.let {
                     _estadoUi.update { estado -> estado.copy(tituloDelCuerpo = it.nombre) }
-                    nuevaFuente = cancionDao.obtenerCancionesDeArtistaConArtista(it.idArtista)
+                    val usuarioId = _estadoUi.value.usuarioActual?.id
+
+                    // Verificamos que el ID no sea nulo antes de llamar a la función.
+                    if (usuarioId != null) {
+                        nuevaFuente = cancionDao.obtenerCancionesDeArtistaConArtista(it.idArtista, usuarioId)
+                    }
                 }
             }
             TipoDeCuerpoBiblioteca.CANCIONES_DE_GENERO -> {
                 genero?.let {
                     _estadoUi.update { estado -> estado.copy(tituloDelCuerpo = it.nombre) }
-                    nuevaFuente = cancionDao.obtenerCancionesDeGeneroConArtista(it.idGenero)
+                    val usuarioId = _estadoUi.value.usuarioActual?.id
+
+                    // Verificamos que el ID no sea nulo antes de llamar a la función.
+                    if (usuarioId != null) {
+                        nuevaFuente = cancionDao.obtenerCancionesDeGeneroConArtista(it.idGenero, usuarioId)
+                    }
                 }
             }
             TipoDeCuerpoBiblioteca.CANCIONES_DE_LISTA -> {
                 lista?.let {
                     _estadoUi.update { estado -> estado.copy(tituloDelCuerpo = it.nombre) }
-                    nuevaFuente = cancionDao.obtenerCancionesDeListaConArtista(it.idLista)
+                    val usuarioId = _estadoUi.value.usuarioActual?.id
+
+                    // Verificamos que el ID no sea nulo antes de llamar a la función.
+                    if (usuarioId != null) {
+                        nuevaFuente =
+                            cancionDao.obtenerCancionesDeListaConArtista(it.idLista, usuarioId)
+                    }
                 }
             }
             TipoDeCuerpoBiblioteca.FAVORITOS -> {

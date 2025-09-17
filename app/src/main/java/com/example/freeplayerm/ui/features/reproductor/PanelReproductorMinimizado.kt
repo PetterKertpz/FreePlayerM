@@ -98,7 +98,7 @@ fun PanelReproductorMinimizado(
                 // --- Vinilo giratorio ---
                 if (cancionConArtista != null) {
                     ViniloConPortada(
-                        urlPortada = cancionConArtista.cancion.portadaUrl?: "",
+                        urlPortada = cancionConArtista.portadaPath?: "",
                         estaReproduciendo = estado.estaReproduciendo,
                         size = 130.dp
                     )
@@ -294,13 +294,14 @@ fun PreviewPanelReproductorEstado() {
             idAlbum = 1,
             idGenero = 1,
             duracionSegundos = 240,
-            portadaUrl = "",
             origen = "LOCAL",
             archivoPath = null
         ),
         artistaNombre = "Lil peep aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", // <-- Añadimos el nombre
         albumNombre = "Álbum de Prueba",
-        generoNombre = "Pop"
+        generoNombre = "Pop",
+        esFavorita = false,
+        portadaPath = null
     )
 
     val estadoDemo = ReproductorEstado(
@@ -328,13 +329,14 @@ private fun PreviewPanelReproductorMinimizado() {
             idAlbum = 1,
             idGenero = 1,
             duracionSegundos = 240,
-            portadaUrl = "",
             origen = "LOCAL",
             archivoPath = null
         ),
         artistaNombre = "Artista de Prueba", // <-- Añadimos el nombre
         albumNombre = "Álbum de Prueba",
-        generoNombre = "Pop"
+        generoNombre = "Pop",
+        esFavorita = false,
+        portadaPath = null
     )
     FreePlayerMTheme {
         PanelReproductorMinimizado(

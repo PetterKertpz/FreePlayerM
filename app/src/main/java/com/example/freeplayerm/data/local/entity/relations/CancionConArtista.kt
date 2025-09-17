@@ -13,5 +13,7 @@ data class CancionConArtista(
 
     val generoNombre: String?,
 
-    val esFavorita: Boolean
+    val esFavorita: Boolean,
+
+    val portadaPath: String?
 )

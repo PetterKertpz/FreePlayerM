@@ -5,6 +5,7 @@ import android.content.ContentUris
 import android.content.Context
 import android.provider.MediaStore
 import android.util.Log
+import androidx.core.net.toUri
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.AlbumEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ArtistaEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
@@ -43,6 +44,7 @@ class RepositorioDeMusicaLocal @Inject constructor(
                         MediaStore.Audio.Media.TITLE,
                         MediaStore.Audio.Media.ARTIST,
                         MediaStore.Audio.Media.ALBUM,
+                        MediaStore.Audio.Media.ALBUM_ID,
                         MediaStore.Audio.Media.DURATION,
                         MediaStore.Audio.Media.YEAR
                     ),
@@ -58,6 +60,7 @@ class RepositorioDeMusicaLocal @Inject constructor(
                     val tituloCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
                     val artistaCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
                     val albumCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
+                    val albumIdCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
                     val duracionCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
                     val anioCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
 
@@ -77,7 +80,7 @@ class RepositorioDeMusicaLocal @Inject constructor(
                                 val tituloAlbumCrudo = (c.getString(albumCol)?.takeIf { it.isNotBlank() } ?: "Álbum Desconocido").trim()
                                 val anio = c.getInt(anioCol)
                                 val duracionMs = c.getLong(duracionCol)
-
+                                val albumIdMediaStore = c.getLong(albumIdCol)
                                 var artistaFinal: String
                                 var tituloFinal: String
 
@@ -99,7 +102,7 @@ class RepositorioDeMusicaLocal @Inject constructor(
                                 Log.d(tag, "'$tituloCrudo' es nueva. Procesada como -> Artista: '$artistaFinal', Título: '$tituloLimpio'.")
 
                                 val artista = obtenerOCrearArtista(artistaFinal)
-                                val album = obtenerOCrearAlbum(tituloAlbumCrudo, artista.idArtista, anio)
+                                val album = obtenerOCrearAlbum(tituloAlbumCrudo, artista.idArtista, anio, albumIdMediaStore)
                                 val genero = obtenerOCrearGenero("Género Desconocido")
 
                                 val cancion = CancionEntity(
@@ -109,9 +112,9 @@ class RepositorioDeMusicaLocal @Inject constructor(
                                     idGenero = genero.idGenero,
                                     titulo = tituloLimpio, // <-- Usamos el título ya limpio
                                     duracionSegundos = (duracionMs / 1000).toInt(),
-                                    portadaUrl = null,
                                     origen = "LOCAL",
-                                    archivoPath = uriContenido
+                                    archivoPath = uriContenido,
+
                                 )
                                 cancionDao.insertarCancion(cancion)
                             }
@@ -149,14 +152,14 @@ class RepositorioDeMusicaLocal @Inject constructor(
 
         // Lista de expresiones regulares para eliminar patrones comunes
         val patronesAEliminar = listOf(
-            Regex("""\s*[\(\[].*?oficial.*?[\)\]]\s*""", RegexOption.IGNORE_CASE), // (Official Video), [official]
-            Regex("""\s*[\(\[].*?video.*?[\)\]]\s*""", RegexOption.IGNORE_CASE), // (Video), [Music Video]
-            Regex("""\s*[\(\[].*?lyrics.*?[\)\]]\s*""", RegexOption.IGNORE_CASE), // (Lyrics), [Lyric Video]
-            Regex("""\s*[\(\[].*?audio.*?[\)\]]\s*""", RegexOption.IGNORE_CASE), // (Official Audio)
-            Regex("""\s*[\(\[].*?visualizer.*?[\)\]]\s*""", RegexOption.IGNORE_CASE), // (Visualizer)
-            Regex("""\s*[\(\[].*?sub español.*?[\)\]]\s*""", RegexOption.IGNORE_CASE), // (sub español)
-            Regex("""\s*[\(\[].*?hd.*?[\)\]]\s*""", RegexOption.IGNORE_CASE), // (HD), (HQ)
-            Regex("""\s*[\(\[].*?kbps.*?[\)\]]\s*""", RegexOption.IGNORE_CASE), // (128 kbps), (320kbps)
+            Regex("""\s*[(\[].*?oficial.*?[)\]]\s*""", RegexOption.IGNORE_CASE), // (Official Video), [official]
+            Regex("""\s*[(\[].*?video.*?[)\]]\s*""", RegexOption.IGNORE_CASE), // (Video), [Music Video]
+            Regex("""\s*[(\[].*?lyrics.*?[)\]]\s*""", RegexOption.IGNORE_CASE), // (Lyrics), [Lyric Video]
+            Regex("""\s*[(\[].*?audio.*?[)\]]\s*""", RegexOption.IGNORE_CASE), // (Official Audio)
+            Regex("""\s*[(\[].*?visualizer.*?[)\]]\s*""", RegexOption.IGNORE_CASE), // (Visualizer)
+            Regex("""\s*[(\[].*?sub español.*?[)\]]\s*""", RegexOption.IGNORE_CASE), // (sub español)
+            Regex("""\s*[(\[].*?hd.*?[)\]]\s*""", RegexOption.IGNORE_CASE), // (HD), (HQ)
+            Regex("""\s*[(\[].*?kbps.*?[)\]]\s*""", RegexOption.IGNORE_CASE), // (128 kbps), (320kbps)
             Regex("""y2meta\.app\s*-\s*""", RegexOption.IGNORE_CASE), // Prefijo de sitios de descarga
             Regex("""-\(mp3convert\.org\)""", RegexOption.IGNORE_CASE) // Sufijo de sitios de descarga
         )
@@ -180,13 +183,29 @@ class RepositorioDeMusicaLocal @Inject constructor(
         return cancionDao.obtenerArtistaPorNombre(nombre)!!
     }
 
-    private suspend fun obtenerOCrearAlbum(titulo: String, artistaId: Int, anio: Int): AlbumEntity {
+    private suspend fun obtenerOCrearAlbum(titulo: String, artistaId: Int, anio: Int, albumIdMediaStore: Long): AlbumEntity {
         val albumExistente = cancionDao.obtenerAlbumPorNombreYArtista(titulo, artistaId)
+        // Si el álbum ya existe, y quizás ya tiene una carátula, no hacemos nada.
         if (albumExistente != null) {
             return albumExistente
         }
 
-        cancionDao.insertarAlbum(AlbumEntity(idArtista = artistaId, titulo = titulo, anio = if (anio > 0) anio else null, portadaUrl = null))
+        // Si el álbum es nuevo, construimos la URI para su carátula.
+        // Esta es la forma estándar en Android para referenciar el arte de un álbum.
+        val uriCaratula = ContentUris.withAppendedId(
+            "content://media/external/audio/albumart".toUri(),
+            albumIdMediaStore
+        )
+
+        // Creamos la nueva entidad de álbum, ahora guardando la ruta de la carátula.
+        val nuevoAlbum = AlbumEntity(
+            idArtista = artistaId,
+            titulo = titulo,
+            anio = if (anio > 0) anio else null,
+            portadaPath = uriCaratula.toString() // Guardamos la URI como un String
+        )
+
+        cancionDao.insertarAlbum(nuevoAlbum)
         return cancionDao.obtenerAlbumPorNombreYArtista(titulo, artistaId)!!
     }
 
