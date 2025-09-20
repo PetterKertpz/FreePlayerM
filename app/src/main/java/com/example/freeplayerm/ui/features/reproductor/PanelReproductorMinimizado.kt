@@ -2,11 +2,6 @@
 package com.example.freeplayerm.ui.features.reproductor
 
 import android.annotation.SuppressLint
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -32,7 +27,12 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -249,16 +249,21 @@ private fun formatTiempo(milisegundos: Long): String {
 private fun ViniloConPortada(
     urlPortada: String, estaReproduciendo: Boolean, size: Dp = 60.dp
 ) {
-    val transicionInfinita = rememberInfiniteTransition(label = "vinilo_rotacion")
+    var rotacionActual by remember { mutableFloatStateOf(0f) }
 
-    val rotacion by transicionInfinita.animateFloat(
-        initialValue = 0f,
-        targetValue = if (estaReproduciendo) 360f else 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 8000, easing = LinearEasing)
-        ),
-        label = "rotacion"
-    )
+    LaunchedEffect(estaReproduciendo) {
+        if (estaReproduciendo) {
+            // Bucle infinito que se ejecuta mientras la corrutina esté activa (mientras se reproduce).
+            while (true) {
+                // Incrementamos la rotación en una pequeña cantidad. El 'awaitFrame'
+                // asegura que esto suceda en cada cuadro de la animación, haciéndola fluida.
+                rotacionActual = (rotacionActual + 0.5f) % 360f
+
+                // Esperamos al siguiente cuadro de la animación.
+                withFrameNanos { }
+            }
+        }
+    }
 
     Box(
         modifier = Modifier.size(size), contentAlignment = Alignment.Center
@@ -268,7 +273,7 @@ private fun ViniloConPortada(
             contentDescription = "Disco de Vinilo",
             modifier = Modifier
                 .fillMaxSize()
-                .rotate(if (estaReproduciendo) rotacion else 0f)
+                .rotate(rotacionActual)
         )
         AsyncImage(
             model = urlPortada,
@@ -277,7 +282,7 @@ private fun ViniloConPortada(
                 .size(size / 2f)
                 .clip(CircleShape)
                 .background(Color.DarkGray)
-            .rotate(if (estaReproduciendo) rotacion else 0f),
+                .rotate(rotacionActual),
             contentScale = ContentScale.Crop
         )
     }
