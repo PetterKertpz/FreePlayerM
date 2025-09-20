@@ -72,9 +72,9 @@ fun CuerpoCanciones(
             onFavoritoClick = { cancionSeleccionada ->
                 onBibliotecaEvento(BibliotecaEvento.AlternarFavorito(cancionSeleccionada))
             },
-            // Los otros eventos se pueden conectar de la misma forma en el futuro
             onAddToPlaylistClick = { cancionSeleccionada ->
-                /* TODO: onBibliotecaEvento(BibliotecaEvento.AbrirDialogoPlaylist(cancionSeleccionada)) */
+                // --- CAMBIO AQUÍ ---
+                onBibliotecaEvento(BibliotecaEvento.AbrirDialogoPlaylist(cancionSeleccionada))
             },
             onEditClick = { cancionSeleccionada ->
                 /* TODO: onBibliotecaEvento(BibliotecaEvento.AbrirEditorDeCancion(cancionSeleccionada)) */
@@ -114,8 +114,6 @@ private fun ListaDeCanciones(
 @Composable
 private fun CancionItem(
     cancionConArtista: CancionConArtista,
-    // --- CAMBIO #4: ESTE COMPOSABLE ES EL MÁS SIMPLE ---
-    // Solo se preocupa de avisar que "se hizo clic", no sabe qué canción es.
     onClick: () -> Unit,
     onFavoritoClick: () -> Unit,
     onAddToPlaylistClick: () -> Unit,
@@ -147,7 +145,7 @@ private fun CancionItem(
             Text(
                 text = cancionConArtista.artistaNombre ?: "Artista Desconocido",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray,
+                color = Color.Black,
                 modifier = Modifier.basicMarquee()
             )
         }
@@ -157,14 +155,14 @@ private fun CancionItem(
                 Icon(
                     imageVector = if (cancionConArtista.esFavorita) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     contentDescription = "Marcar como Favorito",
-                    tint = if (cancionConArtista.esFavorita) AppColors.AcentoRosa else Color.Gray
+                    tint = if (cancionConArtista.esFavorita) AppColors.RojoMedio else Color.Black
                 )
             }
             IconButton(onClick = onAddToPlaylistClick, modifier = Modifier.size(36.dp)) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir a playlist", tint = Color.Gray)
+                Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir a playlist", tint = Color.Black)
             }
             IconButton(onClick = onEditClick, modifier = Modifier.size(36.dp)) {
-                Icon(imageVector = Icons.Default.Edit, contentDescription = "Editar información", tint = Color.Gray)
+                Icon(imageVector = Icons.Default.Edit, contentDescription = "Editar información", tint = Color.Black)
             }
         }
     }

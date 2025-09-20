@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.AlbumEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ArtistaEntity
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.DetalleListaReproduccionEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.FavoritoEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.GeneroEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ListaReproduccionEntity
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -30,7 +32,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.text.Normalizer
 import javax.inject.Inject
-
 
 // --- SIN CAMBIOS EN TUS ENUMS Y DATA CLASSES ---
 enum class TipoDeCuerpoBiblioteca {
@@ -72,7 +73,9 @@ data class BibliotecaEstado(
     val direccionDeOrdenamiento: DireccionDeOrdenamiento = DireccionDeOrdenamiento.ASCENDENTE,
     val estaEscaneando: Boolean = false,
     val escaneoManualEnProgreso: Boolean = false,
-    val errorDeEscaneo: String? = null
+    val errorDeEscaneo: String? = null,
+    val mostrarDialogoPlaylist: Boolean = false,
+    val cancionParaAnadirALista: CancionConArtista? = null
 
 )
 sealed class BibliotecaEvento {
@@ -87,6 +90,10 @@ sealed class BibliotecaEvento {
     data class GeneroSeleccionado(val genero: GeneroEntity) : BibliotecaEvento()
     data class ListaSeleccionada(val lista: ListaReproduccionEntity) : BibliotecaEvento()
     data class AlternarFavorito(val cancionConArtista: CancionConArtista) : BibliotecaEvento()
+    data class AbrirDialogoPlaylist(val cancion: CancionConArtista) : BibliotecaEvento()
+    data object CerrarDialogoPlaylist : BibliotecaEvento()
+    data class CrearNuevaListaYAnadirCancion(val nombre: String, val descripcion: String?) : BibliotecaEvento()
+    data class AnadirCancionAListasExistentes(val idListas: List<Int>) : BibliotecaEvento()
 }
 
 
@@ -100,30 +107,18 @@ class BibliotecaViewModel @Inject constructor(
 
     private val _estadoUi = MutableStateFlow(BibliotecaEstado())
     val estadoUi = _estadoUi.asStateFlow()
-
-    // --- CAMBIO #1: SE ELIMINA EL 'textoDeBusqueda' PRIVADO ---
-    // Ya tenemos el texto de búsqueda en el estado principal (_estadoUi),
-    // usar uno privado aquí era redundante. Simplificamos.
-
-    // --- CAMBIO #2: NUEVO STATEFLOW PARA GESTIONAR LA FUENTE DE CANCIONES ---
-    // Este StateFlow es la clave de la solución. Almacenará QUÉ consulta de canciones
-    // debe estar activa en cada momento (todas las canciones, las de un artista, favoritos, etc.).
-    // Lo inicializamos con un flow vacío.
     private val fuenteDeCancionesActiva =
         MutableStateFlow<Flow<List<CancionConArtista>>>(flowOf(emptyList()))
-
+    private val usuarioIdFlow = _estadoUi.map { it.usuarioActual?.id }.distinctUntilChanged().filterNotNull()
     // Mantenemos este Job para las cargas que no son de canciones (álbumes, artistas, etc.)
 
     init {
-        // --- CAMBIO #3: 'init' AHORA SOLO INICIA EL OBSERVADOR ---
-        // Ya no pre-cargamos la vista de canciones aquí. Solo nos aseguramos de que el sistema
-        // esté listo para reaccionar a los cambios en la fuente de canciones.
         observarYFiltrarCancionesActuales()
         observarYFiltrarAlbumes()
         observarYFiltrarArtistas()
         observarYFiltrarGeneros()
         observarYFiltrarListas()
-        // La UI ahora es responsable de solicitar la primera vista al componerse.
+
     }
 
     private fun observarYFiltrarArtistas() {
@@ -173,6 +168,59 @@ class BibliotecaViewModel @Inject constructor(
     @RequiresApi(Build.VERSION_CODES.R)
     fun enEvento(evento: BibliotecaEvento) {
         when (evento) {
+
+            is BibliotecaEvento.AbrirDialogoPlaylist -> {
+                _estadoUi.update {
+                    it.copy(
+                        mostrarDialogoPlaylist = true,
+                        cancionParaAnadirALista = evento.cancion
+                    )
+                }
+            }
+            is BibliotecaEvento.CerrarDialogoPlaylist -> {
+                _estadoUi.update {
+                    it.copy(
+                        mostrarDialogoPlaylist = false,
+                        cancionParaAnadirALista = null
+                    )
+                }
+            }
+            is BibliotecaEvento.AnadirCancionAListasExistentes -> {
+                viewModelScope.launch {
+                    val cancionId = _estadoUi.value.cancionParaAnadirALista?.cancion?.idCancion ?: return@launch
+                    evento.idListas.forEach { listaId ->
+                        val detalle = DetalleListaReproduccionEntity(idLista = listaId, idCancion = cancionId)
+                        cancionDao.insertarDetalleLista(detalle)
+                    }
+                    // Cerramos el diálogo después de añadir
+                    _estadoUi.update { it.copy(mostrarDialogoPlaylist = false, cancionParaAnadirALista = null) }
+                }
+            }
+            is BibliotecaEvento.CrearNuevaListaYAnadirCancion -> {
+                viewModelScope.launch {
+                    val usuarioId = _estadoUi.value.usuarioActual?.id ?: return@launch
+                    val cancionId = _estadoUi.value.cancionParaAnadirALista?.cancion?.idCancion ?: return@launch
+
+                    // 1. Crear la nueva lista
+                    val nuevaLista = ListaReproduccionEntity(
+                        idUsuario = usuarioId,
+                        nombre = evento.nombre,
+                        descripcion = evento.descripcion,
+                        portadaUrl = null // TODO: Implementar lógica para seleccionar portada
+                    )
+                    val nuevaListaId = cancionDao.insertarListaReproduccion(nuevaLista)
+
+                    // 2. Añadir la canción a la nueva lista
+                    if (nuevaListaId != -1L) { // -1L indica que la inserción falló
+                        val detalle = DetalleListaReproduccionEntity(idLista = nuevaListaId.toInt(), idCancion = cancionId)
+                        cancionDao.insertarDetalleLista(detalle)
+                    }
+
+                    // 3. Cerramos el diálogo
+                    _estadoUi.update { it.copy(mostrarDialogoPlaylist = false, cancionParaAnadirALista = null) }
+                }
+            }
+
             is BibliotecaEvento.AlternarFavorito -> {
                 viewModelScope.launch {
                     val usuarioId = _estadoUi.value.usuarioActual?.id ?: return@launch
@@ -332,7 +380,6 @@ class BibliotecaViewModel @Inject constructor(
         genero: GeneroEntity? = null,
         lista: ListaReproduccionEntity? = null
     ) {
-        // Ya no necesitamos el 'jobDeCargaDeEntidades' porque todo es manejado por observadores.
 
         // 1. Actualizamos el estado de la UI para la nueva vista y limpiamos la búsqueda.
         _estadoUi.update {
@@ -357,9 +404,8 @@ class BibliotecaViewModel @Inject constructor(
             // CASOS QUE SÍ SON LISTAS DE CANCIONES (CAMBIAN EL TÍTULO Y LA FUENTE)
             TipoDeCuerpoBiblioteca.CANCIONES -> {
                 _estadoUi.update { it.copy(tituloDelCuerpo = "Canciones") }
-                val usuarioId = _estadoUi.value.usuarioActual?.id
-                if (usuarioId != null) {
-                    nuevaFuente = cancionDao.obtenerCancionesConArtista(usuarioId.toInt())
+                nuevaFuente = usuarioIdFlow.flatMapLatest { userId ->
+                    cancionDao.obtenerCancionesConArtista(userId)
                 }
             }
             TipoDeCuerpoBiblioteca.CANCIONES_DE_ALBUM -> {

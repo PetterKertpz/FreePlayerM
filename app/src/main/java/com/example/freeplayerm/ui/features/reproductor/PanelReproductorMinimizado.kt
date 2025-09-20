@@ -132,8 +132,6 @@ fun PanelReproductorMinimizado(
                         )
                     }
 
-
-
                     // --- Controles de reproducción ---
                     if (cancionConArtista != null) {
                         ControlesConTiempo(
@@ -153,11 +151,12 @@ fun PanelReproductorMinimizado(
                             },
                             // El rango también se obtiene desde el objeto anidado
                             valueRange = 0f..(cancionConArtista.cancion.duracionSegundos * 1000).toFloat(),
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth(0.8f).align(Alignment.CenterHorizontally),
                             colors = SliderDefaults.colors(
                                 thumbColor = Color.White,
-                                activeTrackColor = Color.White,
-                                inactiveTrackColor = Color.Gray
+                                activeTrackColor = Color.Black,
+                                inactiveTrackColor = Color.Black,
+                                activeTickColor = AppColors.RojoMedio,
                             )
                         )
                     }
@@ -205,8 +204,8 @@ private fun ControlesConTiempo(
                 )
             }
             // Anterior
-            IconButton(onClick = { enEvento(ReproductorEvento.CancionAnterior) }, modifier = Modifier.size(buttonSize)) {
-                Icon(imageVector = IconosReproductor.Anterior, contentDescription = "Anterior", tint = Color.White, modifier = Modifier.size(iconSize))
+            IconButton(onClick = { enEvento(ReproductorEvento.CancionAnterior) }, modifier = Modifier.size(buttonSize + 12.dp)) {
+                Icon(imageVector = IconosReproductor.Anterior, contentDescription = "Anterior", tint = Color.White, modifier = Modifier.size(iconSize + 12.dp))
             }
             // Play/Pausa
             IconButton(onClick = { enEvento(ReproductorEvento.ReproducirPausar) }, modifier = Modifier.size(buttonSize + 12.dp)) {
@@ -216,8 +215,8 @@ private fun ControlesConTiempo(
                 )
             }
             // Siguiente
-            IconButton(onClick = { enEvento(ReproductorEvento.SiguienteCancion) }, modifier = Modifier.size(buttonSize)) {
-                Icon(imageVector = IconosReproductor.Siguiente, contentDescription = "Siguiente", tint = Color.White, modifier = Modifier.size(iconSize))
+            IconButton(onClick = { enEvento(ReproductorEvento.SiguienteCancion) }, modifier = Modifier.size(buttonSize + 12.dp)) {
+                Icon(imageVector = IconosReproductor.Siguiente, contentDescription = "Siguiente", tint = Color.White, modifier = Modifier.size(iconSize + 12.dp))
             }
             // Repetir
             IconButton(onClick = { enEvento(ReproductorEvento.CambiarModoRepeticion) }, modifier = Modifier.size(buttonSize)) {
@@ -275,9 +274,10 @@ private fun ViniloConPortada(
             model = urlPortada,
             contentDescription = "Portada del Álbum",
             modifier = Modifier
-                .size(size / 2.5f)
+                .size(size / 2f)
                 .clip(CircleShape)
-                .background(Color.Red),
+                .background(Color.DarkGray)
+            .rotate(if (estaReproduciendo) rotacion else 0f),
             contentScale = ContentScale.Crop
         )
     }

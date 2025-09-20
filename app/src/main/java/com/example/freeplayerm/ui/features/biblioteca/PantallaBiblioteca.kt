@@ -31,6 +31,7 @@ import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.Artista
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.GeneroEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ListaReproduccionEntity
+import com.example.freeplayerm.com.example.freeplayerm.ui.features.biblioteca.components.VentanaListasReproduccion
 import com.example.freeplayerm.data.local.entity.UsuarioEntity
 import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
 import com.example.freeplayerm.ui.features.biblioteca.components.BarraDeBusquedaYFiltros
@@ -83,14 +84,10 @@ fun Biblioteca(
         // En el Composable 'Biblioteca'
         // Este se ejecuta solo la primera vez que se obtiene el permiso
         LaunchedEffect(key1 = true) {
-            // Escaneo silencioso al iniciar
+            // 1. Inicia el escaneo silencioso al entrar.
             bibliotecaViewModel.enEvento(BibliotecaEvento.PermisoConcedido)
-            // Le pedimos que cargue la vista de canciones por defecto.
+            // 2. Pide que se muestre la vista de canciones por defecto.
             bibliotecaViewModel.enEvento(BibliotecaEvento.CambiarCuerpo(TipoDeCuerpoBiblioteca.CANCIONES))
-        }
-
-        LaunchedEffect(Unit) {
-            bibliotecaViewModel.enEvento(BibliotecaEvento.PermisoConcedido)
         }
         // Este se ejecuta cuando el usuarioId cambia
         LaunchedEffect(usuarioId) {
@@ -138,6 +135,18 @@ fun CuerpoBiblioteca(
     onGeneroClick: (GeneroEntity) -> Unit,
     onListaClick: (ListaReproduccionEntity) -> Unit
 ) {
+    if (estadoBiblioteca.mostrarDialogoPlaylist) {
+        VentanaListasReproduccion(
+            listasExistentes = estadoBiblioteca.listas,
+            onDismiss = { onBibliotecaEvento(BibliotecaEvento.CerrarDialogoPlaylist) },
+            onCrearLista = { nombre, descripcion ->
+                onBibliotecaEvento(BibliotecaEvento.CrearNuevaListaYAnadirCancion(nombre, descripcion))
+            },
+            onAnadirAListas = { ids ->
+                onBibliotecaEvento(BibliotecaEvento.AnadirCancionAListasExistentes(ids))
+            }
+        )
+    }
     Scaffold(
         topBar = {
             SeccionEncabezado(
@@ -196,7 +205,7 @@ fun CuerpoBiblioteca(
             // Si hay contenido, mostramos el cuerpo correspondiente.
             Box(
                 modifier = Modifier.weight(1f),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.TopCenter
             ) {
                 when {
                     // 1. La prioridad más alta es mostrar que está cargando

@@ -8,6 +8,7 @@ import androidx.room.Query
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.AlbumEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ArtistaEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.DetalleListaReproduccionEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.FavoritoEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.GeneroEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ListaReproduccionEntity
@@ -34,6 +35,13 @@ interface CancionDao {
 
     @Query("DELETE FROM favoritos WHERE id_usuario = :usuarioId AND id_cancion = :cancionId")
     suspend fun quitarDeFavoritos(usuarioId: Int, cancionId: Int)
+//
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertarDetalleLista(detalle: DetalleListaReproduccionEntity)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertarListaReproduccion(lista: ListaReproduccionEntity): Long
+//
 
     @Query("SELECT * FROM artistas WHERE nombre = :nombre COLLATE NOCASE LIMIT 1")
     suspend fun obtenerArtistaPorNombre(nombre: String): ArtistaEntity?
