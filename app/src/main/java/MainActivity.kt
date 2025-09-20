@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
+import com.example.freeplayerm.com.example.freeplayerm.ui.features.splash.PantallaDeCarga
 import com.example.freeplayerm.ui.features.nav.GrafoDeNavegacion
 import com.example.freeplayerm.ui.features.nav.Rutas
 import com.example.freeplayerm.ui.features.reproductor.ReproductorViewModel
@@ -23,6 +24,7 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     // Inyectamos el MainViewModel para la lógica de sesión
     private val mainViewModel: MainViewModel by viewModels()
+
     // --- CAMBIO CLAVE ---
     // Inyectamos el ReproductorViewModel a nivel de Actividad.
     // Su estado persistirá mientras la actividad esté viva.
@@ -32,26 +34,36 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             FreePlayerMTheme {
-                val usuario by mainViewModel.usuarioActual.collectAsStateWithLifecycle()
-
-                val rutaDeInicio = if (usuario != null) {
-                    Rutas.Biblioteca.crearRuta(usuario!!.id)
-                } else {
-                    Rutas.Login.ruta
-                }
-
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
+                    // 1. Obtenemos el NUEVO estado de autenticación
+                    val authState by mainViewModel.authState.collectAsStateWithLifecycle()
                     val navController = rememberNavController()
 
-                    // Pasamos la instancia del ReproductorViewModel a nuestro grafo de navegación
-                    GrafoDeNavegacion(
-                        navController = navController,
-                        rutaDeInicio = rutaDeInicio,
-                        reproductorViewModel = reproductorViewModel // <-- ¡NUEVO!
-                    )
+                    // 2. Usamos 'when' para decidir qué pantalla completa mostrar
+                    when (val state = authState) {
+                        is AuthState.Cargando -> {
+                            PantallaDeCarga()
+                        }
+
+                        is AuthState.Autenticado -> {
+                            GrafoDeNavegacion(
+                                navController = navController,
+                                rutaDeInicio = Rutas.Biblioteca.crearRuta(state.usuario.id),
+                                reproductorViewModel = reproductorViewModel
+                            )
+                        }
+
+                        is AuthState.NoAutenticado -> {
+                            GrafoDeNavegacion(
+                                navController = navController,
+                                rutaDeInicio = Rutas.Login.ruta,
+                                reproductorViewModel = reproductorViewModel
+                            )
+                        }
+                    }
                 }
             }
         }
