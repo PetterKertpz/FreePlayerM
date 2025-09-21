@@ -274,7 +274,7 @@ fun CuerpoBiblioteca(
                                                     // Y enviamos este nuevo evento al ViewModel del reproductor
                                                     onReproductorEvento(eventoConCola)
                                                 } else {
-                                                    // Si es cualquier otro evento (play/pause desde el panel), lo pasamos tal cual
+                                                    // Para otros eventos (play/pause), los pasamos tal cual
                                                     onReproductorEvento(evento)
                                                 }
                                             }
