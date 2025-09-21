@@ -30,6 +30,10 @@ data class ReproductorEstado(
 // Define todos los eventos (acciones del usuario) que la UI puede enviar al ViewModel.
 sealed class ReproductorEvento {
     data class SeleccionarCancion(val cancion: CancionConArtista) : ReproductorEvento()
+    data class EstablecerColaYReproducir(
+        val cola: List<CancionConArtista>,
+        val cancionInicial: CancionConArtista
+    ) : ReproductorEvento()
     object ReproducirPausar : ReproductorEvento()
     object SiguienteCancion : ReproductorEvento()
     object CancionAnterior : ReproductorEvento()

@@ -54,7 +54,9 @@ kotlin {
 }
 
 dependencies {
-    
+
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.session)
     implementation(libs.accompanist.permissions)
 
     implementation(libs.composeIcons.cssGg)

@@ -263,7 +263,21 @@ fun CuerpoBiblioteca(
                                         CuerpoCanciones(
                                             estado = estadoBiblioteca,
                                             onBibliotecaEvento = onBibliotecaEvento,
-                                            onReproductorEvento = onReproductorEvento
+                                            onReproductorEvento = { evento ->
+                                                // Comprobamos si el evento es la selección de una canción
+                                                if (evento is ReproductorEvento.SeleccionarCancion) {
+                                                    // Si lo es, creamos nuestro nuevo evento más completo
+                                                    val eventoConCola = ReproductorEvento.EstablecerColaYReproducir(
+                                                        cola = estadoBiblioteca.canciones, // Pasamos la lista completa y ordenada
+                                                        cancionInicial = evento.cancion
+                                                    )
+                                                    // Y enviamos este nuevo evento al ViewModel del reproductor
+                                                    onReproductorEvento(eventoConCola)
+                                                } else {
+                                                    // Si es cualquier otro evento (play/pause desde el panel), lo pasamos tal cual
+                                                    onReproductorEvento(evento)
+                                                }
+                                            }
                                         )
                                     }
 
