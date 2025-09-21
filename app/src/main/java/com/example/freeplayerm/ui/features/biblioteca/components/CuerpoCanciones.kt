@@ -80,15 +80,16 @@ fun CuerpoCanciones(
                 // --- CAMBIO AQUÍ ---
                 onBibliotecaEvento(BibliotecaEvento.AbrirDialogoPlaylist(cancionSeleccionada))
             },
-            onEditClick = { cancionSeleccionada ->
-                /* TODO: onBibliotecaEvento(BibliotecaEvento.AbrirEditorDeCancion(cancionSeleccionada)) */
+            onEditClick = { cancion ->
+                onBibliotecaEvento(BibliotecaEvento.EditarCancion(cancion))
             },
             onToggleSeleccion = { cancionId ->
             onBibliotecaEvento(BibliotecaEvento.AlternarSeleccionCancion(cancionId))
             },
             onActivarModoSeleccion = { cancion ->
             onBibliotecaEvento(BibliotecaEvento.ActivarModoSeleccion(cancion))
-            }
+            },
+
         )
     }
 }
@@ -104,6 +105,7 @@ private fun ListaDeCanciones(
     onEditClick: (CancionConArtista) -> Unit,
     onToggleSeleccion: (Int) -> Unit,
     onActivarModoSeleccion: (CancionConArtista) -> Unit,
+
 ) {
     LazyColumn {
         items(
@@ -191,11 +193,15 @@ private fun CancionItem(
                     tint = if (cancionConArtista.esFavorita) AppColors.RojoMedio else Color.Black
                 )
             }
-            IconButton(onClick = onAddToPlaylistClick, modifier = Modifier.size(36.dp)) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir a playlist", tint = Color.Black)
-            }
-            IconButton(onClick = onEditClick, modifier = Modifier.size(36.dp)) {
-                Icon(imageVector = Icons.Default.Edit, contentDescription = "Editar información", tint = Color.Black)
+            if (esModoSeleccion) {
+                // Botón de Añadir a Lista
+                IconButton(onClick = onAddToPlaylistClick, modifier = Modifier.size(36.dp)) {
+                    Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir a playlist", tint = Color.Black)
+                }
+                // Botón de Editar
+                IconButton(onClick = onEditClick, modifier = Modifier.size(36.dp)) {
+                    Icon(imageVector = Icons.Default.Edit, contentDescription = "Editar información", tint = Color.Black)
+                }
             }
         }
     }

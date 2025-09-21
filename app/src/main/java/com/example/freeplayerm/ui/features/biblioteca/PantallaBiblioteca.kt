@@ -145,12 +145,11 @@ fun CuerpoBiblioteca(
         VentanaListasReproduccion(
             listasExistentes = estadoBiblioteca.listas,
             onDismiss = { onBibliotecaEvento(BibliotecaEvento.CerrarDialogoPlaylist) },
-            onCrearLista = { nombre, descripcion ->
-                // Si estamos en modo selección, usamos el nuevo evento. Si no, el antiguo.
+            onCrearLista = { nombre, descripcion, portadaUri -> // <-- Ahora recibimos el portadaUri
                 if (estadoBiblioteca.esModoSeleccion) {
-                    onBibliotecaEvento(BibliotecaEvento.CrearListaYAnadirCancionesSeleccionadas(nombre, descripcion))
+                    onBibliotecaEvento(BibliotecaEvento.CrearListaYAnadirCancionesSeleccionadas(nombre, descripcion, portadaUri))
                 } else {
-                    onBibliotecaEvento(BibliotecaEvento.CrearNuevaListaYAnadirCancion(nombre, descripcion))
+                    onBibliotecaEvento(BibliotecaEvento.CrearNuevaListaYAnadirCancion(nombre, descripcion, portadaUri))
                 }
             },
             onAnadirAListas = { ids ->
@@ -230,6 +229,7 @@ fun CuerpoBiblioteca(
                     onQuitarSeleccion = { onBibliotecaEvento(BibliotecaEvento.QuitarCancionesSeleccionadasDeLista) },
                     onEliminarLista = { onBibliotecaEvento(BibliotecaEvento.EliminarListaDeReproduccionActual) },
                     onCerrarModoSeleccion = { onBibliotecaEvento(BibliotecaEvento.DesactivarModoSeleccion) }
+
                 )
             }
 

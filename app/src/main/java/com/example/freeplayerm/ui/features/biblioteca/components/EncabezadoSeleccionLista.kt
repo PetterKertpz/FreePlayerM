@@ -44,16 +44,19 @@ fun EncabezadoSeleccionLista(
     onQuitarSeleccion: () -> Unit,
     onEliminarLista: () -> Unit,
     onCerrarModoSeleccion: () -> Unit // <-- ✅ Nuevo parámetro
+
 ) {
     if (lista == null) return
 
     Box( // Usamos Box para poder posicionar el botón de cerrar en la esquina
         modifier = Modifier
+            .clip(shape = RoundedCornerShape(0.dp, 0.dp, 30.dp, 30.dp))
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
     ) {
         Column(
             modifier = Modifier
+
                 .fillMaxWidth()
                 .padding(12.dp)
         ) {

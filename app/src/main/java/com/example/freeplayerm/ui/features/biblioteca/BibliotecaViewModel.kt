@@ -95,7 +95,7 @@ sealed class BibliotecaEvento {
     data class AlternarFavorito(val cancionConArtista: CancionConArtista) : BibliotecaEvento()
     data class AbrirDialogoPlaylist(val cancion: CancionConArtista) : BibliotecaEvento()
     data object CerrarDialogoPlaylist : BibliotecaEvento()
-    data class CrearNuevaListaYAnadirCancion(val nombre: String, val descripcion: String?) : BibliotecaEvento()
+    data class CrearNuevaListaYAnadirCancion(val nombre: String, val descripcion: String?, val portadaUri: String?) : BibliotecaEvento()
     data class AnadirCancionAListasExistentes(val idListas: List<Int>) : BibliotecaEvento()
     data class ActivarModoSeleccion(val cancion: CancionConArtista) : BibliotecaEvento()
     data object DesactivarModoSeleccion : BibliotecaEvento()
@@ -105,7 +105,8 @@ sealed class BibliotecaEvento {
     data object EliminarListaDeReproduccionActual : BibliotecaEvento()
     data object AbrirDialogoAnadirSeleccionALista : BibliotecaEvento()
     data class AnadirCancionesSeleccionadasAListas(val idListas: List<Int>) : BibliotecaEvento()
-    data class CrearListaYAnadirCancionesSeleccionadas(val nombre: String, val descripcion: String?) : BibliotecaEvento()
+    data class CrearListaYAnadirCancionesSeleccionadas(val nombre: String, val descripcion: String?, val portadaUri: String?) : BibliotecaEvento()
+    data class EditarCancion(val cancion: CancionConArtista) : BibliotecaEvento()
 }
 
 
@@ -180,7 +181,13 @@ class BibliotecaViewModel @Inject constructor(
     @RequiresApi(Build.VERSION_CODES.R)
     fun enEvento(evento: BibliotecaEvento) {
         when (evento) {
-
+            is BibliotecaEvento.EditarCancion -> {
+                // TODO: Aquí iría la lógica para abrir la pantalla de edición
+                // para la 'evento.cancion' específica que se pasó.
+                // Ejemplo: _estadoUi.update { it.copy(cancionParaEditar = evento.cancion) }
+                // Al ser una acción directa, salimos del modo selección.
+                _estadoUi.update { it.copy(esModoSeleccion = false, cancionesSeleccionadas = emptySet()) }
+            }
             is BibliotecaEvento.AbrirDialogoAnadirSeleccionALista -> {
                 _estadoUi.update { it.copy(mostrarDialogoPlaylist = true) }
             }
@@ -219,7 +226,7 @@ class BibliotecaViewModel @Inject constructor(
                         idUsuario = usuarioId,
                         nombre = evento.nombre,
                         descripcion = evento.descripcion,
-                        portadaUrl = null
+                        portadaUrl = evento.portadaUri
                     )
                     val nuevaListaId = cancionDao.insertarListaReproduccion(nuevaLista)
 
@@ -342,7 +349,7 @@ class BibliotecaViewModel @Inject constructor(
                         idUsuario = usuarioId,
                         nombre = evento.nombre,
                         descripcion = evento.descripcion,
-                        portadaUrl = null // TODO: Implementar lógica para seleccionar portada
+                        portadaUrl = evento.portadaUri
                     )
                     val nuevaListaId = cancionDao.insertarListaReproduccion(nuevaLista)
 
