@@ -1,8 +1,12 @@
 // en: app/src/main/java/com/example/freeplayerm/ui/features/biblioteca/BibliotecaViewModel.kt
 package com.example.freeplayerm.ui.features.biblioteca
 
+import android.annotation.SuppressLint
+import android.net.Uri
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.AlbumEntity
@@ -14,6 +18,7 @@ import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ListaRe
 import com.example.freeplayerm.data.local.dao.CancionDao
 import com.example.freeplayerm.data.local.entity.UsuarioEntity
 import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
+import com.example.freeplayerm.data.repository.ImageRepository
 import com.example.freeplayerm.data.repository.RepositorioDeMusicaLocal
 import com.example.freeplayerm.data.repository.UsuarioRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -78,7 +83,8 @@ data class BibliotecaEstado(
     val cancionParaAnadirALista: CancionConArtista? = null,
     val esModoSeleccion: Boolean = false,
     val cancionesSeleccionadas: Set<Int> = emptySet(), // Usamos un Set de IDs para eficiencia
-    val listaActual: ListaReproduccionEntity? = null // Para saber en qué lista estamos
+    val listaActual: ListaReproduccionEntity? = null, // Para saber en qué lista estamos
+    val mostrandoDialogoEditarLista: Boolean = false
 
 )
 sealed class BibliotecaEvento {
@@ -107,6 +113,10 @@ sealed class BibliotecaEvento {
     data class AnadirCancionesSeleccionadasAListas(val idListas: List<Int>) : BibliotecaEvento()
     data class CrearListaYAnadirCancionesSeleccionadas(val nombre: String, val descripcion: String?, val portadaUri: String?) : BibliotecaEvento()
     data class EditarCancion(val cancion: CancionConArtista) : BibliotecaEvento()
+    data object VolverAListas : BibliotecaEvento()
+    data object AbrirDialogoEditarLista : BibliotecaEvento()
+    data object CerrarDialogoEditarLista : BibliotecaEvento()
+    data class GuardarCambiosLista(val nombre: String, val descripcion: String?, val portadaUri: String?) : BibliotecaEvento()
 }
 
 
@@ -115,9 +125,10 @@ sealed class BibliotecaEvento {
 class BibliotecaViewModel @Inject constructor(
     private val usuarioRepository: UsuarioRepository,
     private val cancionDao: CancionDao,
-    private val repositorioDeMusicaLocal: RepositorioDeMusicaLocal
+    private val repositorioDeMusicaLocal: RepositorioDeMusicaLocal,
+    private val imageRepository: ImageRepository
 ) : ViewModel() {
-
+    val scrollStates = mutableMapOf<TipoDeCuerpoBiblioteca, LazyListState>()
     private val _estadoUi = MutableStateFlow(BibliotecaEstado())
     val estadoUi = _estadoUi.asStateFlow()
     private val fuenteDeCancionesActiva =
@@ -178,9 +189,50 @@ class BibliotecaViewModel @Inject constructor(
         }
     }
 
+    @SuppressLint("UseKtx")
     @RequiresApi(Build.VERSION_CODES.R)
     fun enEvento(evento: BibliotecaEvento) {
         when (evento) {
+
+            is BibliotecaEvento.AbrirDialogoEditarLista -> {
+                _estadoUi.update { it.copy(mostrandoDialogoEditarLista = true) }
+            }
+            is BibliotecaEvento.CerrarDialogoEditarLista -> {
+                _estadoUi.update { it.copy(mostrandoDialogoEditarLista = false) }
+            }
+            is BibliotecaEvento.GuardarCambiosLista -> {
+                viewModelScope.launch {
+                    val listaAEditar = _estadoUi.value.listaActual ?: return@launch
+                    var nuevaPortadaUrl = listaAEditar.portadaUrl
+
+                    if (evento.portadaUri != null && evento.portadaUri.startsWith("content://")) {
+                        nuevaPortadaUrl = imageRepository.copyImageToInternalStorage(Uri.parse(evento.portadaUri))?.toString()
+                    } else if (evento.portadaUri == null) {
+                        // Si el usuario eliminó la portada
+                        nuevaPortadaUrl = null
+                    }
+
+                    val listaActualizada = listaAEditar.copy(
+                        nombre = evento.nombre,
+                        descripcion = evento.descripcion,
+                        portadaUrl = nuevaPortadaUrl // <-- Usamos la nueva URI
+                    )
+
+                    cancionDao.actualizarLista(listaActualizada)
+
+                    // Actualizamos el estado y cerramos el diálogo
+                    _estadoUi.update {
+                        it.copy(
+                            mostrandoDialogoEditarLista = false,
+                            listaActual = listaActualizada // Actualizamos la lista en la UI al instante
+                        )
+                    }
+                }
+            }
+            is BibliotecaEvento.VolverAListas -> {
+                // Simplemente cambiamos el cuerpo para volver a la vista de todas las listas.
+                cambiarCuerpo(TipoDeCuerpoBiblioteca.LISTAS)
+            }
             is BibliotecaEvento.EditarCancion -> {
                 // TODO: Aquí iría la lógica para abrir la pantalla de edición
                 // para la 'evento.cancion' específica que se pasó.
@@ -220,13 +272,16 @@ class BibliotecaViewModel @Inject constructor(
                     val estado = _estadoUi.value
                     val usuarioId = estado.usuarioActual?.id ?: return@launch
                     val cancionIds = estado.cancionesSeleccionadas
+                    val portadaUriString = evento.portadaUri?.let {
+                        imageRepository.copyImageToInternalStorage(Uri.parse(it))?.toString()
+                    }
 
                     // 1. Creamos la nueva lista
                     val nuevaLista = ListaReproduccionEntity(
                         idUsuario = usuarioId,
                         nombre = evento.nombre,
                         descripcion = evento.descripcion,
-                        portadaUrl = evento.portadaUri
+                        portadaUrl = portadaUriString
                     )
                     val nuevaListaId = cancionDao.insertarListaReproduccion(nuevaLista)
 
@@ -343,13 +398,15 @@ class BibliotecaViewModel @Inject constructor(
                 viewModelScope.launch {
                     val usuarioId = _estadoUi.value.usuarioActual?.id ?: return@launch
                     val cancionId = _estadoUi.value.cancionParaAnadirALista?.cancion?.idCancion ?: return@launch
-
+                    val portadaUriString = evento.portadaUri?.let {
+                        imageRepository.copyImageToInternalStorage(it.toUri())?.toString()
+                    }
                     // 1. Crear la nueva lista
                     val nuevaLista = ListaReproduccionEntity(
                         idUsuario = usuarioId,
                         nombre = evento.nombre,
                         descripcion = evento.descripcion,
-                        portadaUrl = evento.portadaUri
+                        portadaUrl = portadaUriString
                     )
                     val nuevaListaId = cancionDao.insertarListaReproduccion(nuevaLista)
 
@@ -523,18 +580,20 @@ class BibliotecaViewModel @Inject constructor(
         genero: GeneroEntity? = null,
         lista: ListaReproduccionEntity? = null
     ) {
-
+        var nuevaFuente: Flow<List<CancionConArtista>>? = null
+        val esVistaDeLista = nuevoCuerpo == TipoDeCuerpoBiblioteca.CANCIONES_DE_LISTA
         // 1. Actualizamos el estado de la UI para la nueva vista y limpiamos la búsqueda.
         _estadoUi.update {
             it.copy(
                 cuerpoActual = nuevoCuerpo,
                 textoDeBusqueda = "",
-                esModoSeleccion = false, // <-- Se reinicia aquí
-                cancionesSeleccionadas = emptySet() // <-- Y se vacía la selección aquí
+                esModoSeleccion = false,
+                cancionesSeleccionadas = emptySet(),
+                listaActual = if (esVistaDeLista) lista else null // <-- Reinicio clave
             )
         }
 
-        var nuevaFuente: Flow<List<CancionConArtista>>? = null
+
 
         // 2. Simplemente actualizamos el título y, si es una vista de canciones,
         //    le decimos al observador de canciones cuál es su nueva fuente de datos.
@@ -589,11 +648,10 @@ class BibliotecaViewModel @Inject constructor(
             }
             TipoDeCuerpoBiblioteca.CANCIONES_DE_LISTA -> {
                 lista?.let {
-                    _estadoUi.update { estado -> estado.copy(listaActual = it) }
-                    _estadoUi.update { estado -> estado.copy(tituloDelCuerpo = it.nombre) }
-                    val usuarioId = _estadoUi.value.usuarioActual?.id
+                    // Actualizamos el título y nos aseguramos de que la lista esté en el estado
+                    _estadoUi.update { estado -> estado.copy(tituloDelCuerpo = it.nombre, listaActual = it) }
 
-                    // Verificamos que el ID no sea nulo antes de llamar a la función.
+                    val usuarioId = _estadoUi.value.usuarioActual?.id
                     if (usuarioId != null) {
                         nuevaFuente =
                             cancionDao.obtenerCancionesDeListaConArtista(it.idLista, usuarioId)

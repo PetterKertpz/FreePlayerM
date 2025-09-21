@@ -5,6 +5,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.AlbumEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ArtistaEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
@@ -29,6 +30,9 @@ interface CancionDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertarGenero(genero: GeneroEntity): Long
+
+    @Update
+    suspend fun actualizarLista(lista: ListaReproduccionEntity)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun anadirAFavoritos(favorito: FavoritoEntity)

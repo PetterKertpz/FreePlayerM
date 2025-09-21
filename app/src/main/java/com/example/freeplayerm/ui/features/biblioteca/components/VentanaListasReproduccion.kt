@@ -47,6 +47,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.core.net.toUri
 import coil.compose.AsyncImage
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ListaReproduccionEntity
 
@@ -148,28 +149,37 @@ private fun FilaListaSeleccionable(
 }
 
 @Composable
-private fun DialogoCrearLista(
+fun DialogoCrearLista(
+    listaAEditar: ListaReproduccionEntity? = null,
     onDismiss: () -> Unit,
     onCrear: (nombre: String, descripcion: String?, portadaUri: String?) -> Unit
 ) {
-    var nombre by rememberSaveable { mutableStateOf("") }
-    var descripcion by rememberSaveable { mutableStateOf("") }
+    var nombre by rememberSaveable { mutableStateOf(listaAEditar?.nombre ?: "") }
+    var descripcion by rememberSaveable { mutableStateOf(listaAEditar?.descripcion ?: "") }
     val nombreValido = nombre.isNotBlank()
 
     // --- ✅ LÓGICA DEL PHOTO PICKER ---
     // 1. Estado para guardar el Uri de la imagen seleccionada
-    var imagenSeleccionadaUri by remember { mutableStateOf<Uri?>(null) }
+    var imagenSeleccionadaUri by remember(listaAEditar?.idLista) {
+        mutableStateOf<Uri?>(listaAEditar?.portadaUrl?.toUri())
+    }
     // 2. Creamos el lanzador que abrirá la galería
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri ->
-            imagenSeleccionadaUri = uri
+            // Solo actualizamos la imagen si el usuario realmente seleccionó una nueva.
+            // Si cancela (uri es null), no hacemos nada y la portada original se mantiene.
+            if (uri != null) {
+                imagenSeleccionadaUri = uri
+            }
         }
     )
 
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Nueva Lista de Reproducción") },
+        // El título cambia dependiendo del modo
+        title = { Text(if (listaAEditar != null) "Editar Lista" else "Nueva Lista") },
         text = {
             Column (horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
@@ -219,19 +229,18 @@ private fun DialogoCrearLista(
                     onValueChange = { descripcion = it },
                     label = { Text("Descripción (opcional)") }
                 )
-                // TODO: Añadir aquí un botón o área para seleccionar una imagen de portada
             }
 
         },
         confirmButton = {
             Button(
                 onClick = {
-                    // 4. Pasamos el Uri como String al crear la lista
-                    onCrear(nombre, descripcion.ifBlank { null }, imagenSeleccionadaUri.toString())
+                    onCrear(nombre, descripcion.ifBlank { null }, imagenSeleccionadaUri?.toString())
                 },
                 enabled = nombreValido
             ) {
-                Text("Crear")
+                // El texto del botón cambia dependiendo del modo
+                Text(if (listaAEditar != null) "Guardar" else "Crear")
             }
         },
         dismissButton = {

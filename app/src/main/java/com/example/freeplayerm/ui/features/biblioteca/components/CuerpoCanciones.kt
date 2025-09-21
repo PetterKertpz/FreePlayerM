@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -49,6 +50,7 @@ import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 @Composable
 fun CuerpoCanciones(
     modifier: Modifier = Modifier,
+    lazyListState: LazyListState,
     estado: BibliotecaEstado,
     onBibliotecaEvento: (BibliotecaEvento) -> Unit,
     onReproductorEvento: (ReproductorEvento) -> Unit
@@ -65,6 +67,7 @@ fun CuerpoCanciones(
         }
     } else {
         ListaDeCanciones(
+            lazyListState = lazyListState,
             canciones = estado.canciones,
             esModoSeleccion = estado.esModoSeleccion,
             cancionesSeleccionadas = estado.cancionesSeleccionadas,
@@ -96,6 +99,7 @@ fun CuerpoCanciones(
 
 @Composable
 private fun ListaDeCanciones(
+    lazyListState: LazyListState,
     canciones: List<CancionConArtista>,
     esModoSeleccion: Boolean,
     cancionesSeleccionadas: Set<Int>,
@@ -107,7 +111,7 @@ private fun ListaDeCanciones(
     onActivarModoSeleccion: (CancionConArtista) -> Unit,
 
 ) {
-    LazyColumn {
+    LazyColumn(state = lazyListState) {
         items(
             items = canciones,
             key = { cancionConArtista -> cancionConArtista.cancion.idCancion }
@@ -240,7 +244,8 @@ private fun CuerpoCancionesConDatosPreview() {
         CuerpoCanciones(
             estado = estadoDePrueba,
             onBibliotecaEvento = {},
-            onReproductorEvento = {}
+            onReproductorEvento = {},
+            lazyListState = LazyListState(0, 0)
         )
     }
 }
@@ -260,7 +265,8 @@ private fun CuerpoCancionesVacioPreview() {
         CuerpoCanciones(
             estado = estadoDePrueba,
             onBibliotecaEvento = {},
-            onReproductorEvento = {}
+            onReproductorEvento = {},
+            lazyListState = LazyListState(0, 0)
         )
     }
 }
@@ -280,7 +286,8 @@ private fun CuerpoCancionesBusquedaSinResultadosPreview() {
         CuerpoCanciones(
             estado = estadoDePrueba,
             onBibliotecaEvento = {},
-            onReproductorEvento = {}
+            onReproductorEvento = {},
+            lazyListState = LazyListState(0, 0)
         )
     }
 }
