@@ -4,6 +4,7 @@ package com.example.freeplayerm.ui.features.biblioteca
 import android.Manifest
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,8 +12,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -40,6 +45,7 @@ import com.example.freeplayerm.ui.features.biblioteca.components.CuerpoArtistas
 import com.example.freeplayerm.ui.features.biblioteca.components.CuerpoCanciones
 import com.example.freeplayerm.ui.features.biblioteca.components.CuerpoGeneros
 import com.example.freeplayerm.ui.features.biblioteca.components.CuerpoListas
+import com.example.freeplayerm.ui.features.biblioteca.components.EncabezadoSeleccionLista
 import com.example.freeplayerm.ui.features.biblioteca.components.SeccionEncabezado
 import com.example.freeplayerm.ui.features.reproductor.PanelReproductorMinimizado
 import com.example.freeplayerm.ui.features.reproductor.ReproductorEstado
@@ -140,10 +146,20 @@ fun CuerpoBiblioteca(
             listasExistentes = estadoBiblioteca.listas,
             onDismiss = { onBibliotecaEvento(BibliotecaEvento.CerrarDialogoPlaylist) },
             onCrearLista = { nombre, descripcion ->
-                onBibliotecaEvento(BibliotecaEvento.CrearNuevaListaYAnadirCancion(nombre, descripcion))
+                // Si estamos en modo selección, usamos el nuevo evento. Si no, el antiguo.
+                if (estadoBiblioteca.esModoSeleccion) {
+                    onBibliotecaEvento(BibliotecaEvento.CrearListaYAnadirCancionesSeleccionadas(nombre, descripcion))
+                } else {
+                    onBibliotecaEvento(BibliotecaEvento.CrearNuevaListaYAnadirCancion(nombre, descripcion))
+                }
             },
             onAnadirAListas = { ids ->
-                onBibliotecaEvento(BibliotecaEvento.AnadirCancionAListasExistentes(ids))
+                // Si estamos en modo selección, usamos el nuevo evento. Si no, el antiguo.
+                if (estadoBiblioteca.esModoSeleccion) {
+                    onBibliotecaEvento(BibliotecaEvento.AnadirCancionesSeleccionadasAListas(ids))
+                } else {
+                    onBibliotecaEvento(BibliotecaEvento.AnadirCancionAListasExistentes(ids))
+                }
             }
         )
     }
@@ -160,6 +176,16 @@ fun CuerpoBiblioteca(
                     onBibliotecaEvento(BibliotecaEvento.ForzarReescaneo)
                 }
             )
+        },
+        floatingActionButton = {
+            // El FAB solo será visible si estamos en modo selección
+            AnimatedVisibility(visible = estadoBiblioteca.esModoSeleccion) {
+                FloatingActionButton(
+                    onClick = { onBibliotecaEvento(BibliotecaEvento.AbrirDialogoAnadirSeleccionALista) }
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Añadir selección a lista")
+                }
+            }
         },
         bottomBar = {
             // Si hay una canción sonando, componemos el panel.
@@ -193,6 +219,17 @@ fun CuerpoBiblioteca(
                     criterioDeOrdenamiento = estadoBiblioteca.criterioDeOrdenamiento,
                     direccionDeOrdenamiento = estadoBiblioteca.direccionDeOrdenamiento,
                     enEvento = onBibliotecaEvento
+                )
+            }
+            if (estadoBiblioteca.esModoSeleccion && estadoBiblioteca.cuerpoActual == TipoDeCuerpoBiblioteca.CANCIONES_DE_LISTA) {
+                EncabezadoSeleccionLista(
+                    lista = estadoBiblioteca.listaActual,
+                    cancionesSeleccionadas = estadoBiblioteca.cancionesSeleccionadas.size,
+                    totalCanciones = estadoBiblioteca.canciones.size,
+                    onSeleccionarTodo = { onBibliotecaEvento(BibliotecaEvento.SeleccionarTodo) },
+                    onQuitarSeleccion = { onBibliotecaEvento(BibliotecaEvento.QuitarCancionesSeleccionadasDeLista) },
+                    onEliminarLista = { onBibliotecaEvento(BibliotecaEvento.EliminarListaDeReproduccionActual) },
+                    onCerrarModoSeleccion = { onBibliotecaEvento(BibliotecaEvento.DesactivarModoSeleccion) }
                 )
             }
 

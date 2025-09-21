@@ -5,6 +5,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -64,9 +66,11 @@ fun CuerpoCanciones(
     } else {
         ListaDeCanciones(
             canciones = estado.canciones,
+            esModoSeleccion = estado.esModoSeleccion,
+            cancionesSeleccionadas = estado.cancionesSeleccionadas,
             // El clic en la canción se traduce en un evento para el reproductor
             onCancionClick = { cancionSeleccionada ->
-                onReproductorEvento(ReproductorEvento.SeleccionarCancion(cancionSeleccionada))
+                onReproductorEvento(ReproductorEvento.EstablecerColaYReproducir(estado.canciones, cancionSeleccionada))
             },
             // El clic en el favorito se traduce en un evento para la biblioteca
             onFavoritoClick = { cancionSeleccionada ->
@@ -78,6 +82,12 @@ fun CuerpoCanciones(
             },
             onEditClick = { cancionSeleccionada ->
                 /* TODO: onBibliotecaEvento(BibliotecaEvento.AbrirEditorDeCancion(cancionSeleccionada)) */
+            },
+            onToggleSeleccion = { cancionId ->
+            onBibliotecaEvento(BibliotecaEvento.AlternarSeleccionCancion(cancionId))
+            },
+            onActivarModoSeleccion = { cancion ->
+            onBibliotecaEvento(BibliotecaEvento.ActivarModoSeleccion(cancion))
             }
         )
     }
@@ -86,12 +96,14 @@ fun CuerpoCanciones(
 @Composable
 private fun ListaDeCanciones(
     canciones: List<CancionConArtista>,
-    // --- CAMBIO #2: PARÁMETROS SIMPLIFICADOS Y CLAROS ---
-    // Esta función solo se preocupa de notificar QUÉ canción fue seleccionada para cada acción.
+    esModoSeleccion: Boolean,
+    cancionesSeleccionadas: Set<Int>,
     onCancionClick: (CancionConArtista) -> Unit,
     onFavoritoClick: (CancionConArtista) -> Unit,
     onAddToPlaylistClick: (CancionConArtista) -> Unit,
-    onEditClick: (CancionConArtista) -> Unit
+    onEditClick: (CancionConArtista) -> Unit,
+    onToggleSeleccion: (Int) -> Unit,
+    onActivarModoSeleccion: (CancionConArtista) -> Unit,
 ) {
     LazyColumn {
         items(
@@ -100,8 +112,16 @@ private fun ListaDeCanciones(
         ) { cancionConArtista ->
             CancionItem(
                 cancionConArtista = cancionConArtista,
-                // --- CAMBIO #3: PASAMOS EL EVENTO HACIA ARRIBA CON EL OBJETO COMPLETO ---
-                onClick = { onCancionClick(cancionConArtista) },
+                estaSeleccionada = cancionConArtista.cancion.idCancion in cancionesSeleccionadas,
+                esModoSeleccion = esModoSeleccion,
+                onClick = {
+                    if (esModoSeleccion) {
+                        onToggleSeleccion(cancionConArtista.cancion.idCancion)
+                    } else {
+                        onCancionClick(cancionConArtista)
+                    }
+                },
+                onLongClick = { onActivarModoSeleccion(cancionConArtista) },
                 onFavoritoClick = { onFavoritoClick(cancionConArtista) },
                 onAddToPlaylistClick = { onAddToPlaylistClick(cancionConArtista) },
                 onEditClick = { onEditClick(cancionConArtista) }
@@ -114,7 +134,10 @@ private fun ListaDeCanciones(
 @Composable
 private fun CancionItem(
     cancionConArtista: CancionConArtista,
+    estaSeleccionada: Boolean,
+    esModoSeleccion: Boolean,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     onFavoritoClick: () -> Unit,
     onAddToPlaylistClick: () -> Unit,
     onEditClick: () -> Unit
@@ -123,9 +146,19 @@ private fun CancionItem(
         modifier = Modifier
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 6.dp)
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (esModoSeleccion) {
+            Checkbox(
+                checked = estaSeleccionada,
+                onCheckedChange = { onClick() }
+            )
+        }
         AsyncImage(
             model = cancionConArtista.portadaPath,
             contentDescription = "Portada de ${cancionConArtista.albumNombre}",

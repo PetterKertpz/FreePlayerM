@@ -374,7 +374,7 @@ fun PreviewPanelReproductorEstado() {
             origen = "LOCAL",
             archivoPath = null
         ),
-        artistaNombre = "Lil peep aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", // <-- Añadimos el nombre
+        artistaNombre = "Lil peep aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", // <-- Añadimos el nombre
         albumNombre = "Álbum de Prueba",
         generoNombre = "Pop",
         esFavorita = false,

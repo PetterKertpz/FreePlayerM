@@ -42,6 +42,11 @@ interface CancionDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertarListaReproduccion(lista: ListaReproduccionEntity): Long
 //
+    @Query("DELETE FROM detalle_lista_reproduccion WHERE id_lista = :listaId AND id_cancion IN (:cancionIds)")
+    suspend fun quitarCancionesDeLista(listaId: Int, cancionIds: List<Int>)
+
+    @Query("DELETE FROM listas_reproduccion WHERE id_lista = :listaId")
+    suspend fun eliminarListaPorId(listaId: Int)
 
     @Query("SELECT * FROM artistas WHERE nombre = :nombre COLLATE NOCASE LIMIT 1")
     suspend fun obtenerArtistaPorNombre(nombre: String): ArtistaEntity?

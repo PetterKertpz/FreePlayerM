@@ -75,7 +75,10 @@ data class BibliotecaEstado(
     val escaneoManualEnProgreso: Boolean = false,
     val errorDeEscaneo: String? = null,
     val mostrarDialogoPlaylist: Boolean = false,
-    val cancionParaAnadirALista: CancionConArtista? = null
+    val cancionParaAnadirALista: CancionConArtista? = null,
+    val esModoSeleccion: Boolean = false,
+    val cancionesSeleccionadas: Set<Int> = emptySet(), // Usamos un Set de IDs para eficiencia
+    val listaActual: ListaReproduccionEntity? = null // Para saber en qué lista estamos
 
 )
 sealed class BibliotecaEvento {
@@ -94,6 +97,15 @@ sealed class BibliotecaEvento {
     data object CerrarDialogoPlaylist : BibliotecaEvento()
     data class CrearNuevaListaYAnadirCancion(val nombre: String, val descripcion: String?) : BibliotecaEvento()
     data class AnadirCancionAListasExistentes(val idListas: List<Int>) : BibliotecaEvento()
+    data class ActivarModoSeleccion(val cancion: CancionConArtista) : BibliotecaEvento()
+    data object DesactivarModoSeleccion : BibliotecaEvento()
+    data class AlternarSeleccionCancion(val cancionId: Int) : BibliotecaEvento()
+    data object SeleccionarTodo : BibliotecaEvento()
+    data object QuitarCancionesSeleccionadasDeLista : BibliotecaEvento()
+    data object EliminarListaDeReproduccionActual : BibliotecaEvento()
+    data object AbrirDialogoAnadirSeleccionALista : BibliotecaEvento()
+    data class AnadirCancionesSeleccionadasAListas(val idListas: List<Int>) : BibliotecaEvento()
+    data class CrearListaYAnadirCancionesSeleccionadas(val nombre: String, val descripcion: String?) : BibliotecaEvento()
 }
 
 
@@ -168,6 +180,130 @@ class BibliotecaViewModel @Inject constructor(
     @RequiresApi(Build.VERSION_CODES.R)
     fun enEvento(evento: BibliotecaEvento) {
         when (evento) {
+
+            is BibliotecaEvento.AbrirDialogoAnadirSeleccionALista -> {
+                _estadoUi.update { it.copy(mostrarDialogoPlaylist = true) }
+            }
+            is BibliotecaEvento.AnadirCancionesSeleccionadasAListas -> {
+                viewModelScope.launch {
+                    val estado = _estadoUi.value
+                    val cancionIds = estado.cancionesSeleccionadas
+
+                    // Iteramos sobre cada lista elegida
+                    evento.idListas.forEach { listaId ->
+                        // Iteramos sobre cada canción seleccionada
+                        cancionIds.forEach { cancionId ->
+                            val detalle = DetalleListaReproduccionEntity(idLista = listaId, idCancion = cancionId)
+                            cancionDao.insertarDetalleLista(detalle)
+                        }
+                    }
+
+                    // Limpiamos y salimos del modo selección
+                    _estadoUi.update {
+                        it.copy(
+                            esModoSeleccion = false,
+                            cancionesSeleccionadas = emptySet(),
+                            mostrarDialogoPlaylist = false
+                        )
+                    }
+                }
+            }
+            is BibliotecaEvento.CrearListaYAnadirCancionesSeleccionadas -> {
+                viewModelScope.launch {
+                    val estado = _estadoUi.value
+                    val usuarioId = estado.usuarioActual?.id ?: return@launch
+                    val cancionIds = estado.cancionesSeleccionadas
+
+                    // 1. Creamos la nueva lista
+                    val nuevaLista = ListaReproduccionEntity(
+                        idUsuario = usuarioId,
+                        nombre = evento.nombre,
+                        descripcion = evento.descripcion,
+                        portadaUrl = null
+                    )
+                    val nuevaListaId = cancionDao.insertarListaReproduccion(nuevaLista)
+
+                    // 2. Añadimos las canciones a la nueva lista
+                    if (nuevaListaId != -1L) {
+                        cancionIds.forEach { cancionId ->
+                            val detalle = DetalleListaReproduccionEntity(
+                                idLista = nuevaListaId.toInt(),
+                                idCancion = cancionId
+                            )
+                            cancionDao.insertarDetalleLista(detalle)
+                        }
+                    }
+
+                    // 3. Limpiamos y salimos del modo selección
+                    _estadoUi.update {
+                        it.copy(
+                            esModoSeleccion = false,
+                            cancionesSeleccionadas = emptySet(),
+                            mostrarDialogoPlaylist = false
+                        )
+                    }
+                }
+            }
+
+            is BibliotecaEvento.ActivarModoSeleccion -> {
+                _estadoUi.update {
+                    it.copy(
+                        esModoSeleccion = true,
+                        // Al activar, seleccionamos la primera canción
+                        cancionesSeleccionadas = setOf(evento.cancion.cancion.idCancion)
+                    )
+                }
+            }
+            is BibliotecaEvento.DesactivarModoSeleccion -> {
+                _estadoUi.update {
+                    it.copy(esModoSeleccion = false, cancionesSeleccionadas = emptySet())
+                }
+            }
+            is BibliotecaEvento.AlternarSeleccionCancion -> {
+                _estadoUi.update {
+                    val seleccionActual = it.cancionesSeleccionadas.toMutableSet()
+                    if (evento.cancionId in seleccionActual) {
+                        seleccionActual.remove(evento.cancionId)
+                    } else {
+                        seleccionActual.add(evento.cancionId)
+                    }
+                    // Si no queda ninguna canción seleccionada, salimos del modo selección
+                    val nuevoModoSeleccion = seleccionActual.isNotEmpty()
+                    it.copy(cancionesSeleccionadas = seleccionActual, esModoSeleccion = nuevoModoSeleccion)
+                }
+            }
+            is BibliotecaEvento.SeleccionarTodo -> {
+                _estadoUi.update {
+                    val todosLosIds = it.canciones.map { cancion -> cancion.cancion.idCancion }.toSet()
+                    // Si ya están todos seleccionados, los deseleccionamos. Si no, los seleccionamos todos.
+                    val nuevaSeleccion = if (it.cancionesSeleccionadas == todosLosIds) {
+                        emptySet()
+                    } else {
+                        todosLosIds
+                    }
+                    it.copy(cancionesSeleccionadas = nuevaSeleccion)
+                }
+            }
+            is BibliotecaEvento.QuitarCancionesSeleccionadasDeLista -> {
+                viewModelScope.launch {
+                    val estado = _estadoUi.value
+                    val listaId = estado.listaActual?.idLista ?: return@launch
+                    val cancionIds = estado.cancionesSeleccionadas.toList()
+
+                    cancionDao.quitarCancionesDeLista(listaId, cancionIds)
+
+                    // Salimos del modo selección
+                    _estadoUi.update { it.copy(esModoSeleccion = false, cancionesSeleccionadas = emptySet()) }
+                }
+            }
+            is BibliotecaEvento.EliminarListaDeReproduccionActual -> {
+                viewModelScope.launch {
+                    val listaId = _estadoUi.value.listaActual?.idLista ?: return@launch
+                    cancionDao.eliminarListaPorId(listaId)
+                    // Volvemos a la pantalla de listas
+                    cambiarCuerpo(TipoDeCuerpoBiblioteca.LISTAS)
+                }
+            }
 
             is BibliotecaEvento.AbrirDialogoPlaylist -> {
                 _estadoUi.update {
@@ -385,7 +521,9 @@ class BibliotecaViewModel @Inject constructor(
         _estadoUi.update {
             it.copy(
                 cuerpoActual = nuevoCuerpo,
-                textoDeBusqueda = ""
+                textoDeBusqueda = "",
+                esModoSeleccion = false, // <-- Se reinicia aquí
+                cancionesSeleccionadas = emptySet() // <-- Y se vacía la selección aquí
             )
         }
 
@@ -444,6 +582,7 @@ class BibliotecaViewModel @Inject constructor(
             }
             TipoDeCuerpoBiblioteca.CANCIONES_DE_LISTA -> {
                 lista?.let {
+                    _estadoUi.update { estado -> estado.copy(listaActual = it) }
                     _estadoUi.update { estado -> estado.copy(tituloDelCuerpo = it.nombre) }
                     val usuarioId = _estadoUi.value.usuarioActual?.id
 

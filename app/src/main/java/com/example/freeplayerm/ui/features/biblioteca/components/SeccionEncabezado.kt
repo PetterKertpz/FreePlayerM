@@ -144,7 +144,12 @@ fun SeccionEncabezado(
                         containerColor = if (estaSeleccionado) AppColors.Negro else AppColors.Negro.copy(alpha = 0.5f),
                         contentColor = AppColors.Blanco
                     ),
-                    border = BorderStroke(width = 1.dp, color = AppColors.GrisProfundo),
+                    border = BorderStroke(
+                        width = if (estaSeleccionado) 2.5.dp
+                        else 1.5.dp,
+                        color = if (estaSeleccionado) AppColors.PurpuraMedio // 👈 borde rojo si está activo
+                        else AppColors.GrisOscuro
+                    ),
                 ) {
                     Text(
                         text = nombreMenu,
