@@ -5,11 +5,13 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,11 +21,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,6 +48,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -54,7 +59,7 @@ import com.example.freeplayerm.ui.theme.AppColors
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 import java.util.concurrent.TimeUnit
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PanelReproductorMinimizado(
     estado: ReproductorEstado, enEvento: (ReproductorEvento) -> Unit
@@ -75,8 +80,8 @@ fun PanelReproductorMinimizado(
                     brush = Brush.horizontalGradient(
                         colorStops = arrayOf(
                             0.1f to Color.Black,   // empieza en negro
-                            0.325f to Color.Black,   // mantenemos negro hasta el 60%
-                            0.60f to Color(0xFF6A1B9A) // de ahí al final se mezcla al morado
+                            0.28f to Color.Black,   // mantenemos negro hasta el 60%
+                            0.45f to Color(0xFF6A1B9A) // de ahí al final se mezcla al morado
                         )
                     )
                 )
@@ -100,7 +105,7 @@ fun PanelReproductorMinimizado(
                     ViniloConPortada(
                         cancion = cancionConArtista,
                         estaReproduciendo = estado.estaReproduciendo,
-                        size = 130.dp,
+                        size = 100.dp,
 
                     )
                 }
@@ -116,7 +121,7 @@ fun PanelReproductorMinimizado(
                             // Accedemos al título a través de .cancion.titulo
                             text = cancionConArtista.cancion.titulo,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 35.sp,
+                            fontSize = 30.sp,
                             color = Color.White,
                             modifier = Modifier
                                 .basicMarquee()
@@ -145,24 +150,52 @@ fun PanelReproductorMinimizado(
 
                     // Slider
                     if (cancionConArtista != null) {
+                        var sliderPosition by remember { mutableFloatStateOf(0f) }
+
                         Slider(
-                            value = estado.progresoActualMs.toFloat(),
+                            value = if (estado.isScrubbing) sliderPosition else estado.progresoActualMs.toFloat(),
                             onValueChange = { nuevoProgreso ->
-                                enEvento(ReproductorEvento.ActualizarProgreso(nuevoProgreso))
+                                sliderPosition = nuevoProgreso
+                                enEvento(ReproductorEvento.OnScrub(nuevoProgreso))
                             },
-                            // El rango también se obtiene desde el objeto anidado
+                            onValueChangeFinished = {
+                                enEvento(ReproductorEvento.OnScrubFinished(sliderPosition))
+                            },
                             valueRange = 0f..(cancionConArtista.cancion.duracionSegundos * 1000).toFloat(),
                             modifier = Modifier
                                 .fillMaxWidth(0.8f)
                                 .align(Alignment.CenterHorizontally),
+                            thumb = {
+                                SliderDefaults.Thumb(
+                                    interactionSource = MutableInteractionSource(),
+                                    thumbSize = DpSize(18.dp, 18.dp)
+                                )
+                            },
+                            track = { sliderState: SliderState ->
+                                SliderDefaults.Track(
+                                    modifier = Modifier
+                                        .fillMaxHeight(0.25f),
+                                    sliderState = sliderState,
+                                    enabled = true,
+                                    colors = SliderDefaults.colors(
+                                        activeTrackColor = Color.Black,
+                                        inactiveTrackColor = Color.White
+                                    ),
+                                    trackInsideCornerSize = 0.dp,   // opcional, controla bordes internos
+                                    thumbTrackGapSize = 0.dp        // opcional, separación del thumb
+                                )
+                            },
                             colors = SliderDefaults.colors(
-                                thumbColor = Color.White,
+                                thumbColor = Color.Red,
+                                disabledThumbColor = Color.DarkGray,
                                 activeTrackColor = Color.Black,
-                                inactiveTrackColor = Color.Black,
-                                activeTickColor = AppColors.RojoMedio,
+                                inactiveTrackColor = Color.White
                             )
                         )
+
                     }
+
+
 
                 }
             }
@@ -185,7 +218,7 @@ private fun ControlesConTiempo(
         Text(
             text = formatTiempo(estado.progresoActualMs),
             color = Color.White,
-            fontSize = 12.sp
+            fontSize = 15.sp
         )
 
         // --- Botones de control (ocupan el espacio central) ---
@@ -268,7 +301,7 @@ private fun ControlesConTiempo(
         Text(
             text = formatTiempo(duracionTotalMs),
             color = Color.White,
-            fontSize = 12.sp
+            fontSize = 15.sp
         )
     }
 }

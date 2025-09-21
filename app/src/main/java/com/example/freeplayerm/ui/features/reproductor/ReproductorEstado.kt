@@ -24,7 +24,8 @@ data class ReproductorEstado(
     val progresoActualMs: Long = 0L,
     val modoReproduccion: ModoReproduccion = ModoReproduccion.EN_ORDEN,
     val modoRepeticion: ModoRepeticion = ModoRepeticion.NO_REPETIR,
-    val esFavorita: Boolean = false
+    val esFavorita: Boolean = false,
+    val isScrubbing: Boolean = false
 )
 
 // Define todos los eventos (acciones del usuario) que la UI puede enviar al ViewModel.
@@ -40,6 +41,7 @@ sealed class ReproductorEvento {
     object CambiarModoReproduccion : ReproductorEvento()
     object CambiarModoRepeticion : ReproductorEvento()
     object AlternarFavorito : ReproductorEvento()
-    data class ActualizarProgreso(val nuevoProgreso: Float) : ReproductorEvento()
+    data class OnScrub(val position: Float) : ReproductorEvento()
+    data class OnScrubFinished(val position: Float) : ReproductorEvento()
     object Detener : ReproductorEvento()
 }

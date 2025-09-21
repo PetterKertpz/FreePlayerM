@@ -62,6 +62,7 @@ class ReproductorViewModel @Inject constructor(
                     actualizarCancionActual()
                 }
             }
+
             ReproductorEvento.ReproducirPausar -> {
                 // 1. Obtenemos el estado actual de la UI.
                 val estadoActual = _estadoUi.value
@@ -80,7 +81,20 @@ class ReproductorViewModel @Inject constructor(
             }
             ReproductorEvento.SiguienteCancion -> player.seekToNextMediaItem()
             ReproductorEvento.CancionAnterior -> player.seekToPreviousMediaItem()
-            is ReproductorEvento.ActualizarProgreso -> player.seekTo(evento.nuevoProgreso.toLong())
+            is ReproductorEvento.OnScrub -> {
+                _estadoUi.update {
+                    it.copy(
+                        isScrubbing = true,
+                        // Actualizamos el progreso visualmente de forma instantánea
+                        progresoActualMs = evento.position.toLong()
+                    )
+                }
+            }
+            is ReproductorEvento.OnScrubFinished -> {
+                // Cuando el usuario suelta el dedo, le decimos al reproductor que salte a esa posición
+                player.seekTo(evento.position.toLong())
+                _estadoUi.update { it.copy(isScrubbing = false) }
+            }
             ReproductorEvento.CambiarModoReproduccion -> toggleModoReproduccion()
             ReproductorEvento.CambiarModoRepeticion -> toggleModoRepeticion()
             else -> {} // Otros eventos como Detener o AlternarFavorito
@@ -100,8 +114,12 @@ class ReproductorViewModel @Inject constructor(
         detenerActualizadorDeProgreso()
         actualizadorDeProgresoJob = viewModelScope.launch {
             while (true) {
-                _estadoUi.update { it.copy(progresoActualMs = player.currentPosition) }
-                delay(1000L) // Actualiza cada segundo
+                // --- ✅ CAMBIO CLAVE AQUÍ ---
+                // Solo actualizamos el progreso si el usuario NO está deslizando
+                if (!_estadoUi.value.isScrubbing) {
+                    _estadoUi.update { it.copy(progresoActualMs = player.currentPosition) }
+                }
+                delay(1000L)
             }
         }
     }
