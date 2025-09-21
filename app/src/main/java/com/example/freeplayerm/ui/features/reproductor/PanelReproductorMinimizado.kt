@@ -98,9 +98,10 @@ fun PanelReproductorMinimizado(
                 // --- Vinilo giratorio ---
                 if (cancionConArtista != null) {
                     ViniloConPortada(
-                        urlPortada = cancionConArtista.portadaPath?: "",
+                        cancion = cancionConArtista,
                         estaReproduciendo = estado.estaReproduciendo,
-                        size = 130.dp
+                        size = 130.dp,
+
                     )
                 }
 
@@ -151,7 +152,9 @@ fun PanelReproductorMinimizado(
                             },
                             // El rango también se obtiene desde el objeto anidado
                             valueRange = 0f..(cancionConArtista.cancion.duracionSegundos * 1000).toFloat(),
-                            modifier = Modifier.fillMaxWidth(0.8f).align(Alignment.CenterHorizontally),
+                            modifier = Modifier
+                                .fillMaxWidth(0.8f)
+                                .align(Alignment.CenterHorizontally),
                             colors = SliderDefaults.colors(
                                 thumbColor = Color.White,
                                 activeTrackColor = Color.Black,
@@ -195,7 +198,10 @@ private fun ControlesConTiempo(
             val buttonSize = 24.dp
 
             // Aleatorio
-            IconButton(onClick = { enEvento(ReproductorEvento.CambiarModoReproduccion) }, modifier = Modifier.size(buttonSize)) {
+            IconButton(
+                onClick = { enEvento(ReproductorEvento.CambiarModoReproduccion) },
+                modifier = Modifier.size(buttonSize)
+            ) {
                 Icon(
                     imageVector = IconosReproductor.Aleatorio,
                     contentDescription = "Modo reproducción",
@@ -204,28 +210,57 @@ private fun ControlesConTiempo(
                 )
             }
             // Anterior
-            IconButton(onClick = { enEvento(ReproductorEvento.CancionAnterior) }, modifier = Modifier.size(buttonSize + 12.dp)) {
-                Icon(imageVector = IconosReproductor.Anterior, contentDescription = "Anterior", tint = Color.White, modifier = Modifier.size(iconSize + 12.dp))
+            IconButton(
+                onClick = { enEvento(ReproductorEvento.CancionAnterior) },
+                modifier = Modifier.size(buttonSize + 12.dp)
+            ) {
+                Icon(
+                    imageVector = IconosReproductor.Anterior,
+                    contentDescription = "Anterior",
+                    tint = Color.White,
+                    modifier = Modifier.size(iconSize + 12.dp)
+                )
             }
             // Play/Pausa
-            IconButton(onClick = { enEvento(ReproductorEvento.ReproducirPausar) }, modifier = Modifier.size(buttonSize + 12.dp)) {
+            IconButton(
+                onClick = { enEvento(ReproductorEvento.ReproducirPausar) },
+                modifier = Modifier.size(buttonSize + 12.dp)
+            ) {
                 Icon(
                     imageVector = if (estado.estaReproduciendo) IconosReproductor.Pausa else IconosReproductor.Reproducir,
-                    contentDescription = "Play/Pause", tint = Color.White, modifier = Modifier.size(iconSize + 12.dp)
+                    contentDescription = "Play/Pause",
+                    tint = Color.White,
+                    modifier = Modifier.size(iconSize + 12.dp)
                 )
             }
             // Siguiente
-            IconButton(onClick = { enEvento(ReproductorEvento.SiguienteCancion) }, modifier = Modifier.size(buttonSize + 12.dp)) {
-                Icon(imageVector = IconosReproductor.Siguiente, contentDescription = "Siguiente", tint = Color.White, modifier = Modifier.size(iconSize + 12.dp))
+            IconButton(
+                onClick = { enEvento(ReproductorEvento.SiguienteCancion) },
+                modifier = Modifier.size(buttonSize + 12.dp)
+            ) {
+                Icon(
+                    imageVector = IconosReproductor.Siguiente,
+                    contentDescription = "Siguiente",
+                    tint = Color.White,
+                    modifier = Modifier.size(iconSize + 12.dp)
+                )
             }
             // Repetir
-            IconButton(onClick = { enEvento(ReproductorEvento.CambiarModoRepeticion) }, modifier = Modifier.size(buttonSize)) {
+            IconButton(
+                onClick = { enEvento(ReproductorEvento.CambiarModoRepeticion) },
+                modifier = Modifier.size(buttonSize)
+            ) {
                 val (icono, color) = when (estado.modoRepeticion) {
                     ModoRepeticion.NO_REPETIR -> IconosReproductor.RepetirLista to Color.White
                     ModoRepeticion.REPETIR_LISTA -> IconosReproductor.RepetirLista to AppColors.AcentoRosa
                     ModoRepeticion.REPETIR_CANCION -> IconosReproductor.RepetirCancion to AppColors.AcentoRosa
                 }
-                Icon(imageVector = icono, contentDescription = "Repetir", tint = color, modifier = Modifier.size(iconSize))
+                Icon(
+                    imageVector = icono,
+                    contentDescription = "Repetir",
+                    tint = color,
+                    modifier = Modifier.size(iconSize)
+                )
             }
         }
 
@@ -247,19 +282,23 @@ private fun formatTiempo(milisegundos: Long): String {
 
 @Composable
 private fun ViniloConPortada(
-    urlPortada: String, estaReproduciendo: Boolean, size: Dp = 60.dp
+    cancion: CancionConArtista?,
+    estaReproduciendo: Boolean,
+    size: Dp = 60.dp
 ) {
     var rotacionActual by remember { mutableFloatStateOf(0f) }
 
-    LaunchedEffect(estaReproduciendo) {
-        if (estaReproduciendo) {
-            // Bucle infinito que se ejecuta mientras la corrutina esté activa (mientras se reproduce).
-            while (true) {
-                // Incrementamos la rotación en una pequeña cantidad. El 'awaitFrame'
-                // asegura que esto suceda en cada cuadro de la animación, haciéndola fluida.
-                rotacionActual = (rotacionActual + 0.5f) % 360f
+    LaunchedEffect(cancion?.cancion?.idCancion) {
+        rotacionActual = 0f
+    }
 
-                // Esperamos al siguiente cuadro de la animación.
+    // Efecto N°2: Se ejecuta cuando cambia el estado de reproducción (o la canción).
+    // Su responsabilidad es animar el disco si está en modo de reproducción.
+    LaunchedEffect(estaReproduciendo, cancion?.cancion?.idCancion) {
+        if (estaReproduciendo) {
+            // Este bucle solo se ejecuta si la música está sonando.
+            while (true) {
+                rotacionActual = (rotacionActual + 0.5f) % 360f
                 withFrameNanos { }
             }
         }
@@ -276,7 +315,7 @@ private fun ViniloConPortada(
                 .rotate(rotacionActual)
         )
         AsyncImage(
-            model = urlPortada,
+            model = cancion?.portadaPath ?: "",
             contentDescription = "Portada del Álbum",
             modifier = Modifier
                 .size(size / 2f)
