@@ -131,7 +131,7 @@ fun SeccionEncabezado(
             contentPadding = PaddingValues(
                 start = 5.dp,
                 end = 5.dp,
-                bottom = 10.dp // Un poco de espacio inferior
+                bottom = 5.dp // Un poco de espacio inferior
             ),
             modifier = Modifier.fillMaxWidth()
         ) {

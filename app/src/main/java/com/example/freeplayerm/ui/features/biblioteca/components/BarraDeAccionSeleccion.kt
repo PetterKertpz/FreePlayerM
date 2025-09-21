@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 fun BarraDeAccionSeleccion(
     cancionesSeleccionadas: Int,
     totalCanciones: Int,
+    mostrarBotonQuitar: Boolean,
     onSeleccionarTodo: () -> Unit,
     onQuitarSeleccion: () -> Unit,
     onCerrarModoSeleccion: () -> Unit
@@ -40,10 +41,10 @@ fun BarraDeAccionSeleccion(
                 Icon(Icons.Default.Checklist, contentDescription = "Seleccionar Todo")
             }
             Text("$cancionesSeleccionadas / $totalCanciones")
-
-            // El botón de quitar solo se activa si hay algo seleccionado
-            IconButton(onClick = onQuitarSeleccion, enabled = cancionesSeleccionadas > 0) {
-                Icon(Icons.Default.Delete, contentDescription = "Quitar de la lista")
+            if (mostrarBotonQuitar) {
+                IconButton(onClick = onQuitarSeleccion, enabled = cancionesSeleccionadas > 0) {
+                    Icon(Icons.Default.Delete, contentDescription = "Quitar de la lista")
+                }
             }
         }
 

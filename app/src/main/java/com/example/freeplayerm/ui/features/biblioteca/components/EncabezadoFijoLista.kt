@@ -1,6 +1,7 @@
 package com.example.freeplayerm.ui.features.biblioteca.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ListaReproduccionEntity
@@ -54,7 +54,7 @@ fun EncabezadoFijoLista(
             model = lista.portadaUrl,
             contentDescription = "Portada de ${lista.nombre}",
             modifier = Modifier
-                .size(56.dp)
+                .size(60.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(AppColors.GrisProfundo),
             contentScale = ContentScale.Crop
@@ -66,17 +66,15 @@ fun EncabezadoFijoLista(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = lista.nombre,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                modifier = Modifier.basicMarquee()
             )
             if (!lista.descripcion.isNullOrBlank()) {
                 Text(
                     text = lista.descripcion,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.basicMarquee(),
                 )
             }
         }

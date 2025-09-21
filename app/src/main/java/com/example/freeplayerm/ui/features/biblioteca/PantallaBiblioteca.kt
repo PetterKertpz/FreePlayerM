@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -82,37 +83,35 @@ fun Biblioteca(
     } else {
         Manifest.permission.READ_EXTERNAL_STORAGE
     }
-
-    // 2. Crea y recuerda el estado del permiso
     val estadoPermiso = rememberPermissionState(permission = permisoRequerido)
 
-    // 3. Decide qué UI mostrar basado en el estado del permiso
     if (estadoPermiso.status.isGranted) {
-        // Si el permiso está concedido, muestra la pantalla principal de la biblioteca
         val estadoBiblioteca by bibliotecaViewModel.estadoUi.collectAsStateWithLifecycle()
         val estadoReproductor by reproductorViewModel.estadoUi.collectAsStateWithLifecycle()
+
         val cuerpoActual = estadoBiblioteca.cuerpoActual
         val lazyListState = if (cuerpoActual == TipoDeCuerpoBiblioteca.CANCIONES) {
-            // Para el menú "Canciones", SIEMPRE creamos un estado nuevo y fresco.
             rememberLazyListState()
         } else {
-            // Para TODOS los demás menús, usamos la lógica de recordar la posición.
+            // Para los demás, recordamos el estado de LISTA.
             remember(cuerpoActual) {
-                bibliotecaViewModel.scrollStates.getOrPut(cuerpoActual) {
+                bibliotecaViewModel.listScrollStates.getOrPut(cuerpoActual) {
                     LazyListState(0, 0)
                 }
             }
         }
+        // Hacemos lo mismo para los estados de CUADRÍCULA.
+        val lazyGridState = remember(cuerpoActual) {
+            bibliotecaViewModel.gridScrollStates.getOrPut(cuerpoActual) {
+                LazyGridState(0, 0)
+            }
+        }
 
-        // En el Composable 'Biblioteca'
-        // Este se ejecuta solo la primera vez que se obtiene el permiso
         LaunchedEffect(key1 = true) {
-            // 1. Inicia el escaneo silencioso al entrar.
             bibliotecaViewModel.enEvento(BibliotecaEvento.PermisoConcedido)
-            // 2. Pide que se muestre la vista de canciones por defecto.
             bibliotecaViewModel.enEvento(BibliotecaEvento.CambiarCuerpo(TipoDeCuerpoBiblioteca.CANCIONES))
         }
-        // Este se ejecuta cuando el usuarioId cambia
+
         LaunchedEffect(usuarioId) {
             bibliotecaViewModel.cargarDatosDeUsuario(usuarioId)
         }
@@ -120,6 +119,8 @@ fun Biblioteca(
         CuerpoBiblioteca(
             estadoBiblioteca = estadoBiblioteca,
             estadoReproductor = estadoReproductor,
+            lazyListState = lazyListState,
+            lazyGridState = lazyGridState,
             onBibliotecaEvento = bibliotecaViewModel::enEvento,
             onReproductorEvento = reproductorViewModel::enEvento,
             onAlbumClick = { album ->
@@ -134,10 +135,9 @@ fun Biblioteca(
             onGeneroClick = { genero ->
                 bibliotecaViewModel.enEvento(BibliotecaEvento.GeneroSeleccionado(genero))
             },
-            lazyListState = lazyListState
+
         )
     } else {
-        // Si el permiso no está concedido, muestra una pantalla para solicitarlo
         PantallaSolicitudPermiso(estadoPermiso = estadoPermiso)
     }
 }
@@ -152,6 +152,7 @@ fun CuerpoBiblioteca(
     estadoBiblioteca: BibliotecaEstado,
     estadoReproductor: ReproductorEstado,
     lazyListState: LazyListState,
+    lazyGridState: LazyGridState,
     onBibliotecaEvento: (BibliotecaEvento) -> Unit,
     onReproductorEvento: (ReproductorEvento) -> Unit,
     onAlbumClick: (AlbumEntity) -> Unit,
@@ -163,27 +164,14 @@ fun CuerpoBiblioteca(
         VentanaListasReproduccion(
             listasExistentes = estadoBiblioteca.listas,
             onDismiss = { onBibliotecaEvento(BibliotecaEvento.CerrarDialogoPlaylist) },
-            onCrearLista = { nombre, descripcion, portadaUri -> // <-- Ahora recibimos el portadaUri
+            onCrearLista = { nombre, descripcion, portadaUri ->
                 if (estadoBiblioteca.esModoSeleccion) {
-                    onBibliotecaEvento(
-                        BibliotecaEvento.CrearListaYAnadirCancionesSeleccionadas(
-                            nombre,
-                            descripcion,
-                            portadaUri
-                        )
-                    )
+                    onBibliotecaEvento(BibliotecaEvento.CrearListaYAnadirCancionesSeleccionadas(nombre, descripcion, portadaUri))
                 } else {
-                    onBibliotecaEvento(
-                        BibliotecaEvento.CrearNuevaListaYAnadirCancion(
-                            nombre,
-                            descripcion,
-                            portadaUri
-                        )
-                    )
+                    onBibliotecaEvento(BibliotecaEvento.CrearNuevaListaYAnadirCancion(nombre, descripcion, portadaUri))
                 }
             },
             onAnadirAListas = { ids ->
-                // Si estamos en modo selección, usamos el nuevo evento. Si no, el antiguo.
                 if (estadoBiblioteca.esModoSeleccion) {
                     onBibliotecaEvento(BibliotecaEvento.AnadirCancionesSeleccionadasAListas(ids))
                 } else {
@@ -192,22 +180,17 @@ fun CuerpoBiblioteca(
             }
         )
     }
+
     if (estadoBiblioteca.mostrandoDialogoEditarLista) {
-        // Aquí no necesitamos la `VentanaListasReproduccion` completa, solo el diálogo
         DialogoCrearLista(
-            listaAEditar = estadoBiblioteca.listaActual, // Le pasamos la lista a editar
+            listaAEditar = estadoBiblioteca.listaActual,
             onDismiss = { onBibliotecaEvento(BibliotecaEvento.CerrarDialogoEditarLista) },
             onCrear = { nombre, descripcion, portadaUri ->
-                onBibliotecaEvento(
-                    BibliotecaEvento.GuardarCambiosLista(
-                        nombre,
-                        descripcion,
-                        portadaUri
-                    )
-                )
+                onBibliotecaEvento(BibliotecaEvento.GuardarCambiosLista(nombre, descripcion, portadaUri))
             }
         )
     }
+
     Scaffold(
         topBar = {
             SeccionEncabezado(
@@ -223,8 +206,15 @@ fun CuerpoBiblioteca(
             )
         },
         floatingActionButton = {
-            // El FAB solo será visible si estamos en modo selección
-            AnimatedVisibility(visible = estadoBiblioteca.esModoSeleccion) {
+            val mostrarFab = estadoBiblioteca.esModoSeleccion && when (estadoBiblioteca.cuerpoActual) {
+                TipoDeCuerpoBiblioteca.CANCIONES,
+                TipoDeCuerpoBiblioteca.CANCIONES_DE_ALBUM,
+                TipoDeCuerpoBiblioteca.CANCIONES_DE_ARTISTA,
+                TipoDeCuerpoBiblioteca.CANCIONES_DE_GENERO,
+                TipoDeCuerpoBiblioteca.FAVORITOS -> true
+                else -> false
+            }
+            AnimatedVisibility(visible = mostrarFab) {
                 FloatingActionButton(
                     onClick = { onBibliotecaEvento(BibliotecaEvento.AbrirDialogoAnadirSeleccionALista) }
                 ) {
@@ -233,7 +223,6 @@ fun CuerpoBiblioteca(
             }
         },
         bottomBar = {
-            // Si hay una canción sonando, componemos el panel.
             if (estadoReproductor.cancionActual != null) {
                 PanelReproductorMinimizado(
                     estado = estadoReproductor,
@@ -242,9 +231,8 @@ fun CuerpoBiblioteca(
             }
         }
     ) { paddingInterno ->
-        Column(modifier = Modifier
-            .padding(paddingInterno)
-            .fillMaxSize()) {
+        Column(modifier = Modifier.padding(paddingInterno).fillMaxSize()) {
+
             val mostrarBarraDeBusqueda = when (estadoBiblioteca.cuerpoActual) {
                 TipoDeCuerpoBiblioteca.CANCIONES,
                 TipoDeCuerpoBiblioteca.LISTAS,
@@ -256,10 +244,7 @@ fun CuerpoBiblioteca(
                 TipoDeCuerpoBiblioteca.CANCIONES_DE_ARTISTA,
                 TipoDeCuerpoBiblioteca.CANCIONES_DE_GENERO,
                 TipoDeCuerpoBiblioteca.FAVORITOS -> true
-                // Las vistas como 'Álbumes' o 'Artistas' por ahora no tendrán buscador.
-
             }
-
             if (mostrarBarraDeBusqueda) {
                 BarraDeBusquedaYFiltros(
                     textoDeBusqueda = estadoBiblioteca.textoDeBusqueda,
@@ -269,177 +254,128 @@ fun CuerpoBiblioteca(
                 )
             }
 
-            val hayContenido =
-                estadoBiblioteca.canciones.isNotEmpty() ||
-                        estadoBiblioteca.albumes.isNotEmpty() ||
-                        estadoBiblioteca.artistas.isNotEmpty() ||
-                        estadoBiblioteca.listas.isNotEmpty()
-
-            // Si hay contenido, mostramos el cuerpo correspondiente.
             Box(
                 modifier = Modifier.weight(1f),
                 contentAlignment = Alignment.TopCenter
             ) {
+                val hayContenido = estadoBiblioteca.canciones.isNotEmpty() ||
+                        estadoBiblioteca.albumes.isNotEmpty() ||
+                        estadoBiblioteca.artistas.isNotEmpty() ||
+                        estadoBiblioteca.generos.isNotEmpty() ||
+                        estadoBiblioteca.listas.isNotEmpty()
+
                 when {
-                    // 1. La prioridad más alta es mostrar que está cargando
                     estadoBiblioteca.estaEscaneando -> {
                         CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                     }
-                    // 2. Si hay un error, lo mostramos
                     estadoBiblioteca.errorDeEscaneo != null -> {
                         TextoDeEstadoVacio(
                             modifier = Modifier.align(Alignment.Center),
                             mensaje = "Ocurrió un error:\n${estadoBiblioteca.errorDeEscaneo}"
                         )
                     }
-                    // 3. Si no hay contenido (y ya no está cargando), mostramos el mensaje de vacío
                     !hayContenido -> {
                         TextoDeEstadoVacio(
                             modifier = Modifier.align(Alignment.Center),
                             mensaje = "Tu biblioteca está vacía.\nPulsa el botón de refrescar para buscar música."
                         )
                     }
-                    // 4. Si ninguna de las anteriores es cierta, significa que hay contenido
                     else -> {
-                        when {
-                            // 1. PRIORIDAD MÁXIMA: Si está escaneando, siempre mostramos la carga.
-                            estadoBiblioteca.estaEscaneando -> {
-                                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                            }
+                        when (estadoBiblioteca.cuerpoActual) {
 
-                            // 2. SEGUNDA PRIORIDAD: Si hay un error, lo mostramos.
-                            false -> {
-                                TextoDeEstadoVacio(
-                                    modifier = Modifier.align(Alignment.Center),
-                                    mensaje = "Ocurrió un error:\n${estadoBiblioteca.errorDeEscaneo}"
-                                )
-                            }
-
-                            // 3. TERCERA PRIORIDAD: Si no hay contenido (y no está cargando ni hay error), mostramos el mensaje de vacío.
-                            !hayContenido -> {
-                                TextoDeEstadoVacio(
-                                    modifier = Modifier.align(Alignment.Center),
-                                    mensaje = "Tu biblioteca está vacía.\nPulsa el botón de refrescar para buscar música."
-                                )
-                            }
-
-                            // 4. SI NADA DE LO ANTERIOR ES CIERTO: Mostramos el contenido principal.
-                            else -> {
-                                // Aquí dentro colocamos el 'when' simplificado que vimos antes
-                                when (estadoBiblioteca.cuerpoActual) {
-                                    TipoDeCuerpoBiblioteca.CANCIONES,
-                                    TipoDeCuerpoBiblioteca.CANCIONES_DE_LISTA -> {
-                                        Column(Modifier.fillMaxSize()) {
-                                            // 1. El encabezado que SIEMPRE está visible
-                                            EncabezadoFijoLista(
-                                                lista = estadoBiblioteca.listaActual,
-                                                onVolverClick = {
-                                                    onBibliotecaEvento(
-                                                        BibliotecaEvento.VolverAListas
-                                                    )
-                                                },
-                                                onEliminarListaClick = {
-                                                    onBibliotecaEvento(
-                                                        BibliotecaEvento.EliminarListaDeReproduccionActual
-                                                    )
-                                                },
-                                                onEditarListaClick = {
-                                                    onBibliotecaEvento(
-                                                        BibliotecaEvento.AbrirDialogoEditarLista
-                                                    )
-                                                }
-                                            )
-
-                                            // 2. La barra de acción que SOLO aparece en modo selección
-                                            AnimatedVisibility(visible = estadoBiblioteca.esModoSeleccion) {
-                                                BarraDeAccionSeleccion(
-                                                    cancionesSeleccionadas = estadoBiblioteca.cancionesSeleccionadas.size,
-                                                    totalCanciones = estadoBiblioteca.canciones.size,
-                                                    onSeleccionarTodo = {
-                                                        onBibliotecaEvento(
-                                                            BibliotecaEvento.SeleccionarTodo
-                                                        )
-                                                    },
-                                                    onQuitarSeleccion = {
-                                                        onBibliotecaEvento(
-                                                            BibliotecaEvento.QuitarCancionesSeleccionadasDeLista
-                                                        )
-                                                    },
-                                                    onCerrarModoSeleccion = {
-                                                        onBibliotecaEvento(
-                                                            BibliotecaEvento.DesactivarModoSeleccion
-                                                        )
-                                                    }
+                            TipoDeCuerpoBiblioteca.CANCIONES,
+                            TipoDeCuerpoBiblioteca.CANCIONES_DE_ALBUM,
+                            TipoDeCuerpoBiblioteca.CANCIONES_DE_ARTISTA,
+                            TipoDeCuerpoBiblioteca.CANCIONES_DE_GENERO,
+                            TipoDeCuerpoBiblioteca.FAVORITOS -> {
+                                Column(Modifier.fillMaxSize()) {
+                                    AnimatedVisibility(visible = estadoBiblioteca.esModoSeleccion) {
+                                        BarraDeAccionSeleccion(
+                                            cancionesSeleccionadas = estadoBiblioteca.cancionesSeleccionadas.size,
+                                            totalCanciones = estadoBiblioteca.canciones.size,
+                                            mostrarBotonQuitar = false,
+                                            onSeleccionarTodo = { onBibliotecaEvento(BibliotecaEvento.SeleccionarTodo) },
+                                            onQuitarSeleccion = {},
+                                            onCerrarModoSeleccion = { onBibliotecaEvento(BibliotecaEvento.DesactivarModoSeleccion) }
+                                        )
+                                    }
+                                    CuerpoCanciones(
+                                        estado = estadoBiblioteca,
+                                        lazyListState = lazyListState,
+                                        onBibliotecaEvento = onBibliotecaEvento,
+                                        onReproductorEvento = { evento ->
+                                            if (evento is ReproductorEvento.SeleccionarCancion) {
+                                                val eventoConCola = ReproductorEvento.EstablecerColaYReproducir(
+                                                    cola = estadoBiblioteca.canciones,
+                                                    cancionInicial = evento.cancion
                                                 )
+                                                onReproductorEvento(eventoConCola)
+                                            } else {
+                                                onReproductorEvento(evento)
                                             }
-
-                                            // 3. La lista de canciones (que ahora se muestra debajo de los encabezados)
-                                            CuerpoCanciones(
-                                                estado = estadoBiblioteca,
-                                                onBibliotecaEvento = onBibliotecaEvento,
-                                                onReproductorEvento = onReproductorEvento,
-                                                lazyListState = lazyListState
-                                            )
                                         }
-                                    }
-
-                                    TipoDeCuerpoBiblioteca.CANCIONES_DE_ALBUM,
-                                    TipoDeCuerpoBiblioteca.CANCIONES_DE_ARTISTA,
-                                    TipoDeCuerpoBiblioteca.CANCIONES_DE_GENERO,
-                                    TipoDeCuerpoBiblioteca.FAVORITOS -> {
-                                        CuerpoCanciones(
-                                            estado = estadoBiblioteca,
-                                            onBibliotecaEvento = onBibliotecaEvento,
-                                            onReproductorEvento = { evento ->
-                                                // Comprobamos si el evento es la selección de una canción
-                                                if (evento is ReproductorEvento.SeleccionarCancion) {
-                                                    // Si lo es, creamos nuestro nuevo evento más completo
-                                                    val eventoConCola =
-                                                        ReproductorEvento.EstablecerColaYReproducir(
-                                                            cola = estadoBiblioteca.canciones, // Pasamos la lista completa y ordenada
-                                                            cancionInicial = evento.cancion
-                                                        )
-                                                    // Y enviamos este nuevo evento al ViewModel del reproductor
-                                                    onReproductorEvento(eventoConCola)
-                                                } else {
-                                                    // Para otros eventos (play/pause), los pasamos tal cual
-                                                    onReproductorEvento(evento)
-                                                }
-                                            },
-                                            lazyListState = lazyListState
-                                        )
-                                    }
-
-                                    TipoDeCuerpoBiblioteca.LISTAS -> {
-                                        CuerpoListas(
-                                            listas = estadoBiblioteca.listas,
-
-                                            onListaClick = onListaClick
-                                        )
-                                    }
-
-                                    TipoDeCuerpoBiblioteca.ALBUMES -> {
-                                        CuerpoAlbumes(
-                                            albumes = estadoBiblioteca.albumes,
-                                            onAlbumClick = onAlbumClick
-                                        )
-                                    }
-
-                                    TipoDeCuerpoBiblioteca.ARTISTAS -> {
-                                        CuerpoArtistas(
-                                            artistas = estadoBiblioteca.artistas,
-                                            onArtistaClick = onArtistaClick
-                                        )
-                                    }
-
-                                    TipoDeCuerpoBiblioteca.GENEROS -> {
-                                        CuerpoGeneros(
-                                            generos = estadoBiblioteca.generos,
-                                            onGeneroClick = onGeneroClick
-                                        )
-                                    }
+                                    )
                                 }
                             }
+
+                            TipoDeCuerpoBiblioteca.CANCIONES_DE_LISTA -> {
+                                Column(Modifier.fillMaxSize()) {
+                                    EncabezadoFijoLista(
+                                        lista = estadoBiblioteca.listaActual,
+                                        onVolverClick = { onBibliotecaEvento(BibliotecaEvento.VolverAListas) },
+                                        onEliminarListaClick = { onBibliotecaEvento(BibliotecaEvento.EliminarListaDeReproduccionActual) },
+                                        onEditarListaClick = { onBibliotecaEvento(BibliotecaEvento.AbrirDialogoEditarLista) }
+                                    )
+                                    AnimatedVisibility(visible = estadoBiblioteca.esModoSeleccion) {
+                                        BarraDeAccionSeleccion(
+                                            cancionesSeleccionadas = estadoBiblioteca.cancionesSeleccionadas.size,
+                                            totalCanciones = estadoBiblioteca.canciones.size,
+                                            mostrarBotonQuitar = true,
+                                            onSeleccionarTodo = { onBibliotecaEvento(BibliotecaEvento.SeleccionarTodo) },
+                                            onQuitarSeleccion = { onBibliotecaEvento(BibliotecaEvento.QuitarCancionesSeleccionadasDeLista) },
+                                            onCerrarModoSeleccion = { onBibliotecaEvento(BibliotecaEvento.DesactivarModoSeleccion) }
+                                        )
+                                    }
+                                    CuerpoCanciones(
+                                        estado = estadoBiblioteca,
+                                        lazyListState = lazyListState,
+                                        onBibliotecaEvento = onBibliotecaEvento,
+                                        onReproductorEvento = { evento ->
+                                            if (evento is ReproductorEvento.SeleccionarCancion) {
+                                                val eventoConCola = ReproductorEvento.EstablecerColaYReproducir(
+                                                    cola = estadoBiblioteca.canciones,
+                                                    cancionInicial = evento.cancion
+                                                )
+                                                onReproductorEvento(eventoConCola)
+                                            } else {
+                                                onReproductorEvento(evento)
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+
+                            TipoDeCuerpoBiblioteca.LISTAS -> CuerpoListas(
+                                listas = estadoBiblioteca.listas,
+                                lazyListState = lazyListState,
+                                onListaClick = onListaClick
+                            )
+                            TipoDeCuerpoBiblioteca.ALBUMES -> CuerpoAlbumes(
+                                albumes = estadoBiblioteca.albumes,
+                                lazyGridState = lazyGridState,
+                                onAlbumClick = onAlbumClick
+                            )
+                            TipoDeCuerpoBiblioteca.ARTISTAS -> CuerpoArtistas(
+                                artistas = estadoBiblioteca.artistas,
+                                lazyGridState = lazyGridState,
+                                onArtistaClick = onArtistaClick
+                            )
+
+                            TipoDeCuerpoBiblioteca.GENEROS -> CuerpoGeneros(
+                                generos = estadoBiblioteca.generos,
+                                lazyListState = lazyListState,
+                                onGeneroClick = onGeneroClick
+                            )
                         }
                     }
                 }
@@ -548,7 +484,8 @@ fun PreviewBiblioteca() {
             onArtistaClick = {},
             onGeneroClick = {},
             onListaClick = {},
-            lazyListState = LazyListState()
+            lazyListState = LazyListState(),
+            lazyGridState = LazyGridState()
         )
     }
 }

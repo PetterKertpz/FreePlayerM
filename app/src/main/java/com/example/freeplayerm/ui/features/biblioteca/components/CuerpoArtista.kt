@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
@@ -34,6 +35,7 @@ import com.example.freeplayerm.ui.theme.AppColors
 fun CuerpoArtistas(
     modifier: Modifier = Modifier,
     artistas: List<ArtistaEntity>,
+    lazyGridState: LazyGridState,
     onArtistaClick: (ArtistaEntity) -> Unit
 ) {
     if (artistas.isEmpty()) {
@@ -46,6 +48,7 @@ fun CuerpoArtistas(
     } else {
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 140.dp),
+            state = lazyGridState,
             modifier = modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -89,7 +92,7 @@ private fun ArtistaItem(
         Text(
             text = artista.nombre,
             fontWeight = FontWeight.SemiBold,
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier
                 .basicMarquee()
         )
@@ -105,6 +108,9 @@ fun PreviewCuerpoArtistas() {
         ArtistaEntity(3, "Queen", "Reino Unido", null)
     )
     MaterialTheme {
-        CuerpoArtistas(artistas = listaDePrueba, onArtistaClick = {})
+        CuerpoArtistas(
+            artistas = listaDePrueba, onArtistaClick = {},
+            lazyGridState = LazyGridState(),
+        )
     }
 }

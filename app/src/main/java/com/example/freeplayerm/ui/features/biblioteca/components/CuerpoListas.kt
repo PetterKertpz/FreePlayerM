@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +38,7 @@ import com.example.freeplayerm.ui.theme.AppColors
 fun CuerpoListas(
     modifier: Modifier = Modifier,
     listas: List<ListaReproduccionEntity>,
+    lazyListState: LazyListState,
     onListaClick: (ListaReproduccionEntity) -> Unit
 ) {
     if (listas.isEmpty()) {
@@ -47,7 +49,8 @@ fun CuerpoListas(
         LazyColumn(
             modifier = modifier.fillMaxSize(),
             contentPadding = PaddingValues(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            state = lazyListState
         ) {
             items(listas) { lista ->
                 ListaItem(
@@ -77,7 +80,7 @@ private fun ListaItem(
             model = lista.portadaUrl,
             contentDescription = "Portada de ${lista.nombre}",
             modifier = Modifier
-                .size(56.dp)
+                .size(60.dp)
                 .clip(RoundedCornerShape(4.dp))
                 .background(AppColors.GrisProfundo),
             contentScale = ContentScale.Crop,
@@ -89,13 +92,13 @@ private fun ListaItem(
                 text = lista.nombre,
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.basicMarquee()
             )
             Text(
                 text = lista.descripcion ?: "",
-                fontSize = 15.sp,
-                color = Color.Black,
+                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.basicMarquee()
             )
         }
@@ -111,6 +114,9 @@ fun PreviewCuerpoListas() {
         ListaReproduccionEntity(2, 1, "Relax", "Canciones tranquilas", "")
     )
     MaterialTheme {
-        CuerpoListas(listas = listasDePrueba, onListaClick = {})
+        CuerpoListas(
+            listas = listasDePrueba, onListaClick = {},
+            lazyListState = LazyListState(0, 0)
+        )
     }
 }

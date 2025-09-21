@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -35,6 +36,7 @@ import com.example.freeplayerm.ui.theme.AppColors
 fun CuerpoGeneros(
     modifier: Modifier = Modifier,
     generos: List<GeneroEntity>,
+    lazyListState: LazyListState,
     onGeneroClick: (GeneroEntity) -> Unit
 ) {
     if (generos.isEmpty()) {
@@ -46,6 +48,7 @@ fun CuerpoGeneros(
         }
     } else {
         LazyColumn(
+            state = lazyListState,
             modifier = modifier.fillMaxSize(),
             contentPadding = PaddingValues(vertical = 10.dp, horizontal = 10.dp)
         ) {
@@ -83,7 +86,7 @@ private fun GeneroItem(
             fontWeight = FontWeight.SemiBold,
             fontSize = 30.sp,
             modifier = Modifier.weight(1f),
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.MiddleEllipsis
         )
@@ -115,6 +118,9 @@ fun PreviewCuerpoGeneros() {
         GeneroEntity(9, "Electrónica")
     )
     MaterialTheme {
-        CuerpoGeneros(generos = listaDePrueba, onGeneroClick = {})
+        CuerpoGeneros(
+            generos = listaDePrueba, onGeneroClick = {},
+            lazyListState = LazyListState(0,0)
+        )
     }
 }

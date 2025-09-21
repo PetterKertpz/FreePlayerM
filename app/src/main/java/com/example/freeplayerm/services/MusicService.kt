@@ -3,7 +3,6 @@ package com.example.freeplayerm.services
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
 import androidx.annotation.OptIn
 import androidx.media3.common.Player
@@ -61,7 +60,7 @@ class MusicService : MediaSessionService() {
             "Media Playback",
             NotificationManager.IMPORTANCE_LOW
         )
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(channel)
     }
 

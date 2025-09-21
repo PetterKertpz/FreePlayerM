@@ -2,7 +2,9 @@
 package com.example.freeplayerm.ui.features.biblioteca.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -29,8 +31,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.freeplayerm.ui.features.biblioteca.BibliotecaEvento
@@ -52,30 +57,48 @@ fun BarraDeBusquedaYFiltros(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .clip(shape = RoundedCornerShape(0.dp, 0.dp, 15.dp, 15.dp))
             .background(
-                brush = Brush.verticalGradient(
-                    colorStops = arrayOf(
-                        0.1f to Color.Black,
-                        0.4f to Color.Black,
-                        0.8f to AppColors.GrisProfundo
+                brush = if (isSystemInDarkTheme()) {
+                    // Modo oscuro → gradiente
+                    Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0.1f to Color.Black,
+                            0.4f to Color.Black,
+                            0.9f to AppColors.Transparente
+                        )
                     )
-                )
+                } else {
+                    // Modo claro → fondo sólido negro
+                    Brush.verticalGradient(
+                        colors = listOf(Color.Black, Color.Black) // equivalente a todo negro
+                    )
+                }
             )
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(5.dp, 0.dp, 5.dp, 10.dp ),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp) // Añade espacio entre elementos
+        horizontalArrangement = Arrangement.spacedBy(5.dp) // Añade espacio entre elementos
     ) {
         // Usamos OutlinedTextField para un mejor control del estilo
         OutlinedTextField(
             value = textoDeBusqueda,
             onValueChange = { enEvento(BibliotecaEvento.TextoDeBusquedaCambiado(it)) },
-            modifier = Modifier.weight(1f)
+            modifier = Modifier
+                .weight(1f)
                 .border(
                 width = 2.dp,
                 color = AppColors.PurpuraProfundo,
                 shape = RoundedCornerShape(30.dp)
-            ),
-            placeholder = { Text("Buscar en tu biblioteca...") },
+                )
+                .basicMarquee()
+                .fillMaxWidth(0.25f),
+            placeholder = {
+                Text(
+                    "Buscar",
+                    fontStyle = FontStyle.Italic,
+                    fontWeight = FontWeight.Bold
+                )
+            },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Search,
@@ -87,7 +110,7 @@ fun BarraDeBusquedaYFiltros(
             colors = TextFieldDefaults.colors(
                 // --- ✅ COLORES CORREGIDOS PARA VISIBILIDAD ---
                 focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White,
+                unfocusedTextColor = AppColors.GrisOscuro,
                 cursorColor = AppColors.PurpuraProfundo,
                 focusedPlaceholderColor = Color.LightGray,
                 unfocusedPlaceholderColor = Color.LightGray,

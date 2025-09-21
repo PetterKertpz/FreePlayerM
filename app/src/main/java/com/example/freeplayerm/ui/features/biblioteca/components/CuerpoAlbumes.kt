@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
@@ -51,6 +52,7 @@ import com.example.freeplayerm.ui.theme.AppColors
 fun CuerpoAlbumes(
     modifier: Modifier = Modifier,
     albumes: List<AlbumEntity>,
+    lazyGridState: LazyGridState,
     onAlbumClick: (AlbumEntity) -> Unit
 ) {
     if (albumes.isEmpty()) {
@@ -62,7 +64,8 @@ fun CuerpoAlbumes(
         }
     } else {
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 160.dp), // Se adapta al tamaño de la pantalla
+            columns = GridCells.Adaptive(minSize = 160.dp),
+            state = lazyGridState,
             modifier = modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -89,9 +92,7 @@ fun AlbumItem(
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row (
-
-        ) {
+        Row {
             Box(
 
                 modifier = Modifier
@@ -191,6 +192,9 @@ fun PreviewCuerpoAlbumes() {
         AlbumEntity(3, 3, "Ecos Urbanos", 2024, "")
     )
     MaterialTheme {
-        CuerpoAlbumes(albumes = listaDePrueba, onAlbumClick = {})
+        CuerpoAlbumes(
+            albumes = listaDePrueba, onAlbumClick = {},
+            lazyGridState = LazyGridState()
+        )
     }
 }

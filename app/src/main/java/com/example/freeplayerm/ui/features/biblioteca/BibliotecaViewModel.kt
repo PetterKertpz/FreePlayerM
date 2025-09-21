@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,6 +21,7 @@ import com.example.freeplayerm.data.local.entity.UsuarioEntity
 import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
 import com.example.freeplayerm.data.repository.ImageRepository
 import com.example.freeplayerm.data.repository.RepositorioDeMusicaLocal
+import com.example.freeplayerm.data.repository.UserPreferencesRepository
 import com.example.freeplayerm.data.repository.UsuarioRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -126,9 +128,11 @@ class BibliotecaViewModel @Inject constructor(
     private val usuarioRepository: UsuarioRepository,
     private val cancionDao: CancionDao,
     private val repositorioDeMusicaLocal: RepositorioDeMusicaLocal,
-    private val imageRepository: ImageRepository
+    private val imageRepository: ImageRepository,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
-    val scrollStates = mutableMapOf<TipoDeCuerpoBiblioteca, LazyListState>()
+    val listScrollStates = mutableMapOf<TipoDeCuerpoBiblioteca, LazyListState>()
+    val gridScrollStates = mutableMapOf<TipoDeCuerpoBiblioteca, LazyGridState>()
     private val _estadoUi = MutableStateFlow(BibliotecaEstado())
     val estadoUi = _estadoUi.asStateFlow()
     private val fuenteDeCancionesActiva =
@@ -142,6 +146,16 @@ class BibliotecaViewModel @Inject constructor(
         observarYFiltrarArtistas()
         observarYFiltrarGeneros()
         observarYFiltrarListas()
+        viewModelScope.launch {
+            userPreferencesRepository.userPreferences.collect { preferences ->
+                _estadoUi.update {
+                    it.copy(
+                        criterioDeOrdenamiento = preferences.sortCriterion,
+                        direccionDeOrdenamiento = preferences.sortDirection
+                    )
+                }
+            }
+        }
 
     }
 
@@ -193,7 +207,24 @@ class BibliotecaViewModel @Inject constructor(
     @RequiresApi(Build.VERSION_CODES.R)
     fun enEvento(evento: BibliotecaEvento) {
         when (evento) {
-
+            is BibliotecaEvento.CriterioDeOrdenamientoCambiado -> {
+                // Ya no actualizamos el estado aquí, porque el Flow lo hará automáticamente.
+                // Solo guardamos la nueva preferencia.
+                viewModelScope.launch {
+                    userPreferencesRepository.updateSortCriterion(evento.criterio)
+                }
+            }
+            is BibliotecaEvento.DireccionDeOrdenamientoCambiada -> {
+                // Invertimos la dirección actual para guardarla
+                val nuevaDireccion = if (_estadoUi.value.direccionDeOrdenamiento == DireccionDeOrdenamiento.ASCENDENTE) {
+                    DireccionDeOrdenamiento.DESCENDENTE
+                } else {
+                    DireccionDeOrdenamiento.ASCENDENTE
+                }
+                viewModelScope.launch {
+                    userPreferencesRepository.updateSortDirection(nuevaDireccion)
+                }
+            }
             is BibliotecaEvento.AbrirDialogoEditarLista -> {
                 _estadoUi.update { it.copy(mostrandoDialogoEditarLista = true) }
             }

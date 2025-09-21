@@ -33,7 +33,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -179,12 +178,13 @@ private fun CancionItem(
             Text(
                 text = cancionConArtista.cancion.titulo,
                 style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.basicMarquee()
             )
             Text(
                 text = cancionConArtista.artistaNombre ?: "Artista Desconocido",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.basicMarquee()
             )
         }
@@ -194,17 +194,17 @@ private fun CancionItem(
                 Icon(
                     imageVector = if (cancionConArtista.esFavorita) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     contentDescription = "Marcar como Favorito",
-                    tint = if (cancionConArtista.esFavorita) AppColors.RojoMedio else Color.Black
+                    tint = if (cancionConArtista.esFavorita) AppColors.RojoMedio else MaterialTheme.colorScheme.onSurface
                 )
             }
             if (esModoSeleccion) {
                 // Botón de Añadir a Lista
                 IconButton(onClick = onAddToPlaylistClick, modifier = Modifier.size(36.dp)) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir a playlist", tint = Color.Black)
+                    Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir a playlist", tint = MaterialTheme.colorScheme.onSurface)
                 }
                 // Botón de Editar
                 IconButton(onClick = onEditClick, modifier = Modifier.size(36.dp)) {
-                    Icon(imageVector = Icons.Default.Edit, contentDescription = "Editar información", tint = Color.Black)
+                    Icon(imageVector = Icons.Default.Edit, contentDescription = "Editar información", tint = MaterialTheme.colorScheme.onSurface)
                 }
             }
         }
