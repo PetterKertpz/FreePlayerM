@@ -119,6 +119,8 @@ sealed class BibliotecaEvento {
     data object AbrirDialogoEditarLista : BibliotecaEvento()
     data object CerrarDialogoEditarLista : BibliotecaEvento()
     data class GuardarCambiosLista(val nombre: String, val descripcion: String?, val portadaUri: String?) : BibliotecaEvento()
+    data object AnadirSeleccionAFavoritos : BibliotecaEvento()
+    data object QuitarSeleccionDeFavoritos : BibliotecaEvento()
 }
 
 
@@ -207,6 +209,48 @@ class BibliotecaViewModel @Inject constructor(
     @RequiresApi(Build.VERSION_CODES.R)
     fun enEvento(evento: BibliotecaEvento) {
         when (evento) {
+            is BibliotecaEvento.QuitarSeleccionDeFavoritos -> {
+                viewModelScope.launch {
+                    val estado = _estadoUi.value
+                    val usuarioId = estado.usuarioActual?.id ?: return@launch
+                    val cancionIds = estado.cancionesSeleccionadas.toList()
+
+                    // Iteramos sobre cada canción seleccionada y la quitamos de favoritos
+                    cancionIds.forEach { cancionId ->
+                        cancionDao.quitarDeFavoritos(usuarioId, cancionId)
+                    }
+
+                    // Limpiamos y salimos del modo selección
+                    _estadoUi.update {
+                        it.copy(
+                            esModoSeleccion = false,
+                            cancionesSeleccionadas = emptySet()
+                        )
+                    }
+                }
+            }
+            is BibliotecaEvento.AnadirSeleccionAFavoritos -> {
+                viewModelScope.launch {
+                    val estado = _estadoUi.value
+                    val usuarioId = estado.usuarioActual?.id ?: return@launch
+                    val cancionIds = estado.cancionesSeleccionadas
+
+                    // Iteramos sobre cada canción seleccionada y la añadimos a favoritos
+                    cancionIds.forEach { cancionId ->
+                        // Creamos la entidad Favorito y la insertamos
+                        val nuevoFavorito = FavoritoEntity(idUsuario = usuarioId, idCancion = cancionId)
+                        cancionDao.anadirAFavoritos(nuevoFavorito)
+                    }
+
+                    // Limpiamos y salimos del modo selección
+                    _estadoUi.update {
+                        it.copy(
+                            esModoSeleccion = false,
+                            cancionesSeleccionadas = emptySet()
+                        )
+                    }
+                }
+            }
             is BibliotecaEvento.CriterioDeOrdenamientoCambiado -> {
                 // Ya no actualizamos el estado aquí, porque el Flow lo hará automáticamente.
                 // Solo guardamos la nueva preferencia.

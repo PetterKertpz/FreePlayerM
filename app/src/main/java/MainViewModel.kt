@@ -3,6 +3,7 @@ package com.example.freeplayerm
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.freeplayerm.data.local.entity.UsuarioEntity
+import com.example.freeplayerm.data.repository.RepositorioDeMusicaLocal
 import com.example.freeplayerm.data.repository.SessionRepository
 import com.example.freeplayerm.data.repository.UsuarioRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -29,8 +30,9 @@ sealed class AuthState {
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    sessionRepository: SessionRepository,
-    private val usuarioRepository: UsuarioRepository // <-- Inyectamos el UsuarioRepository
+    private val sessionRepository: SessionRepository,
+    private val usuarioRepository: UsuarioRepository, // <-- Inyectamos el UsuarioRepository
+    private val musicRepository: RepositorioDeMusicaLocal
 ) : ViewModel() {
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Cargando)
@@ -54,6 +56,16 @@ class MainViewModel @Inject constructor(
             )
     init {
         comprobarSesion()
+        viewModelScope.launch {
+            try {
+                // Usamos el repositorio para escanear y guardar la música.
+                // Esto no bloqueará la UI.
+                musicRepository.escanearYGuardarMusica()
+            } catch (e: Exception) {
+                // Manejar el error silenciosamente si es necesario
+                e.printStackTrace()
+            }
+        }
     }
 
     private fun comprobarSesion() {

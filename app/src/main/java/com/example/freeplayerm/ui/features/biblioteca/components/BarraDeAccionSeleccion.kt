@@ -1,3 +1,5 @@
+// en: .../biblioteca/components/BarraDeAccionSeleccion.kt
+
 package com.example.freeplayerm.ui.features.biblioteca.components
 
 import androidx.compose.foundation.background
@@ -8,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -22,9 +23,7 @@ import androidx.compose.ui.unit.dp
 fun BarraDeAccionSeleccion(
     cancionesSeleccionadas: Int,
     totalCanciones: Int,
-    mostrarBotonQuitar: Boolean,
     onSeleccionarTodo: () -> Unit,
-    onQuitarSeleccion: () -> Unit,
     onCerrarModoSeleccion: () -> Unit
 ) {
     Row(
@@ -41,11 +40,6 @@ fun BarraDeAccionSeleccion(
                 Icon(Icons.Default.Checklist, contentDescription = "Seleccionar Todo")
             }
             Text("$cancionesSeleccionadas / $totalCanciones")
-            if (mostrarBotonQuitar) {
-                IconButton(onClick = onQuitarSeleccion, enabled = cancionesSeleccionadas > 0) {
-                    Icon(Icons.Default.Delete, contentDescription = "Quitar de la lista")
-                }
-            }
         }
 
         // Botón para cerrar el modo selección (Cancelar Selección)

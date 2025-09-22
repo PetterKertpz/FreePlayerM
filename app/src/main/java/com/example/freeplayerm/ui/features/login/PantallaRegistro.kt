@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,13 +35,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.freeplayerm.ui.features.login.components.CampoDeTextoAutenticacion
 import com.example.freeplayerm.ui.features.nav.Rutas
 import com.example.freeplayerm.ui.theme.AppColors
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 
 /**
  * =================================================================
@@ -114,7 +115,7 @@ fun CuerpoPantallaRegistro(
             // 🔹 HEADER
             Row(
                 horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
             ) {
                 Text(
                     text = "FreePlayer",
@@ -122,13 +123,13 @@ fun CuerpoPantallaRegistro(
                     fontFamily = FontFamily.Default,
                     style = TextStyle(
                         shadow = Shadow(
-                            color = AppColors.PurpuraOscuro,
+                            color = AppColors.RojoFuerte,
                             blurRadius = 20f
                         )
                     ),
                     fontStyle = FontStyle.Italic,
                     fontWeight = FontWeight.Bold,
-                    color = AppColors.PurpuraProfundo,
+                    color = AppColors.PurpuraClaro,
                 )
             }
 
@@ -183,7 +184,7 @@ fun CuerpoPantallaRegistro(
                         text = "¿Tienes una cuenta?",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.clickable { onNavigateToLogin() }
                     )
                 }

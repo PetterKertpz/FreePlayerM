@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,7 +30,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -113,6 +116,7 @@ fun CuerpoPantallaLogin(
             .fillMaxSize()
             .background(Color.Black)
     ) { innerPadding ->
+
         Column(
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -121,8 +125,25 @@ fun CuerpoPantallaLogin(
                 .padding(innerPadding)
         ) {
             // ... (Header se mantiene igual) ...
-            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) { /*...*/ }
-
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "FreePlayer",
+                    fontSize = 50.sp,
+                    fontFamily = FontFamily.Default,
+                    style = TextStyle(
+                        shadow = Shadow(
+                            color = AppColors.RojoFuerte,
+                            blurRadius = 20f
+                        )
+                    ),
+                    fontStyle = FontStyle.Italic,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.PurpuraClaro,
+                )
+            }
             // 🔹 CONTENIDO CENTRAL
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -196,13 +217,13 @@ fun CuerpoPantallaLogin(
                         "¿No tienes una cuenta?",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.clickable { onNavigateToRegistro() })
                     Text(
                         "¿Olvidaste tu contraseña?",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.clickable { onNavigateToRecuperarClave() })
                 }
             }

@@ -5,6 +5,8 @@ import android.Manifest
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,8 +17,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.HeartBroken
+import androidx.compose.material.icons.filled.PlaylistRemove
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
@@ -57,6 +63,8 @@ import com.example.freeplayerm.ui.features.reproductor.PanelReproductorMinimizad
 import com.example.freeplayerm.ui.features.reproductor.ReproductorEstado
 import com.example.freeplayerm.ui.features.reproductor.ReproductorEvento
 import com.example.freeplayerm.ui.features.reproductor.ReproductorViewModel
+import com.example.freeplayerm.ui.features.shared.IconoCorazonAnimado
+import com.example.freeplayerm.ui.theme.AppColors
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
@@ -134,7 +142,7 @@ fun Biblioteca(
             },
             onGeneroClick = { genero ->
                 bibliotecaViewModel.enEvento(BibliotecaEvento.GeneroSeleccionado(genero))
-            },
+            }
 
         )
     } else {
@@ -206,19 +214,78 @@ fun CuerpoBiblioteca(
             )
         },
         floatingActionButton = {
-            val mostrarFab = estadoBiblioteca.esModoSeleccion && when (estadoBiblioteca.cuerpoActual) {
-                TipoDeCuerpoBiblioteca.CANCIONES,
-                TipoDeCuerpoBiblioteca.CANCIONES_DE_ALBUM,
-                TipoDeCuerpoBiblioteca.CANCIONES_DE_ARTISTA,
-                TipoDeCuerpoBiblioteca.CANCIONES_DE_GENERO,
-                TipoDeCuerpoBiblioteca.FAVORITOS -> true
-                else -> false
-            }
+            val mostrarFab = estadoBiblioteca.esModoSeleccion && estadoBiblioteca.cancionesSeleccionadas.isNotEmpty()
+
             AnimatedVisibility(visible = mostrarFab) {
-                FloatingActionButton(
-                    onClick = { onBibliotecaEvento(BibliotecaEvento.AbrirDialogoAnadirSeleccionALista) }
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Añadir selección a lista")
+                    // Decidimos qué botones mostrar según la vista actual
+                    when (estadoBiblioteca.cuerpoActual) {
+
+                        TipoDeCuerpoBiblioteca.CANCIONES_DE_LISTA -> {
+                            // --- Botones para la vista DENTRO de una lista ---
+
+                            // FAB para Añadir a Favoritos
+                            FloatingActionButton(
+                                onClick = { onBibliotecaEvento(BibliotecaEvento.AnadirSeleccionAFavoritos) },
+                                modifier = Modifier.border(BorderStroke(1.dp, AppColors.Negro), CircleShape),
+                                shape = CircleShape,
+                                containerColor = AppColors.PurpuraProfundo,
+                            ) {
+                                Icon(Icons.Default.Favorite, contentDescription = "Añadir selección a favoritos")
+                            }
+                            // FAB para Quitar de la Lista
+                            FloatingActionButton(
+                                onClick = { onBibliotecaEvento(BibliotecaEvento.QuitarCancionesSeleccionadasDeLista) },
+                                modifier = Modifier.border(BorderStroke(1.dp, AppColors.Negro), CircleShape),
+                                shape = CircleShape,
+                                containerColor = AppColors.PurpuraProfundo,
+                            ) {
+                                Icon(Icons.Default.PlaylistRemove, contentDescription = "Quitar selección de la lista")
+                            }
+
+                        }
+                        TipoDeCuerpoBiblioteca.FAVORITOS -> {
+                            FloatingActionButton(
+                                onClick = { onBibliotecaEvento(BibliotecaEvento.QuitarSeleccionDeFavoritos) },
+                                // --- ✅ ESTILO APLICADO ---
+                                modifier = Modifier.border(BorderStroke(1.dp, AppColors.Negro), CircleShape),
+                                shape = CircleShape,
+                                containerColor = AppColors.PurpuraProfundo,
+
+                            ) {
+                                Icon(Icons.Default.HeartBroken, contentDescription = "Quitar selección de favoritos")
+                            }
+                        }
+
+                        else -> {
+                            // --- Botones para TODAS las demás vistas de canciones ---
+
+                            // FAB para Añadir a Favoritos
+                            FloatingActionButton(
+                                onClick = { onBibliotecaEvento(BibliotecaEvento.AnadirSeleccionAFavoritos) },
+                                modifier = Modifier.border(BorderStroke(1.dp, AppColors.Negro), CircleShape),
+                                shape = CircleShape,
+                                containerColor = AppColors.PurpuraProfundo,
+                            ) {
+                                IconoCorazonAnimado(
+                                    esFavorito = false
+                                )
+                            }
+
+                            // FAB para Añadir a otra Lista de Reproducción
+                            FloatingActionButton(
+                                onClick = { onBibliotecaEvento(BibliotecaEvento.AbrirDialogoAnadirSeleccionALista) },
+                                modifier = Modifier.border(BorderStroke(1.dp, AppColors.Negro), CircleShape),
+                                shape = CircleShape,
+                                containerColor = AppColors.PurpuraProfundo,
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = "Añadir selección a otra lista")
+                            }
+                        }
+                    }
                 }
             }
         },
@@ -293,27 +360,27 @@ fun CuerpoBiblioteca(
                                         BarraDeAccionSeleccion(
                                             cancionesSeleccionadas = estadoBiblioteca.cancionesSeleccionadas.size,
                                             totalCanciones = estadoBiblioteca.canciones.size,
-                                            mostrarBotonQuitar = false,
                                             onSeleccionarTodo = { onBibliotecaEvento(BibliotecaEvento.SeleccionarTodo) },
-                                            onQuitarSeleccion = {},
                                             onCerrarModoSeleccion = { onBibliotecaEvento(BibliotecaEvento.DesactivarModoSeleccion) }
                                         )
                                     }
                                     CuerpoCanciones(
+                                        canciones = estadoBiblioteca.canciones,
                                         estado = estadoBiblioteca,
                                         lazyListState = lazyListState,
                                         onBibliotecaEvento = onBibliotecaEvento,
                                         onReproductorEvento = { evento ->
                                             if (evento is ReproductorEvento.SeleccionarCancion) {
-                                                val eventoConCola = ReproductorEvento.EstablecerColaYReproducir(
-                                                    cola = estadoBiblioteca.canciones,
-                                                    cancionInicial = evento.cancion
-                                                )
+                                                val eventoConCola =
+                                                    ReproductorEvento.EstablecerColaYReproducir(
+                                                        cola = estadoBiblioteca.canciones,
+                                                        cancionInicial = evento.cancion
+                                                    )
                                                 onReproductorEvento(eventoConCola)
                                             } else {
                                                 onReproductorEvento(evento)
                                             }
-                                        }
+                                        },
                                     )
                                 }
                             }
@@ -330,9 +397,7 @@ fun CuerpoBiblioteca(
                                         BarraDeAccionSeleccion(
                                             cancionesSeleccionadas = estadoBiblioteca.cancionesSeleccionadas.size,
                                             totalCanciones = estadoBiblioteca.canciones.size,
-                                            mostrarBotonQuitar = true,
                                             onSeleccionarTodo = { onBibliotecaEvento(BibliotecaEvento.SeleccionarTodo) },
-                                            onQuitarSeleccion = { onBibliotecaEvento(BibliotecaEvento.QuitarCancionesSeleccionadasDeLista) },
                                             onCerrarModoSeleccion = { onBibliotecaEvento(BibliotecaEvento.DesactivarModoSeleccion) }
                                         )
                                     }
@@ -342,15 +407,17 @@ fun CuerpoBiblioteca(
                                         onBibliotecaEvento = onBibliotecaEvento,
                                         onReproductorEvento = { evento ->
                                             if (evento is ReproductorEvento.SeleccionarCancion) {
-                                                val eventoConCola = ReproductorEvento.EstablecerColaYReproducir(
-                                                    cola = estadoBiblioteca.canciones,
-                                                    cancionInicial = evento.cancion
-                                                )
+                                                val eventoConCola =
+                                                    ReproductorEvento.EstablecerColaYReproducir(
+                                                        cola = estadoBiblioteca.canciones,
+                                                        cancionInicial = evento.cancion
+                                                    )
                                                 onReproductorEvento(eventoConCola)
                                             } else {
                                                 onReproductorEvento(evento)
                                             }
-                                        }
+                                        },
+                                        canciones = estadoBiblioteca.canciones
                                     )
                                 }
                             }

@@ -20,10 +20,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,11 +40,13 @@ import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
 import com.example.freeplayerm.ui.features.biblioteca.BibliotecaEstado
 import com.example.freeplayerm.ui.features.biblioteca.BibliotecaEvento
 import com.example.freeplayerm.ui.features.reproductor.ReproductorEvento
+import com.example.freeplayerm.ui.features.shared.IconoCorazonAnimado
 import com.example.freeplayerm.ui.theme.AppColors
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 
 @Composable
 fun CuerpoCanciones(
+    canciones: List<CancionConArtista>,
     modifier: Modifier = Modifier,
     lazyListState: LazyListState,
     estado: BibliotecaEstado,
@@ -55,7 +54,7 @@ fun CuerpoCanciones(
     onReproductorEvento: (ReproductorEvento) -> Unit
 ) {
     // --- CAMBIO #1: LA LÓGICA DE EVENTOS SE MANEJA AQUÍ, EN EL NIVEL SUPERIOR ---
-    if (estado.canciones.isEmpty()) {
+    if (canciones.isEmpty()) {
         val mensaje = if (estado.textoDeBusqueda.isNotBlank()) {
             "No se encontraron resultados para \"${estado.textoDeBusqueda}\""
         } else {
@@ -67,7 +66,7 @@ fun CuerpoCanciones(
     } else {
         ListaDeCanciones(
             lazyListState = lazyListState,
-            canciones = estado.canciones,
+            canciones = canciones,
             esModoSeleccion = estado.esModoSeleccion,
             cancionesSeleccionadas = estado.cancionesSeleccionadas,
             // El clic en la canción se traduce en un evento para el reproductor
@@ -77,10 +76,6 @@ fun CuerpoCanciones(
             // El clic en el favorito se traduce en un evento para la biblioteca
             onFavoritoClick = { cancionSeleccionada ->
                 onBibliotecaEvento(BibliotecaEvento.AlternarFavorito(cancionSeleccionada))
-            },
-            onAddToPlaylistClick = { cancionSeleccionada ->
-                // --- CAMBIO AQUÍ ---
-                onBibliotecaEvento(BibliotecaEvento.AbrirDialogoPlaylist(cancionSeleccionada))
             },
             onEditClick = { cancion ->
                 onBibliotecaEvento(BibliotecaEvento.EditarCancion(cancion))
@@ -104,7 +99,6 @@ private fun ListaDeCanciones(
     cancionesSeleccionadas: Set<Int>,
     onCancionClick: (CancionConArtista) -> Unit,
     onFavoritoClick: (CancionConArtista) -> Unit,
-    onAddToPlaylistClick: (CancionConArtista) -> Unit,
     onEditClick: (CancionConArtista) -> Unit,
     onToggleSeleccion: (Int) -> Unit,
     onActivarModoSeleccion: (CancionConArtista) -> Unit,
@@ -128,7 +122,6 @@ private fun ListaDeCanciones(
                 },
                 onLongClick = { onActivarModoSeleccion(cancionConArtista) },
                 onFavoritoClick = { onFavoritoClick(cancionConArtista) },
-                onAddToPlaylistClick = { onAddToPlaylistClick(cancionConArtista) },
                 onEditClick = { onEditClick(cancionConArtista) }
             )
         }
@@ -144,7 +137,6 @@ private fun CancionItem(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onFavoritoClick: () -> Unit,
-    onAddToPlaylistClick: () -> Unit,
     onEditClick: () -> Unit
 ) {
     Row(
@@ -190,21 +182,20 @@ private fun CancionItem(
         }
         Spacer(modifier = Modifier.width(8.dp))
         Row {
-            IconButton(onClick = onFavoritoClick, modifier = Modifier.size(36.dp)) {
-                Icon(
-                    imageVector = if (cancionConArtista.esFavorita) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = "Marcar como Favorito",
-                    tint = if (cancionConArtista.esFavorita) AppColors.RojoMedio else MaterialTheme.colorScheme.onSurface
-                )
-            }
-            if (esModoSeleccion) {
-                // Botón de Añadir a Lista
-                IconButton(onClick = onAddToPlaylistClick, modifier = Modifier.size(36.dp)) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir a playlist", tint = MaterialTheme.colorScheme.onSurface)
+            if (!esModoSeleccion) {
+                IconButton(onClick = onFavoritoClick, modifier = Modifier.size(36.dp)) {
+                    // --- ✅ REEMPLAZAMOS EL ICONO ANTIGUO POR EL NUEVO ---
+                    IconoCorazonAnimado(
+                        esFavorito = cancionConArtista.esFavorita
+                    )
                 }
+            }
+
+            // Los botones de Añadir a Lista y Editar solo se muestran EN modo selección
+            if (esModoSeleccion) {
                 // Botón de Editar
                 IconButton(onClick = onEditClick, modifier = Modifier.size(36.dp)) {
-                    Icon(imageVector = Icons.Default.Edit, contentDescription = "Editar información", tint = MaterialTheme.colorScheme.onSurface)
+                    Icon(imageVector = Icons.Default.Edit, contentDescription = "Editar información")
                 }
             }
         }
@@ -245,7 +236,8 @@ private fun CuerpoCancionesConDatosPreview() {
             estado = estadoDePrueba,
             onBibliotecaEvento = {},
             onReproductorEvento = {},
-            lazyListState = LazyListState(0, 0)
+            lazyListState = LazyListState(0, 0),
+            canciones = listaDeCancionesDePrueba
         )
     }
 }
@@ -260,13 +252,33 @@ private fun CuerpoCancionesVacioPreview() {
         canciones = emptyList(), // Lista vacía
         textoDeBusqueda = ""
     )
+    val listaDeCancionesDePrueba = (1..20).map { i ->
+        CancionConArtista(
+            cancion = CancionEntity(
+                idCancion = i.toInt(),
+                titulo = "Una Canción Muy Larga Para Probar El Efecto Marquee Número $i",
+                idArtista = (i % 5).toInt(), // 5 artistas diferentes
+                idAlbum = (i % 3).toInt(),   // 3 álbumes diferentes
+                duracionSegundos = 210,
+                archivoPath = "/path/to/song$i.mp3",
+                origen = "LOCAL",
+                idGenero = null
+            ),
+            artistaNombre = "Artista ${(i % 5) + 1}",
+            albumNombre = null,
+            generoNombre = null,
+            esFavorita = false,
+            portadaPath = null
+        )
+    }
 
     FreePlayerMTheme {
         CuerpoCanciones(
             estado = estadoDePrueba,
             onBibliotecaEvento = {},
             onReproductorEvento = {},
-            lazyListState = LazyListState(0, 0)
+            lazyListState = LazyListState(0, 0),
+            canciones = listaDeCancionesDePrueba
         )
     }
 }
@@ -283,11 +295,31 @@ private fun CuerpoCancionesBusquedaSinResultadosPreview() {
     )
 
     FreePlayerMTheme {
+        val listaDeCancionesDePrueba = (1..20).map { i ->
+            CancionConArtista(
+                cancion = CancionEntity(
+                    idCancion = i.toInt(),
+                    titulo = "Una Canción Muy Larga Para Probar El Efecto Marquee Número $i",
+                    idArtista = (i % 5).toInt(), // 5 artistas diferentes
+                    idAlbum = (i % 3).toInt(),   // 3 álbumes diferentes
+                    duracionSegundos = 210,
+                    archivoPath = "/path/to/song$i.mp3",
+                    origen = "LOCAL",
+                    idGenero = null
+                ),
+                artistaNombre = "Artista ${(i % 5) + 1}",
+                albumNombre = null,
+                generoNombre = null,
+                esFavorita = false,
+                portadaPath = null
+            )
+        }
         CuerpoCanciones(
             estado = estadoDePrueba,
             onBibliotecaEvento = {},
             onReproductorEvento = {},
-            lazyListState = LazyListState(0, 0)
+            lazyListState = LazyListState(0, 0),
+            canciones = listaDeCancionesDePrueba
         )
     }
 }
