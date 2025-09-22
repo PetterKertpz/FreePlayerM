@@ -1,6 +1,8 @@
 // en: app/src/main/java/com/example/freeplayerm/ui/features/nav/GrafoDeNavegacion.kt
 package com.example.freeplayerm.ui.features.nav
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -14,6 +16,7 @@ import com.example.freeplayerm.ui.features.reproductor.ReproductorViewModel
 
 
 // --- CAMBIO CLAVE AQUÍ ---
+@RequiresApi(Build.VERSION_CODES.R)
 @Composable
 fun GrafoDeNavegacion(
     navController: NavHostController,

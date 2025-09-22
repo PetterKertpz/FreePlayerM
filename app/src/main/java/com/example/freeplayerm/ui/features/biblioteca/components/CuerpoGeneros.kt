@@ -1,42 +1,42 @@
-// en: app/src/main/java/com/example/freeplayerm/ui/features/biblioteca/components/CuerpoGeneros.kt
 package com.example.freeplayerm.ui.features.biblioteca.components
 
-import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material3.Icon
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.GeneroEntity
-import com.example.freeplayerm.ui.theme.AppColors
+import com.example.freeplayerm.ui.features.biblioteca.utils.GeneroVisuals
 
 @Composable
 fun CuerpoGeneros(
     modifier: Modifier = Modifier,
     generos: List<GeneroEntity>,
-    lazyListState: LazyListState,
+    lazyGridState: LazyGridState,
     onGeneroClick: (GeneroEntity) -> Unit
 ) {
     if (generos.isEmpty()) {
@@ -47,12 +47,15 @@ fun CuerpoGeneros(
             Text(text = "No se encontraron géneros.", color = Color.Gray)
         }
     } else {
-        LazyColumn(
-            state = lazyListState,
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2), // Una cuadrícula con 2 columnas
+            state = lazyGridState,
             modifier = modifier.fillMaxSize(),
-            contentPadding = PaddingValues(vertical = 10.dp, horizontal = 10.dp)
+            contentPadding = PaddingValues(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(generos) { genero ->
+            items(generos, key = { it.idGenero }) { genero ->
                 GeneroItem(
                     genero = genero,
                     onClick = { onGeneroClick(genero) }
@@ -67,38 +70,45 @@ private fun GeneroItem(
     genero: GeneroEntity,
     onClick: () -> Unit
 ) {
-    Row(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 5.dp, vertical = 5.dp)
-            .border(
-                width = 1.dp,
-                color = AppColors.GrisClaro,
-                shape = RoundedCornerShape(8.dp)
-
-            ),
-        verticalAlignment = Alignment.CenterVertically,
+            .aspectRatio(1f) // Hace que la tarjeta sea un cuadrado perfecto
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-
-        Text(
-            text = genero.nombre,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 30.sp,
-            modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.MiddleEllipsis
-        )
-        Spacer(
-            modifier = Modifier
-                .width(10.dp)
-        )
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = "Ver canciones del género",
-            tint = Color.Gray
-        )
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.BottomStart // Alinea el texto abajo a la izquierda
+        ) {
+            // La imagen del género
+            AsyncImage(
+                model = GeneroVisuals.getImageForGenre(genero.nombre),
+                contentDescription = genero.nombre,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop // Asegura que la imagen llene la tarjeta
+            )
+            // Un gradiente oscuro para que el texto sea legible sobre cualquier imagen
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f)),
+                            startY = 300f // El gradiente empieza más abajo
+                        )
+                    )
+            )
+            // El nombre del género
+            Text(
+                text = genero.nombre,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = Color.White,
+                modifier = Modifier.padding(12.dp)
+            )
+        }
     }
 }
 
@@ -109,18 +119,15 @@ fun PreviewCuerpoGeneros() {
     val listaDePrueba = listOf(
         GeneroEntity(1, "Rock"),
         GeneroEntity(2, "Pop"),
-        GeneroEntity(3, "Electrónica"),
-        GeneroEntity(4, "Rock"),
-        GeneroEntity(5, "Pop"),
-        GeneroEntity(6, "Electrónica"),
-        GeneroEntity(7, "Rock"),
-        GeneroEntity(8, "Pop"),
-        GeneroEntity(9, "Electrónica")
+        GeneroEntity(3, "Cumbia"),
+        GeneroEntity(4, "Electronica")
+
     )
     MaterialTheme {
         CuerpoGeneros(
-            generos = listaDePrueba, onGeneroClick = {},
-            lazyListState = LazyListState(0,0)
+            generos = listaDePrueba,
+            onGeneroClick = {},
+            lazyGridState = LazyGridState()
         )
     }
 }

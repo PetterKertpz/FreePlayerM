@@ -440,8 +440,8 @@ fun CuerpoBiblioteca(
 
                             TipoDeCuerpoBiblioteca.GENEROS -> CuerpoGeneros(
                                 generos = estadoBiblioteca.generos,
-                                lazyListState = lazyListState,
-                                onGeneroClick = onGeneroClick
+                                lazyGridState = lazyGridState,
+                                onGeneroClick = onGeneroClick,
                             )
                         }
                     }
