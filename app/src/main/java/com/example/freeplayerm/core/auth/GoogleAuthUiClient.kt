@@ -5,6 +5,7 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import com.example.freeplayerm.R
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -68,13 +69,13 @@ class GoogleAuthUiClient(
             } else {
                 SignInResult.Error("Error: Credencial de tipo inesperado.")
             }
+            // --- ✅ CORRECCIÓN 1: Manejar la cancelación del usuario explícitamente ---
+        } catch (e: NoCredentialException) {
+            e.printStackTrace()
+            SignInResult.Cancelled
         } catch (e: GetCredentialException) {
             e.printStackTrace()
-            if (e.type == "androidx.credentials.exceptions.public.UserCancellationException") {
-                SignInResult.Cancelled
-            } else {
-                SignInResult.Error("Error de Credential Manager: ${e.message}")
-            }
+            SignInResult.Error("Error de Credential Manager: ${e.message}")
         } catch (e: Exception) {
             e.printStackTrace()
             if (e is CancellationException) throw e

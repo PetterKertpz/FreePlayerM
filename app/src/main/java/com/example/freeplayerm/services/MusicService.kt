@@ -7,10 +7,8 @@ import android.content.Intent
 import androidx.annotation.OptIn
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
-import com.example.freeplayerm.MainActivity
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -32,32 +30,24 @@ class MusicService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
 
-        // 1. Creamos el canal de notificación (necesario para Android 8.0+)
         createNotificationChannel()
 
-        // 2. Creamos el proveedor de notificaciones por defecto.
-        //    La personalización del icono se hace aquí, directamente.
-        val notificationProvider = DefaultMediaNotificationProvider.Builder(this)
-            .setNotificationId(NOTIFICATION_ID)
-            .setChannelId(CHANNEL_ID)
-            .build()
+        // --- ✅ USAMOS NUESTRO NUEVO Y SIMPLE PROVEEDOR ---
+        val notificationProvider = CustomNotificationProvider(this)
 
-        // Asignamos el proveedor de notificaciones al servicio.
         setMediaNotificationProvider(notificationProvider)
 
-        // Configuramos la intención para abrir la app al pulsar la notificación.
-        val pendingIntent = Intent(this, MainActivity::class.java).let {
+        // El resto de la configuración se mantiene igual
+        val pendingIntent = packageManager?.getLaunchIntentForPackage(packageName)?.let {
             PendingIntent.getActivity(this, 0, it, PendingIntent.FLAG_IMMUTABLE)
         }
-        mediaSession.setSessionActivity(pendingIntent)
+        mediaSession.setSessionActivity(pendingIntent!!)
     }
 
     private fun createNotificationChannel() {
-        // La comprobación de versión ya no es necesaria si tu minSdk es 26+,
-        // pero la dejamos por compatibilidad y buenas prácticas.
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Media Playback",
+            "Reproducción de Música",
             NotificationManager.IMPORTANCE_LOW
         )
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
