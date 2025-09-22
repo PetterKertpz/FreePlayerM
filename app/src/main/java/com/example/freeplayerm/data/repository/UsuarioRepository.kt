@@ -10,6 +10,7 @@ interface UsuarioRepository {
     suspend fun actualizarUsuario(usuario: UsuarioEntity)
     suspend fun eliminarUsuario(usuario: UsuarioEntity)
     suspend fun obtenerUsuarioPorId(id: Int): UsuarioEntity?
+    suspend fun enviarCorreoRecuperacion(correo: String): Result<Unit>
 
     // --- NUEVA FUNCIÓN AÑADIDA A LA INTERFAZ ---
     fun obtenerUsuarioPorIdFlow(id: Int): Flow<UsuarioEntity?>

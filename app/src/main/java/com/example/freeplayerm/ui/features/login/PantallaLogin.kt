@@ -88,10 +88,7 @@ fun PantallaLogin(
         estado = estado,
         enEvento = viewModel::enEvento,
         onNavigateToRegistro = { navController.navigate(Rutas.Registro.ruta) },
-        onNavigateToRecuperarClave = {
-            Toast.makeText(contexto, "Función no implementada", Toast.LENGTH_SHORT).show()
-        },
-        // --- LÓGICA CORREGIDA Y SIMPLIFICADA AQUÍ ---
+        onNavigateToRecuperarClave = { navController.navigate(Rutas.RecuperarClave.ruta) },
         onBotonGoogleClick = {
             coroutineScope.launch {
                 // 1. Llamamos a la única función que maneja todo el flujo

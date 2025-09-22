@@ -9,6 +9,7 @@ package com.example.freeplayerm.ui.features.nav
 sealed class Rutas(val ruta: String) {
     object Login : Rutas("login")
     object Registro : Rutas("registro")
+    object RecuperarClave : Rutas("recuperar_clave")
     object Biblioteca : Rutas("biblioteca/{usuarioId}")
         fun crearRuta(usuarioId: Int) = "biblioteca/$usuarioId"
 }

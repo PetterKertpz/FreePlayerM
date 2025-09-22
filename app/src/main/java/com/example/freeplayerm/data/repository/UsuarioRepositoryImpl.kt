@@ -4,7 +4,10 @@ package com.example.freeplayerm.data.repository
 import com.example.freeplayerm.core.security.SeguridadHelper
 import com.example.freeplayerm.data.local.dao.UsuarioDao
 import com.example.freeplayerm.data.local.entity.UsuarioEntity
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.tasks.await
 import java.util.Date
 
 // Clase que implementa la interfaz UsuarioRepository.
@@ -13,7 +16,7 @@ class UsuarioRepositoryImpl(
     private val usuarioDao: UsuarioDao,
     private val sessionRepository: SessionRepository // <-- ¡Nueva inyección!
 ) : UsuarioRepository {
-
+    private val auth = Firebase.auth
     // Simplemente llama al método correspondiente en el DAO.
     override suspend fun insertarUsuario(usuario: UsuarioEntity) {
         usuarioDao.insertarUsuario(usuario)
@@ -30,7 +33,31 @@ class UsuarioRepositoryImpl(
     override suspend fun eliminarUsuario(usuario: UsuarioEntity) {
         usuarioDao.eliminarUsuario(usuario)
     }
+    override suspend fun enviarCorreoRecuperacion(correo: String): Result<Unit> {
+        return try {
+            // --- ✅ LÓGICA DE VALIDACIÓN AÑADIDA ---
 
+            // 1. Buscamos al usuario por su correo en nuestra base de datos local.
+            val usuario = usuarioDao.obtenerUsuarioPorCorreo(correo)
+
+            // 2. Comprobamos si el usuario existe y si es una cuenta LOCAL.
+            if (usuario == null) {
+                return Result.failure(Exception("No existe una cuenta registrada con ese correo electrónico."))
+            }
+            if (usuario.tipoAutenticacion != "LOCAL") {
+                return Result.failure(Exception("Esa cuenta fue registrada usando un método social y no tiene contraseña local."))
+            }
+
+            // 3. Si todo está en orden, procedemos a llamar a Firebase.
+            auth.sendPasswordResetEmail(correo).await()
+            Result.success(Unit)
+
+        } catch (e: Exception) {
+            // Devolvemos el mensaje de error original de Firebase si la validación pasa pero el envío falla.
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
     /**
      * Registra un nuevo usuario con correo y contraseña.
      * Ventajas:

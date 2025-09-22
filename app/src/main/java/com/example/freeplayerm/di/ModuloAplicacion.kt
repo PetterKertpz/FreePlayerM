@@ -31,7 +31,7 @@ object ModuloAplicacion {
         )
             // AÑADIDO: Permite a Room destruir y recrear la BD si las migraciones fallan
             // Es útil durante el desarrollo, pero para producción se necesitaría un plan de migración.
-            .fallbackToDestructiveMigration(false)
+            .fallbackToDestructiveMigration(true)
             .build()
     }
 

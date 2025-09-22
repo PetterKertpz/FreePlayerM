@@ -11,6 +11,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.freeplayerm.ui.features.biblioteca.Biblioteca
 import com.example.freeplayerm.ui.features.login.PantallaLogin
+import com.example.freeplayerm.ui.features.login.PantallaRecuperarClave
 import com.example.freeplayerm.ui.features.login.PantallaRegistro
 import com.example.freeplayerm.ui.features.reproductor.ReproductorViewModel
 
@@ -32,6 +33,9 @@ fun GrafoDeNavegacion(
         }
         composable(Rutas.Registro.ruta) {
             PantallaRegistro(navController)
+        }
+        composable(Rutas.RecuperarClave.ruta) {
+            PantallaRecuperarClave(navController)
         }
         composable(
             route = Rutas.Biblioteca.ruta,
