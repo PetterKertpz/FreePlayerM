@@ -5,7 +5,16 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,14 +29,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -44,12 +55,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import coil.compose.AsyncImage
+import com.example.freeplayerm.R
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ListaReproduccionEntity
+import com.example.freeplayerm.ui.theme.AppColors
 
 @Composable
 fun VentanaListasReproduccion(
@@ -64,8 +80,8 @@ fun VentanaListasReproduccion(
     if (mostrarDialogoCrearLista) {
         DialogoCrearLista(
             onDismiss = { mostrarDialogoCrearLista = false },
-            onCrear = { nombre, desc, portadaUri -> // Recibimos los 3 parámetros
-                onCrearLista(nombre, desc, portadaUri) // Y los pasamos hacia arriba
+            onCrear = { nombre, desc, portadaUri ->
+                onCrearLista(nombre, desc, portadaUri)
                 mostrarDialogoCrearLista = false
             }
         )
@@ -76,7 +92,8 @@ fun VentanaListasReproduccion(
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 500.dp) // Limita la altura máxima del diálogo
+                .heightIn(min = 200.dp, max = 600.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
@@ -98,8 +115,8 @@ fun VentanaListasReproduccion(
 
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     items(listasExistentes, key = { it.idLista }) { lista ->
-                        FilaListaSeleccionable(
-                            nombreLista = lista.nombre,
+                        PlaylistItem(
+                            lista = lista,
                             estaSeleccionada = lista.idLista in listasSeleccionadas,
                             onToggle = {
                                 if (lista.idLista in listasSeleccionadas) {
@@ -125,26 +142,80 @@ fun VentanaListasReproduccion(
         }
     }
 }
-
 @Composable
-private fun FilaListaSeleccionable(
-    nombreLista: String,
+private fun PlaylistItem(
+    lista: ListaReproduccionEntity,
     estaSeleccionada: Boolean,
     onToggle: () -> Unit
 ) {
-    Row(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onToggle)
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(vertical = 4.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onToggle),
+        shape = RoundedCornerShape(12.dp),
+        border = if (estaSeleccionada) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Checkbox(
-            checked = estaSeleccionada,
-            onCheckedChange = { onToggle() }
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(text = nombreLista, style = MaterialTheme.typography.bodyLarge)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(8.dp)
+        ) {
+            AsyncImage(
+                model = lista.portadaUrl,
+                contentDescription = "Portada de ${lista.nombre}",
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(AppColors.GrisProfundo),
+                contentScale = ContentScale.Crop,
+                // Un fallback por si no hay portada
+                error = painterResource(id = R.drawable.ic_notification)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = lista.nombre,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            SelectorAnimado(seleccionado = estaSeleccionada)
+        }
+    }
+}
+
+@Composable
+private fun SelectorAnimado(seleccionado: Boolean) {
+    val scale by animateFloatAsState(
+        targetValue = if (seleccionado) 1f else 0.8f,
+        animationSpec = tween(durationMillis = 200),
+        label = "scale"
+    )
+
+    Box(
+        modifier = Modifier
+            .size(24.dp)
+            .clip(CircleShape)
+            .background(
+                if (seleccionado) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+            )
+            .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        AnimatedVisibility(
+            visible = seleccionado,
+            enter = scaleIn() + fadeIn(),
+            exit = scaleOut() + fadeOut()
+        ) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = "Seleccionado",
+                tint = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.scale(scale)
+            )
+        }
     }
 }
 
@@ -250,3 +321,5 @@ fun DialogoCrearLista(
         }
     )
 }
+
+
