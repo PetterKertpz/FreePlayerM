@@ -1,8 +1,8 @@
 // en: app/src/main/java/com/example/freeplayerm/ui/features/biblioteca/components/CuerpoListas.kt
 package com.example.freeplayerm.ui.features.biblioteca.components
 
+import com.example.freeplayerm.com.example.freeplayerm.ui.features.shared.MarqueeTextConDesvanecido
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -88,18 +88,18 @@ private fun ListaItem(
 
         )
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            MarqueeTextConDesvanecido(
                 text = lista.nombre,
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.basicMarquee()
+
             )
-            Text(
+            MarqueeTextConDesvanecido(
                 text = lista.descripcion ?: "",
                 fontSize = 18.sp,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.basicMarquee()
+
             )
         }
 

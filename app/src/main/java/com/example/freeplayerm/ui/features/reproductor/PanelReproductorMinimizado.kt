@@ -1,10 +1,10 @@
 // en: app/src/main/java/com/example/freeplayerm/ui/features/reproductor/PanelReproductorMinimizado.kt
 package com.example.freeplayerm.ui.features.reproductor
 
+import com.example.freeplayerm.com.example.freeplayerm.ui.features.shared.MarqueeTextConDesvanecido
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -117,24 +117,22 @@ fun PanelReproductorMinimizado(
                     modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center
                 ) {
                     if (cancionConArtista != null) {
-                        Text(
+                        MarqueeTextConDesvanecido(
                             // Accedemos al título a través de .cancion.titulo
                             text = cancionConArtista.cancion.titulo,
                             fontWeight = FontWeight.Bold,
                             fontSize = 30.sp,
                             color = Color.White,
-                            modifier = Modifier
-                                .basicMarquee()
+
                         )
                     }
                     if (cancionConArtista != null) {
-                        Text(
+                        MarqueeTextConDesvanecido(
                             // Significa: "Usa 'artistaNombre'. Si es nulo, usa 'Artista Desconocido' en su lugar".
                             text = cancionConArtista.artistaNombre ?: "Artista Desconocido",
                             fontSize = 20.sp,
                             color = Color.White,
-                            modifier = Modifier
-                                .basicMarquee()
+
                         )
                     }
 

@@ -1,7 +1,7 @@
 package com.example.freeplayerm.ui.features.biblioteca.components
 
+import com.example.freeplayerm.com.example.freeplayerm.ui.features.shared.MarqueeTextConDesvanecido
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,7 +17,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,17 +63,17 @@ fun EncabezadoFijoLista(
 
         // Título y descripción
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            MarqueeTextConDesvanecido(
                 text = lista.nombre,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.basicMarquee()
+
             )
             if (!lista.descripcion.isNullOrBlank()) {
-                Text(
+                MarqueeTextConDesvanecido(
                     text = lista.descripcion,
                     style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.basicMarquee(),
+
                 )
             }
         }

@@ -1,5 +1,6 @@
 package com.example.freeplayerm.ui.features.biblioteca.components
 
+import com.example.freeplayerm.com.example.freeplayerm.ui.features.shared.MarqueeTextConDesvanecido
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -101,7 +102,7 @@ private fun GeneroItem(
                     )
             )
             // El nombre del género
-            Text(
+            MarqueeTextConDesvanecido(
                 text = genero.nombre,
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,

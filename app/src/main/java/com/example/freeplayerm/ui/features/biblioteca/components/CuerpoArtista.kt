@@ -1,8 +1,8 @@
 // en: app/src/main/java/com/example/freeplayerm/ui/features/biblioteca/components/CuerpoArtistas.kt
 package com.example.freeplayerm.ui.features.biblioteca.components
 
+import com.example.freeplayerm.com.example.freeplayerm.ui.features.shared.MarqueeTextConDesvanecido
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -89,12 +89,11 @@ private fun ArtistaItem(
             contentScale = ContentScale.Crop
         )
 
-        Text(
+        MarqueeTextConDesvanecido(
             text = artista.nombre,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier
-                .basicMarquee()
+
         )
     }
 }

@@ -3,7 +3,6 @@ package com.example.freeplayerm.ui.features.biblioteca.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
@@ -36,6 +35,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
+import com.example.freeplayerm.com.example.freeplayerm.ui.features.shared.MarqueeTextConDesvanecido
 import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
 import com.example.freeplayerm.ui.features.biblioteca.BibliotecaEstado
 import com.example.freeplayerm.ui.features.biblioteca.BibliotecaEvento
@@ -167,17 +167,17 @@ private fun CancionItem(
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            MarqueeTextConDesvanecido(
                 text = cancionConArtista.cancion.titulo,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.basicMarquee()
+
             )
-            Text(
+            MarqueeTextConDesvanecido(
                 text = cancionConArtista.artistaNombre ?: "Artista Desconocido",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.basicMarquee()
+
             )
         }
         Spacer(modifier = Modifier.width(8.dp))

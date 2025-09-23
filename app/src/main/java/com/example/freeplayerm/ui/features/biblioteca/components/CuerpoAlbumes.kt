@@ -1,10 +1,9 @@
 // en: app/src/main/java/com/example/freeplayerm/ui/features/biblioteca/components/CuerpoAlbumes.kt
 package com.example.freeplayerm.ui.features.biblioteca.components
 
+import com.example.freeplayerm.com.example.freeplayerm.ui.features.shared.MarqueeTextConDesvanecido
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.MarqueeSpacing
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -158,23 +157,19 @@ fun AlbumItem(
         ) {
 
             // ℹ️ Información del álbum
-            Text(
+            MarqueeTextConDesvanecido(
                 text = album.titulo,
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 color = Color.Black,
-                modifier = Modifier
-                    .basicMarquee(
-                        spacing = MarqueeSpacing(0.dp)
-                    )
+
 
             )
-            Text(
+            MarqueeTextConDesvanecido(
                 text = "Artista ${album.idArtista}", // reemplaza con el nombre real
                 fontSize = 15.sp,
                 color = Color.Black,
-                modifier = Modifier
-                    .basicMarquee()
+
             )
         }
 
