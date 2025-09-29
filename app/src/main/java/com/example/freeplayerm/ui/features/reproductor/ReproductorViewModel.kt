@@ -24,6 +24,7 @@ class ReproductorViewModel @Inject constructor(
 
     private var colaDeReproduccion: List<CancionConArtista> = emptyList()
     private var actualizadorDeProgresoJob: Job? = null
+    private var trabajoDeRotacion: Job? = null
 
     init {
         escucharEventosDelReproductor()
@@ -33,7 +34,13 @@ class ReproductorViewModel @Inject constructor(
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 _estadoUi.update { it.copy(estaReproduciendo = isPlaying) }
-                if (isPlaying) iniciarActualizadorDeProgreso() else detenerActualizadorDeProgreso()
+                if (isPlaying) {
+                    iniciarActualizadorDeProgreso()
+                } else {
+                    detenerActualizadorDeProgreso()
+                }
+                // <-- MODIFICADO: Llamamos a la nueva función aquí
+                gestionarRotacionVinilo(isPlaying)
             }
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -100,11 +107,34 @@ class ReproductorViewModel @Inject constructor(
             else -> {} // Otros eventos como Detener o AlternarFavorito
         }
     }
-
+    private fun gestionarRotacionVinilo(estaReproduciendo: Boolean) {
+        trabajoDeRotacion?.cancel()
+        if (estaReproduciendo) {
+            trabajoDeRotacion = viewModelScope.launch {
+                while (true) {
+                    val anguloActual = _estadoUi.value.anguloRotacionVinilo
+                    // Incremento para una rotación completa cada 10 segundos
+                    val incremento = 360f / (10000f / 16f)
+                    _estadoUi.update {
+                        it.copy(
+                            anguloRotacionVinilo = (anguloActual + incremento) % 360f
+                        )
+                    }
+                    delay(16) // Actualiza a ~60 FPS
+                }
+            }
+        }
+    }
     private fun actualizarCancionActual() {
         val indiceActual = player.currentMediaItemIndex
         if (indiceActual >= 0 && indiceActual < colaDeReproduccion.size) {
-            _estadoUi.update { it.copy(cancionActual = colaDeReproduccion[indiceActual]) }
+            // ✅ CORRECCIÓN FINAL: Al cambiar de canción, se reinicia el ángulo a 0.
+            _estadoUi.update {
+                it.copy(
+                    cancionActual = colaDeReproduccion[indiceActual],
+                    anguloRotacionVinilo = 0f // <-- Esta línea es la corrección
+                )
+            }
         } else {
             _estadoUi.update { it.copy(cancionActual = null, estaReproduciendo = false) }
         }
@@ -123,6 +153,8 @@ class ReproductorViewModel @Inject constructor(
             }
         }
     }
+
+
 
     private fun detenerActualizadorDeProgreso() {
         actualizadorDeProgresoJob?.cancel()

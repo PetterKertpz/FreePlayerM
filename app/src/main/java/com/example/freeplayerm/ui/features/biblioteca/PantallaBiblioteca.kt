@@ -1,8 +1,8 @@
-// en: app/src/main/java/com/example/freeplayerm/ui/features/biblioteca/PantallaBiblioteca.kt
 package com.example.freeplayerm.ui.features.biblioteca
 
 import android.Manifest
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
@@ -13,9 +13,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -23,17 +25,22 @@ import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.HeartBroken
 import androidx.compose.material.icons.filled.PlaylistRemove
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -60,6 +67,7 @@ import com.example.freeplayerm.ui.features.biblioteca.components.CuerpoListas
 import com.example.freeplayerm.ui.features.biblioteca.components.EncabezadoFijoLista
 import com.example.freeplayerm.ui.features.biblioteca.components.SeccionEncabezado
 import com.example.freeplayerm.ui.features.reproductor.PanelReproductorMinimizado
+import com.example.freeplayerm.ui.features.reproductor.PantallaReproductorExpandido
 import com.example.freeplayerm.ui.features.reproductor.ReproductorEstado
 import com.example.freeplayerm.ui.features.reproductor.ReproductorEvento
 import com.example.freeplayerm.ui.features.reproductor.ReproductorViewModel
@@ -70,6 +78,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import kotlinx.coroutines.launch
 import java.util.Date
 
 /**
@@ -77,6 +86,7 @@ import java.util.Date
  * 1. El "Composable Inteligente"
  * =================================================================
  */
+
 @RequiresApi(Build.VERSION_CODES.R)
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -84,7 +94,6 @@ fun Biblioteca(
     usuarioId: Int,
     bibliotecaViewModel: BibliotecaViewModel = hiltViewModel(),
     reproductorViewModel: ReproductorViewModel
-
 ) {
     val permisoRequerido = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         Manifest.permission.READ_MEDIA_AUDIO
@@ -101,14 +110,12 @@ fun Biblioteca(
         val lazyListState = if (cuerpoActual == TipoDeCuerpoBiblioteca.CANCIONES) {
             rememberLazyListState()
         } else {
-            // Para los demás, recordamos el estado de LISTA.
             remember(cuerpoActual) {
                 bibliotecaViewModel.listScrollStates.getOrPut(cuerpoActual) {
                     LazyListState(0, 0)
                 }
             }
         }
-        // Hacemos lo mismo para los estados de CUADRÍCULA.
         val lazyGridState = remember(cuerpoActual) {
             bibliotecaViewModel.gridScrollStates.getOrPut(cuerpoActual) {
                 LazyGridState(0, 0)
@@ -143,18 +150,13 @@ fun Biblioteca(
             onGeneroClick = { genero ->
                 bibliotecaViewModel.enEvento(BibliotecaEvento.GeneroSeleccionado(genero))
             }
-
         )
     } else {
         PantallaSolicitudPermiso(estadoPermiso = estadoPermiso)
     }
 }
 
-/**
- * =================================================================
- * 2. El "Composable Tonto"
- * =================================================================
- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CuerpoBiblioteca(
     estadoBiblioteca: BibliotecaEstado,
@@ -168,6 +170,18 @@ fun CuerpoBiblioteca(
     onGeneroClick: (GeneroEntity) -> Unit,
     onListaClick: (ListaReproduccionEntity) -> Unit
 ) {
+    val scope = rememberCoroutineScope()
+    val scaffoldState = rememberBottomSheetScaffoldState()
+    val peekHeight = if (estadoReproductor.cancionActual != null) 140.dp else 0.dp
+    // Este valor es para compensar la altura del DragHandle y lograr la superposición
+    val dragHandleOffset = 50.dp
+
+    BackHandler(enabled = scaffoldState.bottomSheetState.currentValue == SheetValue.Expanded) {
+        scope.launch {
+            scaffoldState.bottomSheetState.partialExpand()
+        }
+    }
+
     if (estadoBiblioteca.mostrarDialogoPlaylist) {
         VentanaListasReproduccion(
             listasExistentes = estadoBiblioteca.listas,
@@ -199,251 +213,187 @@ fun CuerpoBiblioteca(
         )
     }
 
-    Scaffold(
-        topBar = {
-            SeccionEncabezado(
-                usuario = estadoBiblioteca.usuarioActual,
-                cuerpoActual = estadoBiblioteca.cuerpoActual,
-                onMenuClick = { nuevoCuerpo ->
-                    onBibliotecaEvento(BibliotecaEvento.CambiarCuerpo(nuevoCuerpo))
-                },
-                escaneoManualEnProgreso = estadoBiblioteca.escaneoManualEnProgreso,
-                onReescanearClick = {
-                    onBibliotecaEvento(BibliotecaEvento.ForzarReescaneo)
-                }
-            )
-        },
-        floatingActionButton = {
-            val mostrarFab = estadoBiblioteca.esModoSeleccion && estadoBiblioteca.cancionesSeleccionadas.isNotEmpty()
-
-            AnimatedVisibility(visible = mostrarFab) {
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Decidimos qué botones mostrar según la vista actual
-                    when (estadoBiblioteca.cuerpoActual) {
-
-                        TipoDeCuerpoBiblioteca.CANCIONES_DE_LISTA -> {
-                            // --- Botones para la vista DENTRO de una lista ---
-
-                            // FAB para Añadir a Favoritos
-                            FloatingActionButton(
-                                onClick = { onBibliotecaEvento(BibliotecaEvento.AnadirSeleccionAFavoritos) },
-                                modifier = Modifier.border(BorderStroke(1.dp, AppColors.Negro), CircleShape),
-                                shape = CircleShape,
-                                containerColor = AppColors.PurpuraProfundo,
-                            ) {
-                                Icon(Icons.Default.Favorite, contentDescription = "Añadir selección a favoritos")
-                            }
-                            // FAB para Quitar de la Lista
-                            FloatingActionButton(
-                                onClick = { onBibliotecaEvento(BibliotecaEvento.QuitarCancionesSeleccionadasDeLista) },
-                                modifier = Modifier.border(BorderStroke(1.dp, AppColors.Negro), CircleShape),
-                                shape = CircleShape,
-                                containerColor = AppColors.PurpuraProfundo,
-                            ) {
-                                Icon(Icons.Default.PlaylistRemove, contentDescription = "Quitar selección de la lista")
-                            }
-
-                        }
-                        TipoDeCuerpoBiblioteca.FAVORITOS -> {
-                            FloatingActionButton(
-                                onClick = { onBibliotecaEvento(BibliotecaEvento.QuitarSeleccionDeFavoritos) },
-                                // --- ✅ ESTILO APLICADO ---
-                                modifier = Modifier.border(BorderStroke(1.dp, AppColors.Negro), CircleShape),
-                                shape = CircleShape,
-                                containerColor = AppColors.PurpuraProfundo,
-
-                            ) {
-                                Icon(Icons.Default.HeartBroken, contentDescription = "Quitar selección de favoritos")
-                            }
-                        }
-
-                        else -> {
-                            // --- Botones para TODAS las demás vistas de canciones ---
-
-                            // FAB para Añadir a Favoritos
-                            FloatingActionButton(
-                                onClick = { onBibliotecaEvento(BibliotecaEvento.AnadirSeleccionAFavoritos) },
-                                modifier = Modifier.border(BorderStroke(1.dp, AppColors.Negro), CircleShape),
-                                shape = CircleShape,
-                                containerColor = AppColors.PurpuraProfundo,
-                            ) {
-                                IconoCorazonAnimado(
-                                    esFavorito = false
-                                )
-                            }
-
-                            // FAB para Añadir a otra Lista de Reproducción
-                            FloatingActionButton(
-                                onClick = { onBibliotecaEvento(BibliotecaEvento.AbrirDialogoAnadirSeleccionALista) },
-                                modifier = Modifier.border(BorderStroke(1.dp, AppColors.Negro), CircleShape),
-                                shape = CircleShape,
-                                containerColor = AppColors.PurpuraProfundo,
-                            ) {
-                                Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = "Añadir selección a otra lista")
-                            }
+    Box(modifier = Modifier.fillMaxSize()) {
+        BottomSheetScaffold(
+            scaffoldState = scaffoldState,
+            sheetPeekHeight = peekHeight,
+            // Usamos el DragHandle oficial para garantizar el deslizamiento
+            sheetDragHandle = { BottomSheetDefaults.DragHandle() },
+            topBar = {
+                SeccionEncabezado(
+                    usuario = estadoBiblioteca.usuarioActual,
+                    cuerpoActual = estadoBiblioteca.cuerpoActual,
+                    onMenuClick = { nuevoCuerpo ->
+                        onBibliotecaEvento(BibliotecaEvento.CambiarCuerpo(nuevoCuerpo))
+                    },
+                    escaneoManualEnProgreso = estadoBiblioteca.escaneoManualEnProgreso,
+                    onReescanearClick = {
+                        onBibliotecaEvento(BibliotecaEvento.ForzarReescaneo)
+                    }
+                )
+            },
+            sheetContent = {
+                // ✅ CORRECCIÓN: Se vuelve a la lógica estable de if/else
+                if (estadoReproductor.cancionActual != null) {
+                    if (scaffoldState.bottomSheetState.currentValue == SheetValue.Expanded) {
+                        PantallaReproductorExpandido(
+                            estado = estadoReproductor,
+                            onCollapse = { scope.launch { scaffoldState.bottomSheetState.partialExpand() } },
+                            enEvento = onReproductorEvento,
+                        )
+                    } else {
+                        Box(modifier = Modifier.offset(y = -dragHandleOffset)) {
+                            PanelReproductorMinimizado(
+                                estado = estadoReproductor,
+                                enEvento = onReproductorEvento,
+                                onExpand = { scope.launch { scaffoldState.bottomSheetState.expand() } }
+                            )
                         }
                     }
                 }
             }
-        },
-        bottomBar = {
-            if (estadoReproductor.cancionActual != null) {
-                PanelReproductorMinimizado(
-                    estado = estadoReproductor,
-                    enEvento = onReproductorEvento
-                )
+        ) { paddingValues ->
+            // El contenido de la biblioteca (listas, etc.) se dibuja aquí.
+            Column(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+                val mostrarBarraDeBusqueda = when (estadoBiblioteca.cuerpoActual) {
+                    TipoDeCuerpoBiblioteca.CANCIONES,
+                    TipoDeCuerpoBiblioteca.LISTAS,
+                    TipoDeCuerpoBiblioteca.ALBUMES,
+                    TipoDeCuerpoBiblioteca.ARTISTAS,
+                    TipoDeCuerpoBiblioteca.GENEROS,
+                    TipoDeCuerpoBiblioteca.CANCIONES_DE_LISTA,
+                    TipoDeCuerpoBiblioteca.CANCIONES_DE_ALBUM,
+                    TipoDeCuerpoBiblioteca.CANCIONES_DE_ARTISTA,
+                    TipoDeCuerpoBiblioteca.CANCIONES_DE_GENERO,
+                    TipoDeCuerpoBiblioteca.FAVORITOS -> true
+                }
+                if (mostrarBarraDeBusqueda) {
+                    BarraDeBusquedaYFiltros(
+                        textoDeBusqueda = estadoBiblioteca.textoDeBusqueda,
+                        criterioDeOrdenamiento = estadoBiblioteca.criterioDeOrdenamiento,
+                        direccionDeOrdenamiento = estadoBiblioteca.direccionDeOrdenamiento,
+                        enEvento = onBibliotecaEvento
+                    )
+                }
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    val hayContenido = estadoBiblioteca.canciones.isNotEmpty() ||
+                            estadoBiblioteca.albumes.isNotEmpty() ||
+                            estadoBiblioteca.artistas.isNotEmpty() ||
+                            estadoBiblioteca.generos.isNotEmpty() ||
+                            estadoBiblioteca.listas.isNotEmpty()
+
+                    when {
+                        estadoBiblioteca.estaEscaneando -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                        estadoBiblioteca.errorDeEscaneo != null -> TextoDeEstadoVacio(modifier = Modifier.align(Alignment.Center), mensaje = "Ocurrió un error:\n${estadoBiblioteca.errorDeEscaneo}")
+                        !hayContenido -> TextoDeEstadoVacio(modifier = Modifier.align(Alignment.Center), mensaje = "Tu biblioteca está vacía.\nPulsa el botón de refrescar para buscar música.")
+                        else -> {
+                            when (estadoBiblioteca.cuerpoActual) {
+                                TipoDeCuerpoBiblioteca.CANCIONES,
+                                TipoDeCuerpoBiblioteca.CANCIONES_DE_ALBUM,
+                                TipoDeCuerpoBiblioteca.CANCIONES_DE_ARTISTA,
+                                TipoDeCuerpoBiblioteca.CANCIONES_DE_GENERO,
+                                TipoDeCuerpoBiblioteca.FAVORITOS -> {
+                                    Column(Modifier.fillMaxSize()) {
+                                        AnimatedVisibility(visible = estadoBiblioteca.esModoSeleccion) {
+                                            BarraDeAccionSeleccion(
+                                                cancionesSeleccionadas = estadoBiblioteca.cancionesSeleccionadas.size,
+                                                totalCanciones = estadoBiblioteca.canciones.size,
+                                                onSeleccionarTodo = { onBibliotecaEvento(BibliotecaEvento.SeleccionarTodo) },
+                                                onCerrarModoSeleccion = { onBibliotecaEvento(BibliotecaEvento.DesactivarModoSeleccion) }
+                                            )
+                                        }
+                                        CuerpoCanciones(
+                                            canciones = estadoBiblioteca.canciones,
+                                            estado = estadoBiblioteca,
+                                            lazyListState = lazyListState,
+                                            onBibliotecaEvento = onBibliotecaEvento,
+                                            onReproductorEvento = { evento ->
+                                                if (evento is ReproductorEvento.SeleccionarCancion) {
+                                                    val eventoConCola =
+                                                        ReproductorEvento.EstablecerColaYReproducir(
+                                                            cola = estadoBiblioteca.canciones,
+                                                            cancionInicial = evento.cancion
+                                                        )
+                                                    onReproductorEvento(eventoConCola)
+                                                } else {
+                                                    onReproductorEvento(evento)
+                                                }
+                                            },
+                                        )
+                                    }
+                                }
+                                TipoDeCuerpoBiblioteca.CANCIONES_DE_LISTA -> {
+                                    Column(Modifier.fillMaxSize()) {
+                                        EncabezadoFijoLista(
+                                            lista = estadoBiblioteca.listaActual,
+                                            onVolverClick = { onBibliotecaEvento(BibliotecaEvento.VolverAListas) },
+                                            onEliminarListaClick = { onBibliotecaEvento(BibliotecaEvento.EliminarListaDeReproduccionActual) },
+                                            onEditarListaClick = { onBibliotecaEvento(BibliotecaEvento.AbrirDialogoEditarLista) }
+                                        )
+                                        AnimatedVisibility(visible = estadoBiblioteca.esModoSeleccion) {
+                                            BarraDeAccionSeleccion(
+                                                cancionesSeleccionadas = estadoBiblioteca.cancionesSeleccionadas.size,
+                                                totalCanciones = estadoBiblioteca.canciones.size,
+                                                onSeleccionarTodo = { onBibliotecaEvento(BibliotecaEvento.SeleccionarTodo) },
+                                                onCerrarModoSeleccion = { onBibliotecaEvento(BibliotecaEvento.DesactivarModoSeleccion) }
+                                            )
+                                        }
+                                        CuerpoCanciones(
+                                            estado = estadoBiblioteca,
+                                            lazyListState = lazyListState,
+                                            onBibliotecaEvento = onBibliotecaEvento,
+                                            onReproductorEvento = { evento ->
+                                                if (evento is ReproductorEvento.SeleccionarCancion) {
+                                                    val eventoConCola =
+                                                        ReproductorEvento.EstablecerColaYReproducir(
+                                                            cola = estadoBiblioteca.canciones,
+                                                            cancionInicial = evento.cancion
+                                                        )
+                                                    onReproductorEvento(eventoConCola)
+                                                } else {
+                                                    onReproductorEvento(evento)
+                                                }
+                                            },
+                                            canciones = estadoBiblioteca.canciones
+                                        )
+                                    }
+                                }
+                                TipoDeCuerpoBiblioteca.LISTAS -> CuerpoListas(listas = estadoBiblioteca.listas, lazyListState = lazyListState, onListaClick = onListaClick)
+                                TipoDeCuerpoBiblioteca.ALBUMES -> CuerpoAlbumes(albumes = estadoBiblioteca.albumes, lazyGridState = lazyGridState, onAlbumClick = onAlbumClick)
+                                TipoDeCuerpoBiblioteca.ARTISTAS -> CuerpoArtistas(artistas = estadoBiblioteca.artistas, lazyGridState = lazyGridState, onArtistaClick = onArtistaClick)
+                                TipoDeCuerpoBiblioteca.GENEROS -> CuerpoGeneros(generos = estadoBiblioteca.generos, lazyGridState = lazyGridState, onGeneroClick = onGeneroClick)
+                            }
+                        }
+                    }
+                }
             }
         }
-    ) { paddingInterno ->
-        Column(modifier = Modifier.padding(paddingInterno).fillMaxSize()) {
 
-            val mostrarBarraDeBusqueda = when (estadoBiblioteca.cuerpoActual) {
-                TipoDeCuerpoBiblioteca.CANCIONES,
-                TipoDeCuerpoBiblioteca.LISTAS,
-                TipoDeCuerpoBiblioteca.ALBUMES,
-                TipoDeCuerpoBiblioteca.ARTISTAS,
-                TipoDeCuerpoBiblioteca.GENEROS,
-                TipoDeCuerpoBiblioteca.CANCIONES_DE_LISTA,
-                TipoDeCuerpoBiblioteca.CANCIONES_DE_ALBUM,
-                TipoDeCuerpoBiblioteca.CANCIONES_DE_ARTISTA,
-                TipoDeCuerpoBiblioteca.CANCIONES_DE_GENERO,
-                TipoDeCuerpoBiblioteca.FAVORITOS -> true
-            }
-            if (mostrarBarraDeBusqueda) {
-                BarraDeBusquedaYFiltros(
-                    textoDeBusqueda = estadoBiblioteca.textoDeBusqueda,
-                    criterioDeOrdenamiento = estadoBiblioteca.criterioDeOrdenamiento,
-                    direccionDeOrdenamiento = estadoBiblioteca.direccionDeOrdenamiento,
-                    enEvento = onBibliotecaEvento
-                )
-            }
-
-            Box(
-                modifier = Modifier.weight(1f),
-                contentAlignment = Alignment.TopCenter
+        val mostrarFab = estadoBiblioteca.esModoSeleccion && estadoBiblioteca.cancionesSeleccionadas.isNotEmpty()
+        AnimatedVisibility(
+            visible = mostrarFab,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = peekHeight + 16.dp)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                val hayContenido = estadoBiblioteca.canciones.isNotEmpty() ||
-                        estadoBiblioteca.albumes.isNotEmpty() ||
-                        estadoBiblioteca.artistas.isNotEmpty() ||
-                        estadoBiblioteca.generos.isNotEmpty() ||
-                        estadoBiblioteca.listas.isNotEmpty()
-
-                when {
-                    estadoBiblioteca.estaEscaneando -> {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                when (estadoBiblioteca.cuerpoActual) {
+                    TipoDeCuerpoBiblioteca.CANCIONES_DE_LISTA -> {
+                        FloatingActionButton(onClick = { onBibliotecaEvento(BibliotecaEvento.AnadirSeleccionAFavoritos) }, modifier = Modifier.border(BorderStroke(1.dp, AppColors.Negro), CircleShape), shape = CircleShape, containerColor = AppColors.PurpuraProfundo) { Icon(Icons.Default.Favorite, contentDescription = "Añadir selección a favoritos") }
+                        FloatingActionButton(onClick = { onBibliotecaEvento(BibliotecaEvento.QuitarCancionesSeleccionadasDeLista) }, modifier = Modifier.border(BorderStroke(1.dp, AppColors.Negro), CircleShape), shape = CircleShape, containerColor = AppColors.PurpuraProfundo) { Icon(Icons.Default.PlaylistRemove, contentDescription = "Quitar selección de la lista") }
                     }
-                    estadoBiblioteca.errorDeEscaneo != null -> {
-                        TextoDeEstadoVacio(
-                            modifier = Modifier.align(Alignment.Center),
-                            mensaje = "Ocurrió un error:\n${estadoBiblioteca.errorDeEscaneo}"
-                        )
-                    }
-                    !hayContenido -> {
-                        TextoDeEstadoVacio(
-                            modifier = Modifier.align(Alignment.Center),
-                            mensaje = "Tu biblioteca está vacía.\nPulsa el botón de refrescar para buscar música."
-                        )
+                    TipoDeCuerpoBiblioteca.FAVORITOS -> {
+                        FloatingActionButton(onClick = { onBibliotecaEvento(BibliotecaEvento.QuitarSeleccionDeFavoritos) }, modifier = Modifier.border(BorderStroke(1.dp, AppColors.Negro), CircleShape), shape = CircleShape, containerColor = AppColors.PurpuraProfundo) { Icon(Icons.Default.HeartBroken, contentDescription = "Quitar selección de favoritos") }
                     }
                     else -> {
-                        when (estadoBiblioteca.cuerpoActual) {
-
-                            TipoDeCuerpoBiblioteca.CANCIONES,
-                            TipoDeCuerpoBiblioteca.CANCIONES_DE_ALBUM,
-                            TipoDeCuerpoBiblioteca.CANCIONES_DE_ARTISTA,
-                            TipoDeCuerpoBiblioteca.CANCIONES_DE_GENERO,
-                            TipoDeCuerpoBiblioteca.FAVORITOS -> {
-                                Column(Modifier.fillMaxSize()) {
-                                    AnimatedVisibility(visible = estadoBiblioteca.esModoSeleccion) {
-                                        BarraDeAccionSeleccion(
-                                            cancionesSeleccionadas = estadoBiblioteca.cancionesSeleccionadas.size,
-                                            totalCanciones = estadoBiblioteca.canciones.size,
-                                            onSeleccionarTodo = { onBibliotecaEvento(BibliotecaEvento.SeleccionarTodo) },
-                                            onCerrarModoSeleccion = { onBibliotecaEvento(BibliotecaEvento.DesactivarModoSeleccion) }
-                                        )
-                                    }
-                                    CuerpoCanciones(
-                                        canciones = estadoBiblioteca.canciones,
-                                        estado = estadoBiblioteca,
-                                        lazyListState = lazyListState,
-                                        onBibliotecaEvento = onBibliotecaEvento,
-                                        onReproductorEvento = { evento ->
-                                            if (evento is ReproductorEvento.SeleccionarCancion) {
-                                                val eventoConCola =
-                                                    ReproductorEvento.EstablecerColaYReproducir(
-                                                        cola = estadoBiblioteca.canciones,
-                                                        cancionInicial = evento.cancion
-                                                    )
-                                                onReproductorEvento(eventoConCola)
-                                            } else {
-                                                onReproductorEvento(evento)
-                                            }
-                                        },
-                                    )
-                                }
-                            }
-
-                            TipoDeCuerpoBiblioteca.CANCIONES_DE_LISTA -> {
-                                Column(Modifier.fillMaxSize()) {
-                                    EncabezadoFijoLista(
-                                        lista = estadoBiblioteca.listaActual,
-                                        onVolverClick = { onBibliotecaEvento(BibliotecaEvento.VolverAListas) },
-                                        onEliminarListaClick = { onBibliotecaEvento(BibliotecaEvento.EliminarListaDeReproduccionActual) },
-                                        onEditarListaClick = { onBibliotecaEvento(BibliotecaEvento.AbrirDialogoEditarLista) }
-                                    )
-                                    AnimatedVisibility(visible = estadoBiblioteca.esModoSeleccion) {
-                                        BarraDeAccionSeleccion(
-                                            cancionesSeleccionadas = estadoBiblioteca.cancionesSeleccionadas.size,
-                                            totalCanciones = estadoBiblioteca.canciones.size,
-                                            onSeleccionarTodo = { onBibliotecaEvento(BibliotecaEvento.SeleccionarTodo) },
-                                            onCerrarModoSeleccion = { onBibliotecaEvento(BibliotecaEvento.DesactivarModoSeleccion) }
-                                        )
-                                    }
-                                    CuerpoCanciones(
-                                        estado = estadoBiblioteca,
-                                        lazyListState = lazyListState,
-                                        onBibliotecaEvento = onBibliotecaEvento,
-                                        onReproductorEvento = { evento ->
-                                            if (evento is ReproductorEvento.SeleccionarCancion) {
-                                                val eventoConCola =
-                                                    ReproductorEvento.EstablecerColaYReproducir(
-                                                        cola = estadoBiblioteca.canciones,
-                                                        cancionInicial = evento.cancion
-                                                    )
-                                                onReproductorEvento(eventoConCola)
-                                            } else {
-                                                onReproductorEvento(evento)
-                                            }
-                                        },
-                                        canciones = estadoBiblioteca.canciones
-                                    )
-                                }
-                            }
-
-                            TipoDeCuerpoBiblioteca.LISTAS -> CuerpoListas(
-                                listas = estadoBiblioteca.listas,
-                                lazyListState = lazyListState,
-                                onListaClick = onListaClick
-                            )
-                            TipoDeCuerpoBiblioteca.ALBUMES -> CuerpoAlbumes(
-                                albumes = estadoBiblioteca.albumes,
-                                lazyGridState = lazyGridState,
-                                onAlbumClick = onAlbumClick
-                            )
-                            TipoDeCuerpoBiblioteca.ARTISTAS -> CuerpoArtistas(
-                                artistas = estadoBiblioteca.artistas,
-                                lazyGridState = lazyGridState,
-                                onArtistaClick = onArtistaClick
-                            )
-
-                            TipoDeCuerpoBiblioteca.GENEROS -> CuerpoGeneros(
-                                generos = estadoBiblioteca.generos,
-                                lazyGridState = lazyGridState,
-                                onGeneroClick = onGeneroClick,
-                            )
-                        }
+                        FloatingActionButton(onClick = { onBibliotecaEvento(BibliotecaEvento.AnadirSeleccionAFavoritos) }, modifier = Modifier.border(BorderStroke(1.dp, AppColors.Negro), CircleShape), shape = CircleShape, containerColor = AppColors.PurpuraProfundo) { IconoCorazonAnimado(esFavorito = false) }
+                        FloatingActionButton(onClick = { onBibliotecaEvento(BibliotecaEvento.AbrirDialogoAnadirSeleccionALista) }, modifier = Modifier.border(BorderStroke(1.dp, AppColors.Negro), CircleShape), shape = CircleShape, containerColor = AppColors.PurpuraProfundo) { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = "Añadir selección a otra lista") }
                     }
                 }
             }
@@ -456,17 +406,19 @@ fun TextoDeEstadoVacio(
     modifier: Modifier = Modifier,
     mensaje: String
 ) {
+    // ... (Esta función está bien, no necesita cambios)
     Text(
         text = mensaje,
         style = MaterialTheme.typography.bodyLarge,
         textAlign = TextAlign.Center,
-        modifier = modifier.padding(32.dp) // Un padding generoso para que no se pegue a los bordes
+        modifier = modifier.padding(32.dp)
     )
 }
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun PantallaSolicitudPermiso(estadoPermiso: PermissionState) {
+    // ... (Esta función está bien, no necesita cambios)
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -498,12 +450,10 @@ fun PantallaSolicitudPermiso(estadoPermiso: PermissionState) {
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun PreviewBiblioteca() {
-    // Datos de prueba para el usuario
+    // ... (Esta función está bien, no necesita cambios)
     val usuarioDePrueba =
         UsuarioEntity(1, "Preview User", "a@a.com", "", Date(), "", "LOCAL")
 
-    // --- PASO 1: Crear una CancionEntity de prueba ---
-    // Esta es la base de datos de la canción, con sus IDs y propiedades.
     val cancionEntityDePrueba = CancionEntity(
         idCancion = 1,
         idArtista = 1,
@@ -515,19 +465,16 @@ fun PreviewBiblioteca() {
         archivoPath = ""
     )
 
-    // --- PASO 2: Construir el CancionConArtista usando la entidad anterior ---
-    // Este es el objeto "enriquecido" que usa la UI, con los nombres ya resueltos.
     val cancionConArtistaDePrueba =
         CancionConArtista(
             cancion = cancionEntityDePrueba,
-            artistaNombre = "La Quinta Estación", // Reemplaza TODO()
-            albumNombre = "Flores de Alquiler", // Reemplaza TODO()
+            artistaNombre = "La Quinta Estación",
+            albumNombre = "Flores de Alquiler",
             generoNombre = "Pop Rock",
             esFavorita = false,
-            portadaPath = null            // Reemplaza TODO()
+            portadaPath = null
         )
 
-    // Datos de prueba para la lista de álbumes
     val albumesDePrueba = listOf(
         AlbumEntity(1, 1, "Viaje de Lujo", 2023, ""),
         AlbumEntity(2, 2, "Noches de Verano", 2022, "")
@@ -540,7 +487,6 @@ fun PreviewBiblioteca() {
                 cuerpoActual = TipoDeCuerpoBiblioteca.ALBUMES,
                 albumes = albumesDePrueba
             ),
-            // --- PASO 3: Usar el objeto CancionConArtista en el estado del reproductor ---
             estadoReproductor = ReproductorEstado(
                 cancionActual = cancionConArtistaDePrueba,
                 estaReproduciendo = true
@@ -551,8 +497,8 @@ fun PreviewBiblioteca() {
             onArtistaClick = {},
             onGeneroClick = {},
             onListaClick = {},
-            lazyListState = LazyListState(),
-            lazyGridState = LazyGridState()
+            lazyListState = rememberLazyListState(),
+            lazyGridState = rememberLazyGridState()
         )
     }
 }

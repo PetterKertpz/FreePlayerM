@@ -1,10 +1,10 @@
 // en: app/src/main/java/com/example/freeplayerm/ui/features/reproductor/PanelReproductorMinimizado.kt
 package com.example.freeplayerm.ui.features.reproductor
 
-import com.example.freeplayerm.com.example.freeplayerm.ui.features.shared.MarqueeTextConDesvanecido
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,12 +30,10 @@ import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,15 +51,19 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.freeplayerm.R
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
+import com.example.freeplayerm.com.example.freeplayerm.ui.features.shared.MarqueeTextConDesvanecido
 import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
 import com.example.freeplayerm.ui.theme.AppColors
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 import java.util.concurrent.TimeUnit
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PanelReproductorMinimizado(
-    estado: ReproductorEstado, enEvento: (ReproductorEvento) -> Unit
+    estado: ReproductorEstado,
+    enEvento: (ReproductorEvento) -> Unit,
+    onExpand: () -> Unit
+
 ) {
     val cancionConArtista = estado.cancionActual
 
@@ -87,10 +88,8 @@ fun PanelReproductorMinimizado(
                 )
 
                 .fillMaxSize()
-                .padding(
-                    vertical = 5.dp,
-                    horizontal = 5.dp
-                )
+                .padding(top = 20.dp, start = 5.dp, end = 5.dp, bottom = 5.dp),
+            Alignment.BottomCenter
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -102,19 +101,28 @@ fun PanelReproductorMinimizado(
             ) {
                 // --- Vinilo giratorio ---
                 if (cancionConArtista != null) {
-                    ViniloConPortada(
-                        cancion = cancionConArtista,
-                        estaReproduciendo = estado.estaReproduciendo,
-                        size = 100.dp,
+                    Box(
+                        modifier = Modifier
+                            .clickable { onExpand() }
 
-                    )
+                    ) {
+                        ViniloConPortada(
+                            cancion = cancionConArtista,
+                            anguloRotacion = estado.anguloRotacionVinilo,
+                            size = 100.dp,
+
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(5.dp))
 
                 // --- Información ---
                 Column(
-                    modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onExpand() },
+                    verticalArrangement = Arrangement.Center
                 ) {
                     if (cancionConArtista != null) {
                         MarqueeTextConDesvanecido(
@@ -305,6 +313,7 @@ private fun ControlesConTiempo(
 }
 
 @SuppressLint("DefaultLocale")
+@Composable
 private fun formatTiempo(milisegundos: Long): String {
     val minutos = TimeUnit.MILLISECONDS.toMinutes(milisegundos)
     val segundos = TimeUnit.MILLISECONDS.toSeconds(milisegundos) % 60
@@ -312,38 +321,25 @@ private fun formatTiempo(milisegundos: Long): String {
 }
 
 @Composable
-private fun ViniloConPortada(
+fun ViniloConPortada(
     cancion: CancionConArtista?,
-    estaReproduciendo: Boolean,
+    anguloRotacion: Float = 0f,
     size: Dp = 60.dp
 ) {
-    var rotacionActual by remember { mutableFloatStateOf(0f) }
-
-    LaunchedEffect(cancion?.cancion?.idCancion) {
-        rotacionActual = 0f
-    }
-
-    // Efecto N°2: Se ejecuta cuando cambia el estado de reproducción (o la canción).
-    // Su responsabilidad es animar el disco si está en modo de reproducción.
-    LaunchedEffect(estaReproduciendo, cancion?.cancion?.idCancion) {
-        if (estaReproduciendo) {
-            // Este bucle solo se ejecuta si la música está sonando.
-            while (true) {
-                rotacionActual = (rotacionActual + 0.5f) % 360f
-                withFrameNanos { }
-            }
-        }
-    }
 
     Box(
-        modifier = Modifier.size(size), contentAlignment = Alignment.Center
+        modifier = Modifier
+            .size(size)
+            ,
+        contentAlignment = Alignment.Center
     ) {
         Image(
             painter = painterResource(id = R.drawable.vinilo_foreground),
             contentDescription = "Disco de Vinilo",
             modifier = Modifier
                 .fillMaxSize()
-                .rotate(rotacionActual)
+                .rotate(anguloRotacion)
+
         )
         AsyncImage(
             model = cancion?.portadaPath ?: "",
@@ -352,7 +348,8 @@ private fun ViniloConPortada(
                 .size(size / 2f)
                 .clip(CircleShape)
                 .background(Color.DarkGray)
-                .rotate(rotacionActual),
+                .rotate(anguloRotacion)
+                ,
             contentScale = ContentScale.Crop
         )
     }
@@ -389,7 +386,10 @@ fun PreviewPanelReproductorEstado() {
     )
 
     MaterialTheme {
-        PanelReproductorMinimizado(estado = estadoDemo, enEvento = {})
+        PanelReproductorMinimizado(
+            estado = estadoDemo, enEvento = {},
+            onExpand = {},
+        )
     }
 }
 
@@ -422,7 +422,8 @@ private fun PreviewPanelReproductorMinimizado() {
                 modoReproduccion = ModoReproduccion.ALEATORIO,
                 modoRepeticion = ModoRepeticion.REPETIR_CANCION
             ),
-            enEvento = {}
+            enEvento = {},
+            onExpand = {},
         )
     }
 }

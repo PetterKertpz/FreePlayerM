@@ -25,7 +25,8 @@ data class ReproductorEstado(
     val modoReproduccion: ModoReproduccion = ModoReproduccion.EN_ORDEN,
     val modoRepeticion: ModoRepeticion = ModoRepeticion.NO_REPETIR,
     val esFavorita: Boolean = false,
-    val isScrubbing: Boolean = false
+    val isScrubbing: Boolean = false,
+    val anguloRotacionVinilo: Float = 0f
 )
 
 // Define todos los eventos (acciones del usuario) que la UI puede enviar al ViewModel.
