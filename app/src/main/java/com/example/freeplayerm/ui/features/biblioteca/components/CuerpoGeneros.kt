@@ -1,6 +1,5 @@
 package com.example.freeplayerm.ui.features.biblioteca.components
 
-import com.example.freeplayerm.com.example.freeplayerm.ui.features.shared.MarqueeTextConDesvanecido
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.GeneroEntity
+import com.example.freeplayerm.com.example.freeplayerm.ui.features.shared.MarqueeTextConDesvanecido
 import com.example.freeplayerm.ui.features.biblioteca.utils.GeneroVisuals
 
 @Composable
@@ -103,7 +103,7 @@ private fun GeneroItem(
             )
             // El nombre del género
             MarqueeTextConDesvanecido(
-                text = genero.nombre,
+                text = "  "+genero.nombre,
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 color = Color.White,

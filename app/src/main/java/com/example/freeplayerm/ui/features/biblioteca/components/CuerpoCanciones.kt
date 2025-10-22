@@ -168,13 +168,13 @@ private fun CancionItem(
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             MarqueeTextConDesvanecido(
-                text = cancionConArtista.cancion.titulo,
+                text = "  " + cancionConArtista.cancion.titulo,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
 
             )
             MarqueeTextConDesvanecido(
-                text = cancionConArtista.artistaNombre ?: "Artista Desconocido",
+                text = ("  " + cancionConArtista.artistaNombre),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
 
@@ -221,7 +221,8 @@ private fun CuerpoCancionesConDatosPreview() {
             albumNombre = null,
             generoNombre = null,
             esFavorita = false,
-            portadaPath = null
+            portadaPath = null,
+            fechaLanzamiento = null
         )
     }
 
@@ -268,7 +269,8 @@ private fun CuerpoCancionesVacioPreview() {
             albumNombre = null,
             generoNombre = null,
             esFavorita = false,
-            portadaPath = null
+            portadaPath = null,
+            fechaLanzamiento = null
         )
     }
 
@@ -311,7 +313,8 @@ private fun CuerpoCancionesBusquedaSinResultadosPreview() {
                 albumNombre = null,
                 generoNombre = null,
                 esFavorita = false,
-                portadaPath = null
+                portadaPath = null,
+                fechaLanzamiento = null
             )
         }
         CuerpoCanciones(

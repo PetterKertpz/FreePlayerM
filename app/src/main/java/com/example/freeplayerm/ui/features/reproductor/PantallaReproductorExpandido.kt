@@ -112,7 +112,7 @@ fun PantallaReproductorExpandido(
                 ViniloConPortada(
                     cancion = cancionConArtista,
                     anguloRotacion = estado.anguloRotacionVinilo,
-                    size = 200.dp,
+                    size = 120.dp,
 
                 )
                 Spacer(modifier = Modifier.width(16.dp))
@@ -311,7 +311,8 @@ private fun ControlesReproductorExpandido(
             Icon(
                 imageVector = IconosReproductor.Aleatorio, // ✅ CAMBIO
                 contentDescription = "Aleatorio",
-                tint = if (estado.modoReproduccion == ModoReproduccion.ALEATORIO) AppColors.AcentoRosa else Color.White,
+                tint = if (estado.modoReproduccion == ModoReproduccion.ALEATORIO) AppColors.PurpuraProfundo
+                else Color.White,
                 modifier = Modifier.size(iconSize)
             )
         }
@@ -327,7 +328,7 @@ private fun ControlesReproductorExpandido(
             onClick = { enEvento(ReproductorEvento.ReproducirPausar) },
             modifier = Modifier
                 .size(80.dp)
-                .background(AppColors.AcentoRosa, CircleShape)
+                .background(AppColors.PurpuraProfundo, CircleShape)
         ) {
             Icon(
                 imageVector = if (estado.estaReproduciendo) IconosReproductor.Pausa else IconosReproductor.Reproducir, // ✅ CAMBIO
@@ -348,8 +349,8 @@ private fun ControlesReproductorExpandido(
             // ✅ CAMBIO: Lógica adaptada para usar los ImageVector de IconosReproductor
             val (vector, color) = when (estado.modoRepeticion) {
                 ModoRepeticion.NO_REPETIR -> IconosReproductor.RepetirLista to Color.White
-                ModoRepeticion.REPETIR_LISTA -> IconosReproductor.RepetirLista to AppColors.AcentoRosa
-                ModoRepeticion.REPETIR_CANCION -> IconosReproductor.RepetirCancion to AppColors.AcentoRosa
+                ModoRepeticion.REPETIR_LISTA -> IconosReproductor.RepetirLista to AppColors.PurpuraProfundo
+                ModoRepeticion.REPETIR_CANCION -> IconosReproductor.RepetirCancion to AppColors.PurpuraProfundo
             }
 
             Icon(
@@ -393,7 +394,8 @@ fun PreviewPantallaReproductorExpandido() {
         albumNombre = "A Night at the Opera",
         generoNombre = "Rock Progresivo",
         esFavorita = true,
-        portadaPath = null // Coil usará el `error` painter
+        portadaPath = null,
+        fechaLanzamiento = null // Coil usará el `error` painter
     )
 
     FreePlayerMTheme {

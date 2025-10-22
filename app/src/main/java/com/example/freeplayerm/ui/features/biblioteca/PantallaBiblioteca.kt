@@ -472,7 +472,8 @@ fun PreviewBiblioteca() {
             albumNombre = "Flores de Alquiler",
             generoNombre = "Pop Rock",
             esFavorita = false,
-            portadaPath = null
+            portadaPath = null,
+            fechaLanzamiento = null
         )
 
     val albumesDePrueba = listOf(

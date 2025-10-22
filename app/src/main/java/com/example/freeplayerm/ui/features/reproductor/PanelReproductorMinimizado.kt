@@ -127,7 +127,7 @@ fun PanelReproductorMinimizado(
                     if (cancionConArtista != null) {
                         MarqueeTextConDesvanecido(
                             // Accedemos al título a través de .cancion.titulo
-                            text = cancionConArtista.cancion.titulo,
+                            text = "  "+cancionConArtista.cancion.titulo,
                             fontWeight = FontWeight.Bold,
                             fontSize = 30.sp,
                             color = Color.White,
@@ -137,7 +137,7 @@ fun PanelReproductorMinimizado(
                     if (cancionConArtista != null) {
                         MarqueeTextConDesvanecido(
                             // Significa: "Usa 'artistaNombre'. Si es nulo, usa 'Artista Desconocido' en su lugar".
-                            text = cancionConArtista.artistaNombre ?: "Artista Desconocido",
+                            text = ("  " + cancionConArtista.artistaNombre),
                             fontSize = 20.sp,
                             color = Color.White,
 
@@ -373,7 +373,8 @@ fun PreviewPanelReproductorEstado() {
         albumNombre = "Álbum de Prueba",
         generoNombre = "Pop",
         esFavorita = false,
-        portadaPath = null
+        portadaPath = null,
+        fechaLanzamiento = null
     )
 
     val estadoDemo = ReproductorEstado(
@@ -411,7 +412,8 @@ private fun PreviewPanelReproductorMinimizado() {
         albumNombre = "Álbum de Prueba",
         generoNombre = "Pop",
         esFavorita = false,
-        portadaPath = null
+        portadaPath = null,
+        fechaLanzamiento = null
     )
     FreePlayerMTheme {
         PanelReproductorMinimizado(
