@@ -90,6 +90,7 @@ data class BibliotecaEstado(
 
 )
 sealed class BibliotecaEvento {
+    data object LimpiarBusqueda : BibliotecaEvento()
     data object ForzarReescaneo : BibliotecaEvento()
     data object PermisoConcedido : BibliotecaEvento()
     data class CambiarCuerpo(val nuevoCuerpo: TipoDeCuerpoBiblioteca) : BibliotecaEvento()
@@ -250,6 +251,9 @@ class BibliotecaViewModel @Inject constructor(
                         )
                     }
                 }
+            }
+            is BibliotecaEvento.LimpiarBusqueda -> {
+                _estadoUi.update { it.copy(textoDeBusqueda = "") }
             }
             is BibliotecaEvento.CriterioDeOrdenamientoCambiado -> {
                 // Ya no actualizamos el estado aquí, porque el Flow lo hará automáticamente.

@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -90,11 +91,12 @@ import java.util.Date
 @RequiresApi(Build.VERSION_CODES.R)
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun Biblioteca(
+fun PantallaBiblioteca(
     usuarioId: Int,
     bibliotecaViewModel: BibliotecaViewModel = hiltViewModel(),
     reproductorViewModel: ReproductorViewModel
 ) {
+    val focusManager = LocalFocusManager.current
     val permisoRequerido = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         Manifest.permission.READ_MEDIA_AUDIO
     } else {
@@ -136,7 +138,16 @@ fun Biblioteca(
             estadoReproductor = estadoReproductor,
             lazyListState = lazyListState,
             lazyGridState = lazyGridState,
-            onBibliotecaEvento = bibliotecaViewModel::enEvento,
+            onBibliotecaEvento = { evento ->
+                // 1. Siempre pasamos el evento al ViewModel
+                bibliotecaViewModel.enEvento(evento)
+
+                // 2. Si el evento es el de limpiar (que viene de CuerpoCanciones),
+                //    le decimos al focusManager que quite el foco.
+                if (evento is BibliotecaEvento.LimpiarBusqueda) {
+                    focusManager.clearFocus()
+                }
+            },
             onReproductorEvento = reproductorViewModel::enEvento,
             onAlbumClick = { album ->
                 bibliotecaViewModel.enEvento(BibliotecaEvento.AlbumSeleccionado(album))

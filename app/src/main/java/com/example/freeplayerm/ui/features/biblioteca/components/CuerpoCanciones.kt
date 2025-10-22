@@ -72,6 +72,8 @@ fun CuerpoCanciones(
             // El clic en la canción se traduce en un evento para el reproductor
             onCancionClick = { cancionSeleccionada ->
                 onReproductorEvento(ReproductorEvento.EstablecerColaYReproducir(estado.canciones, cancionSeleccionada))
+                // Limpiamos la barra de búsqueda al seleccionar una canción
+                onBibliotecaEvento(BibliotecaEvento.LimpiarBusqueda)
             },
             // El clic en el favorito se traduce en un evento para la biblioteca
             onFavoritoClick = { cancionSeleccionada ->
@@ -122,7 +124,8 @@ private fun ListaDeCanciones(
                 },
                 onLongClick = { onActivarModoSeleccion(cancionConArtista) },
                 onFavoritoClick = { onFavoritoClick(cancionConArtista) },
-                onEditClick = { onEditClick(cancionConArtista) }
+                onEditClick = { onEditClick(cancionConArtista) },
+
             )
         }
     }
@@ -137,7 +140,8 @@ private fun CancionItem(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onFavoritoClick: () -> Unit,
-    onEditClick: () -> Unit
+    onEditClick: () -> Unit,
+
 ) {
     Row(
         modifier = Modifier
@@ -146,7 +150,8 @@ private fun CancionItem(
             .fillMaxWidth()
             .combinedClickable(
                 onClick = onClick,
-                onLongClick = onLongClick
+                onLongClick = onLongClick,
+
             ),
         verticalAlignment = Alignment.CenterVertically
     ) {

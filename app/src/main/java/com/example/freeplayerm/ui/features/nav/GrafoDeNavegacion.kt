@@ -9,7 +9,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.example.freeplayerm.ui.features.biblioteca.Biblioteca
+import com.example.freeplayerm.ui.features.biblioteca.PantallaBiblioteca
 import com.example.freeplayerm.ui.features.login.PantallaLogin
 import com.example.freeplayerm.ui.features.login.PantallaRecuperarClave
 import com.example.freeplayerm.ui.features.login.PantallaRegistro
@@ -43,7 +43,7 @@ fun GrafoDeNavegacion(
         ) { backStackEntry ->
             val usuarioId = backStackEntry.arguments?.getInt("usuarioId") ?: -1
             // Se lo pasamos a la pantalla Biblioteca
-            Biblioteca(
+            PantallaBiblioteca(
                 usuarioId = usuarioId,
                 reproductorViewModel = reproductorViewModel // <-- ¡NUEVO!
             )
