@@ -30,8 +30,8 @@ class CancionSyncService @Inject constructor(
         // Iniciar nueva sincronización
         syncJob = scope.launch {
             try {
-                val exito = geniusRepository.sincronizarCancionAlReproducir(cancionConArtista)
-                if (exito) {
+                val cancionCorregida = geniusRepository.sincronizarCancionAlReproducir(cancionConArtista)
+                if (cancionCorregida != null) {
                     Log.d(TAG, " Sincronización exitosa") // Cambié a Log.d para éxito
                 } else {
                     Log.w(TAG, " Sincronización falló")

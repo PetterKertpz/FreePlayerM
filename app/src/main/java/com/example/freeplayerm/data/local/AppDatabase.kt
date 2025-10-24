@@ -31,7 +31,7 @@ import com.example.freeplayerm.data.local.entity.UsuarioEntity
         FavoritoEntity::class,
         LetraEntity::class
     ],
-    version = 5, // ¡IMPORTANTE! Se incrementa la versión por el cambio de esquema
+    version = 7, // ¡IMPORTANTE! Se incrementa la versión por el cambio de esquema
     exportSchema = false
 )
 @TypeConverters(Converters::class)
