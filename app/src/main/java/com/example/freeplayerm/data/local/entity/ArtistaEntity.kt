@@ -22,5 +22,11 @@ data class ArtistaEntity(
     val paisOrigen: String?,
 
     @ColumnInfo(name = "descripcion")
-    val descripcion: String?
+    val descripcion: String?,
+
+    @ColumnInfo(name = "genius_id")
+    val geniusId: String? = null, // ID de Genius
+
+    @ColumnInfo(name = "image_url") // O path local si la descargas
+    val imageUrl: String? = null
 )

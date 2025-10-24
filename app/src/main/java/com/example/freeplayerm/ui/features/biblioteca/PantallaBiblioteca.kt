@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -47,6 +48,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.AlbumEntity
@@ -107,6 +109,8 @@ fun PantallaBiblioteca(
     if (estadoPermiso.status.isGranted) {
         val estadoBiblioteca by bibliotecaViewModel.estadoUi.collectAsStateWithLifecycle()
         val estadoReproductor by reproductorViewModel.estadoUi.collectAsStateWithLifecycle()
+        val letra by reproductorViewModel.letra.collectAsStateWithLifecycle()
+        val infoArtista by reproductorViewModel.infoArtista.collectAsStateWithLifecycle()
 
         val cuerpoActual = estadoBiblioteca.cuerpoActual
         val lazyListState = if (cuerpoActual == TipoDeCuerpoBiblioteca.CANCIONES) {
@@ -136,6 +140,8 @@ fun PantallaBiblioteca(
         CuerpoBiblioteca(
             estadoBiblioteca = estadoBiblioteca,
             estadoReproductor = estadoReproductor,
+            letra = letra, // <-- PASAR
+            infoArtista = infoArtista,
             lazyListState = lazyListState,
             lazyGridState = lazyGridState,
             onBibliotecaEvento = { evento ->
@@ -179,7 +185,9 @@ fun CuerpoBiblioteca(
     onAlbumClick: (AlbumEntity) -> Unit,
     onArtistaClick: (ArtistaEntity) -> Unit,
     onGeneroClick: (GeneroEntity) -> Unit,
-    onListaClick: (ListaReproduccionEntity) -> Unit
+    onListaClick: (ListaReproduccionEntity) -> Unit,
+    letra: String?,
+    infoArtista: String?,
 ) {
     val scope = rememberCoroutineScope()
     val scaffoldState = rememberBottomSheetScaffoldState()
@@ -251,6 +259,8 @@ fun CuerpoBiblioteca(
                             estado = estadoReproductor,
                             onCollapse = { scope.launch { scaffoldState.bottomSheetState.partialExpand() } },
                             enEvento = onReproductorEvento,
+                            letra = letra,
+                            infoArtista = infoArtista
                         )
                     } else {
                         Box(modifier = Modifier.offset(y = -dragHandleOffset)) {
@@ -425,7 +435,57 @@ fun TextoDeEstadoVacio(
         modifier = modifier.padding(32.dp)
     )
 }
+@Composable
+private fun PantallaLetra(letra: String?) {
+    when {
+        letra == "Cargando letra..." -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            }
+        }
+        letra.isNullOrBlank() || letra == "Letra no disponible." -> {
+            Text(
+                "Letra no disponible.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+        else -> {
+            Text(
+                text = letra,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+                lineHeight = 22.sp
+            )
+        }
+    }
+}
 
+@Composable
+private fun PantallaAcercaDe(info: String?) {
+    when {
+        info == "Cargando información..." -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            }
+        }
+        info.isNullOrBlank() || info == "Información del artista no disponible." -> {
+            Text(
+                "Información del artista no disponible.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+        else -> {
+            Text(
+                text = info,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+                lineHeight = 22.sp
+            )
+        }
+    }
+}
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun PantallaSolicitudPermiso(estadoPermiso: PermissionState) {
@@ -510,7 +570,9 @@ fun PreviewBiblioteca() {
             onGeneroClick = {},
             onListaClick = {},
             lazyListState = rememberLazyListState(),
-            lazyGridState = rememberLazyGridState()
+            lazyGridState = rememberLazyGridState(),
+            letra = null,
+            infoArtista = null
         )
     }
 }

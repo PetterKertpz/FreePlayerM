@@ -10,8 +10,10 @@ import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.Cancion
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.DetalleListaReproduccionEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.FavoritoEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.GeneroEntity
+import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.LetraEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ListaReproduccionEntity
 import com.example.freeplayerm.data.local.dao.CancionDao
+import com.example.freeplayerm.data.local.dao.LetraDao
 import com.example.freeplayerm.data.local.dao.UsuarioDao
 import com.example.freeplayerm.data.local.entity.UsuarioEntity
 
@@ -26,13 +28,15 @@ import com.example.freeplayerm.data.local.entity.UsuarioEntity
         CancionEntity::class,
         ListaReproduccionEntity::class,
         DetalleListaReproduccionEntity::class,
-        FavoritoEntity::class
+        FavoritoEntity::class,
+        LetraEntity::class
     ],
-    version = 2, // ¡IMPORTANTE! Se incrementa la versión por el cambio de esquema
+    version = 5, // ¡IMPORTANTE! Se incrementa la versión por el cambio de esquema
     exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun usuarioDao(): UsuarioDao
-    abstract fun cancionDao(): CancionDao // <-- NUEVO DAO AÑADIDO
+    abstract fun cancionDao(): CancionDao
+    abstract fun letraDao(): LetraDao
 }

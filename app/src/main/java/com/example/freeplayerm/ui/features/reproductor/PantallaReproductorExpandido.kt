@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,6 +58,8 @@ import java.util.concurrent.TimeUnit
 @Composable
 fun PantallaReproductorExpandido(
     estado: ReproductorEstado,
+    letra: String?,
+    infoArtista: String?,
     onCollapse: () -> Unit,
     enEvento: (ReproductorEvento) -> Unit,
 ) {
@@ -148,7 +151,8 @@ fun PantallaReproductorExpandido(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 24.dp)
+                    .weight(1f)
+                    .padding(vertical = 16.dp, horizontal = 16.dp) // Añadido padding horizontal
             ) {
                 var tabSeleccionada by remember { mutableIntStateOf(0) }
                 val tabs = listOf("Letra", "Acerca de")
@@ -156,40 +160,34 @@ fun PantallaReproductorExpandido(
                 SecondaryTabRow(
                     selectedTabIndex = tabSeleccionada,
                     containerColor = Color.Transparent,
-                    contentColor = Color.White,
-                    indicator = {}, // Sin indicador por ahora
-
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    indicator = {},
                 ) {
                     tabs.forEachIndexed { index, title ->
                         Tab(
                             selected = tabSeleccionada == index,
                             onClick = { tabSeleccionada = index },
-                            text = { Text(title) },
+                            text = { Text(title, fontWeight = if (tabSeleccionada == index) FontWeight.Bold else FontWeight.Normal) },
                             selectedContentColor = AppColors.AcentoRosa,
-                            unselectedContentColor = Color.LightGray
+                            unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
 
+                // --- Contenido de las pestañas ---
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(150.dp) // Altura fija para el contenido de la pestaña
-                        .padding(top = 16.dp),
-                    contentAlignment = Alignment.Center
+                        .fillMaxSize()
+                        .padding(top = 16.dp)
+                        .verticalScroll(rememberScrollState()), // Contenido deslizable
+                    contentAlignment = Alignment.TopStart
                 ) {
                     when (tabSeleccionada) {
-                        0 -> Text(
-                            "Letra no disponible.",
-                            color = Color.Gray,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
+                        // --- PESTAÑA LETRA (Corregida) ---
+                        0 -> PantallaLetra(letra = letra) // Llama al Composable
 
-                        1 -> Text(
-                            "Información del artista no disponible.",
-                            color = Color.Gray,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
+                        // --- PESTAÑA ACERCA DE (Corregida) ---
+                        1 -> PantallaAcercaDe(info = infoArtista) // Llama al Composable
                     }
                 }
             }
@@ -259,6 +257,58 @@ fun PantallaReproductorExpandido(
             ControlesReproductorExpandido(estado = estado, enEvento = enEvento)
 
             Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun PantallaLetra(letra: String?) {
+    when {
+        letra == "Cargando letra..." -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            }
+        }
+        letra.isNullOrBlank() || letra == "Letra no disponible." -> {
+            Text(
+                "Letra no disponible.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+        else -> {
+            Text(
+                text = letra,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+                lineHeight = 35.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun PantallaAcercaDe(info: String?) {
+    when {
+        info == "Cargando información..." -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            }
+        }
+        info.isNullOrBlank() || info == "Información del artista no disponible." -> {
+            Text(
+                "Información del artista no disponible.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+        else -> {
+            Text(
+                text = info,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+                lineHeight = 22.sp
+            )
         }
     }
 }
@@ -409,7 +459,8 @@ fun PreviewPantallaReproductorExpandido() {
             ),
             onCollapse = {},
             enEvento = {},
-
+            letra = null,
+            infoArtista = null,
         )
     }
 }

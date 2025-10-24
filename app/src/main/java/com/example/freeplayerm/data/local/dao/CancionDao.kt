@@ -34,18 +34,37 @@ interface CancionDao {
     @Update
     suspend fun actualizarLista(lista: ListaReproduccionEntity)
 
+    @Update
+    suspend fun actualizarArtista(artista: ArtistaEntity)
+
+    @Update
+    suspend fun actualizarAlbum(album: AlbumEntity)
+
+    @Update
+    suspend fun actualizarCancion(cancion: CancionEntity) // Por si acaso
+
+    @Query("SELECT * FROM artistas WHERE id_artista = :artistaId")
+    suspend fun obtenerArtistaPorId(artistaId: Int): ArtistaEntity?
+
+    // Este metodo ya lo tenías como 'suspend', esta es la versión Flow
+    @Query("SELECT * FROM artistas WHERE id_artista = :artistaId")
+    fun obtenerArtistaPorIdFlow(artistaId: Int): Flow<ArtistaEntity?>// Necesario para actualizar
+
+    @Query("SELECT * FROM albumes WHERE id_album = :albumId")
+    suspend fun obtenerAlbumPorId(albumId: Int): AlbumEntity?
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun anadirAFavoritos(favorito: FavoritoEntity)
 
     @Query("DELETE FROM favoritos WHERE id_usuario = :usuarioId AND id_cancion = :cancionId")
     suspend fun quitarDeFavoritos(usuarioId: Int, cancionId: Int)
-//
+    //
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertarDetalleLista(detalle: DetalleListaReproduccionEntity)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertarListaReproduccion(lista: ListaReproduccionEntity): Long
-//
+    //
     @Query("DELETE FROM detalle_lista_reproduccion WHERE id_lista = :listaId AND id_cancion IN (:cancionIds)")
     suspend fun quitarCancionesDeLista(listaId: Int, cancionIds: List<Int>)
 
@@ -64,11 +83,11 @@ interface CancionDao {
     @Query("SELECT * FROM canciones WHERE archivo_path = :path LIMIT 1")
     suspend fun obtenerCancionPorRuta(path: String): CancionEntity?
 
-
     @Query("""
         SELECT c.*, a.nombre AS artistaNombre, al.titulo AS albumNombre, g.nombre AS generoNombre,
                (f.id_usuario IS NOT NULL) as esFavorita,
-               al.portada_path AS portadaPath
+               al.portada_path AS portadaPath,
+               al.anio AS fechaLanzamiento
         FROM canciones AS c
         LEFT JOIN artistas AS a ON c.id_artista = a.id_artista
         LEFT JOIN albumes AS al ON c.id_album = al.id_album
@@ -76,6 +95,21 @@ interface CancionDao {
         LEFT JOIN favoritos AS f ON c.id_cancion = f.id_cancion AND f.id_usuario = :usuarioId
     """)
     fun obtenerCancionesConArtista(usuarioId: Int): Flow<List<CancionConArtista>>
+
+    // MÉTODO CORREGIDO - usa JOIN completo como los otros métodos
+    @Query("""
+        SELECT c.*, a.nombre AS artistaNombre, al.titulo AS albumNombre, g.nombre AS generoNombre,
+               (f.id_usuario IS NOT NULL) as esFavorita,
+               al.portada_path AS portadaPath,
+               al.anio AS fechaLanzamiento
+        FROM canciones AS c
+        LEFT JOIN artistas AS a ON c.id_artista = a.id_artista
+        LEFT JOIN albumes AS al ON c.id_album = al.id_album
+        LEFT JOIN generos AS g ON c.id_genero = g.id_genero
+        LEFT JOIN favoritos AS f ON c.id_cancion = f.id_cancion AND f.id_usuario = :usuarioId
+        WHERE c.id_cancion = :idCancion
+    """)
+    suspend fun obtenerCancionConArtistaPorId(idCancion: Int, usuarioId: Int): CancionConArtista?
 
     @Query("SELECT * FROM canciones WHERE id_cancion = :id")
     fun obtenerCancionPorId(id: Int): Flow<CancionEntity?>
@@ -120,7 +154,8 @@ interface CancionDao {
     @Query("""
         SELECT c.*, a.nombre AS artistaNombre, al.titulo AS albumNombre, g.nombre AS generoNombre,
                (f.id_usuario IS NOT NULL) as esFavorita,
-               al.portada_path AS portadaPath
+               al.portada_path AS portadaPath,
+               al.anio AS fechaLanzamiento
         FROM canciones AS c
         LEFT JOIN artistas AS a ON c.id_artista = a.id_artista
         LEFT JOIN albumes AS al ON c.id_album = al.id_album
@@ -134,7 +169,8 @@ interface CancionDao {
     @Query("""
         SELECT c.*, a.nombre AS artistaNombre, al.titulo AS albumNombre, g.nombre AS generoNombre,
                (f.id_usuario IS NOT NULL) as esFavorita,
-               al.portada_path AS portadaPath
+               al.portada_path AS portadaPath,
+               al.anio AS fechaLanzamiento
         FROM canciones AS c
         LEFT JOIN artistas AS a ON c.id_artista = a.id_artista
         LEFT JOIN albumes AS al ON c.id_album = al.id_album
@@ -148,7 +184,8 @@ interface CancionDao {
     @Query("""
         SELECT c.*, a.nombre AS artistaNombre, al.titulo AS albumNombre, g.nombre AS generoNombre,
                (f.id_usuario IS NOT NULL) as esFavorita,
-               al.portada_path AS portadaPath
+               al.portada_path AS portadaPath,
+               al.anio AS fechaLanzamiento
         FROM canciones AS c
         LEFT JOIN artistas AS a ON c.id_artista = a.id_artista
         LEFT JOIN albumes AS al ON c.id_album = al.id_album
@@ -162,7 +199,8 @@ interface CancionDao {
     @Query("""
         SELECT c.*, a.nombre as artistaNombre, al.titulo AS albumNombre, g.nombre AS generoNombre,
                (f.id_usuario IS NOT NULL) as esFavorita,
-               al.portada_path AS portadaPath
+               al.portada_path AS portadaPath,
+               al.anio AS fechaLanzamiento
         FROM canciones c
         LEFT JOIN artistas a ON c.id_artista = a.id_artista
         LEFT JOIN albumes AS al ON c.id_album = al.id_album
@@ -171,13 +209,15 @@ interface CancionDao {
         INNER JOIN detalle_lista_reproduccion d ON c.id_cancion = d.id_cancion
         WHERE d.id_lista = :listaId
     """)
-    fun obtenerCancionesDeListaConArtista(listaId: Int, usuarioId: Int): Flow<List<CancionConArtista>>
+    fun obtenerCancionesDeListaConArtista(listaId: Int, usuarioId: Int):
+            Flow<List<CancionConArtista>>
 
     // 6. NUEVA: Para las canciones favoritas de un usuario
     @Query("""
         SELECT c.*, a.nombre as artistaNombre, al.titulo AS albumNombre, g.nombre AS generoNombre,
                (f.id_usuario IS NOT NULL) as esFavorita,
-               al.portada_path AS portadaPath
+               al.portada_path AS portadaPath,
+               al.anio AS fechaLanzamiento
         FROM canciones c
         LEFT JOIN artistas a ON c.id_artista = a.id_artista
         LEFT JOIN albumes AS al ON c.id_album = al.id_album

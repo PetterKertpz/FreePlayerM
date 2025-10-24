@@ -3,10 +3,16 @@ package com.example.freeplayerm.di
 import android.content.Context
 import androidx.credentials.CredentialManager
 import androidx.room.Room
+import com.example.freeplayerm.com.example.freeplayerm.services.CancionSyncService
 import com.example.freeplayerm.core.auth.GoogleAuthUiClient
 import com.example.freeplayerm.data.local.AppDatabase
 import com.example.freeplayerm.data.local.dao.CancionDao // <-- Importante
+import com.example.freeplayerm.data.local.dao.LetraDao
 import com.example.freeplayerm.data.local.dao.UsuarioDao
+import com.example.freeplayerm.data.remote.GeniusApiService
+import com.example.freeplayerm.data.remote.GeniusScraper
+import com.example.freeplayerm.data.remote.GeniusServiceOptimizado
+import com.example.freeplayerm.data.repository.GeniusRepository
 import com.example.freeplayerm.data.repository.SessionRepository
 import com.example.freeplayerm.data.repository.UsuarioRepository
 import com.example.freeplayerm.data.repository.UsuarioRepositoryImpl
@@ -15,11 +21,30 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import okhttp3.OkHttpClient
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object ModuloAplicacion {
+
+    @Provides
+    @Singleton
+    fun provideGeniusScraper(okHttpClient: OkHttpClient): GeniusScraper {
+        return GeniusScraper(okHttpClient)
+    }
+
+    @Provides
+    @Singleton
+    fun provideCancionSyncService(geniusRepository: GeniusRepository): CancionSyncService {
+        return CancionSyncService(geniusRepository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideGeniusServiceOptimizado(apiService: GeniusApiService): GeniusServiceOptimizado {
+        return GeniusServiceOptimizado(apiService)
+    }
 
     @Provides
     @Singleton
@@ -29,8 +54,6 @@ object ModuloAplicacion {
             AppDatabase::class.java,
             "freeplayer_database"
         )
-            // AÑADIDO: Permite a Room destruir y recrear la BD si las migraciones fallan
-            // Es útil durante el desarrollo, pero para producción se necesitaría un plan de migración.
             .fallbackToDestructiveMigration(true)
             .build()
     }
@@ -71,5 +94,11 @@ object ModuloAplicacion {
         credentialManager: CredentialManager
     ): GoogleAuthUiClient {
         return GoogleAuthUiClient(context, credentialManager)
+    }
+
+    @Provides
+    @Singleton
+    fun provideLetraDao(appDatabase: AppDatabase): LetraDao {
+        return appDatabase.letraDao()
     }
 }

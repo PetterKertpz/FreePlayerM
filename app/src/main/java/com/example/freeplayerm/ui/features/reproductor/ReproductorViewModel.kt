@@ -4,27 +4,42 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import com.example.freeplayerm.data.local.dao.CancionDao
+import com.example.freeplayerm.data.local.dao.LetraDao
 import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
+import com.example.freeplayerm.data.repository.GeniusRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class ReproductorViewModel @Inject constructor(
-    private val player: Player
+    private val player: Player,
+    private val geniusRepository: GeniusRepository, // <-- AÑADIDO
+    private val letraDao: LetraDao, // <-- AÑADIDO
+    private val cancionDao: CancionDao
 ) : ViewModel() {
 
     private val _estadoUi = MutableStateFlow(ReproductorEstado(cancionActual = null))
     val estadoUi = _estadoUi.asStateFlow()
 
+    private val _letra = MutableStateFlow<String?>(null)
+    val letra = _letra.asStateFlow()
+
+    private val _infoArtista = MutableStateFlow<String?>("Cargando información...")
+    val infoArtista = _infoArtista.asStateFlow()
+
     private var colaDeReproduccion: List<CancionConArtista> = emptyList()
     private var actualizadorDeProgresoJob: Job? = null
     private var trabajoDeRotacion: Job? = null
+    private var trabajoDeLetra: Job? = null
+    private var trabajoDeArtista: Job? = null
 
     init {
         escucharEventosDelReproductor()
@@ -127,16 +142,77 @@ class ReproductorViewModel @Inject constructor(
     }
     private fun actualizarCancionActual() {
         val indiceActual = player.currentMediaItemIndex
+
+        // 1. Cancelamos los observadores de la canción anterior
+        trabajoDeLetra?.cancel()
+        trabajoDeArtista?.cancel()
+
         if (indiceActual >= 0 && indiceActual < colaDeReproduccion.size) {
-            // ✅ CORRECCIÓN FINAL: Al cambiar de canción, se reinicia el ángulo a 0.
+            val cancionActual = colaDeReproduccion[indiceActual]
+
+            // 2. Actualizamos la UI con la nueva canción
             _estadoUi.update {
                 it.copy(
-                    cancionActual = colaDeReproduccion[indiceActual],
-                    anguloRotacionVinilo = 0f // <-- Esta línea es la corrección
+                    cancionActual = cancionActual,
+                    anguloRotacionVinilo = 0f
                 )
             }
+
+            // 3. Ponemos los estados de texto en "Cargando"
+            _letra.value = "Cargando letra..."
+            _infoArtista.value = "Cargando información..."
+
+            // 4. Lanzamos la sincronización en segundo plano (para API, Jsoup, etc.)
+            viewModelScope.launch {
+                geniusRepository.sincronizarCancionAlReproducir(cancionActual)
+            }
+
+            // 5. Observamos la LETRA desde la base de datos
+            trabajoDeLetra = viewModelScope.launch {
+                letraDao.obtenerLetraPorIdCancion(cancionActual.cancion.idCancion)
+                    .distinctUntilChanged()
+                    .collect { letraEntity ->
+                        // Cuando Room nos da la letra (ahora o después), actualizamos
+                        if (letraEntity != null && letraEntity.letra.isNotBlank()) {
+                            _letra.value = letraEntity.letra
+                        } else {
+                            // Damos un tiempo de gracia por si la red tarda
+                            delay(3000)
+                            if (_letra.value == "Cargando letra...") {
+                                _letra.value = "Letra no disponible."
+                            }
+                        }
+                    }
+            }
+
+            // 6. Observamos la INFO DEL ARTISTA desde la base de datos
+            val artistaId = cancionActual.cancion.idArtista
+            if (artistaId != null) {
+                trabajoDeArtista = viewModelScope.launch {
+                    cancionDao.obtenerArtistaPorIdFlow(artistaId)
+                        .distinctUntilChanged()
+                        .collect { artistaEntity ->
+                            // Cuando el repo actualice al artista, esto se disparará
+                            if (artistaEntity?.descripcion.isNullOrBlank()) {
+                                // Damos tiempo de gracia
+                                delay(3000)
+                                if (_infoArtista.value == "Cargando información...") {
+                                    _infoArtista.value = "Información del artista no disponible."
+                                }
+                            } else {
+                                _infoArtista.value = artistaEntity.descripcion
+                            }
+                        }
+                }
+            } else {
+                _infoArtista.value = "Información del artista no disponible."
+            }
+
         } else {
+            // No hay canción sonando
             _estadoUi.update { it.copy(cancionActual = null, estaReproduciendo = false) }
+            _letra.value = null
+            _infoArtista.value = null
         }
     }
 
@@ -153,8 +229,6 @@ class ReproductorViewModel @Inject constructor(
             }
         }
     }
-
-
 
     private fun detenerActualizadorDeProgreso() {
         actualizadorDeProgresoJob?.cancel()
@@ -185,6 +259,8 @@ class ReproductorViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        trabajoDeLetra?.cancel()
+        trabajoDeArtista?.cancel()
         // No liberamos el player aquí, porque el servicio lo gestiona.
         super.onCleared()
     }

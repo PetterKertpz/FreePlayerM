@@ -32,9 +32,6 @@ class RepositorioDeMusicaLocal @Inject constructor(
             return
         }
 
-        // --- CAMBIO CLAVE #3: USAR 'finally' PARA LIBERAR EL CERROJO ---
-        // El bloque 'finally' se ejecuta SIEMPRE al final, tanto si el 'try' tiene éxito
-        // como si falla por una excepción. Esto garantiza que nuestro cerrojo siempre se libere.
         try {
             withContext(Dispatchers.IO) {
                 val cursor = contexto.contentResolver.query(
@@ -74,32 +71,20 @@ class RepositorioDeMusicaLocal @Inject constructor(
                             ).toString()
 
                             if (cancionDao.obtenerCancionPorRuta(uriContenido) == null) {
-                                // --- CAMBIO #1: LÓGICA DE PROCESAMIENTO INTELIGENTE ---
-
                                 val artistaCrudo = c.getString(artistaCol)
                                 val tituloAlbumCrudo = (c.getString(albumCol)?.takeIf { it.isNotBlank() } ?: "Álbum Desconocido").trim()
                                 val anio = c.getInt(anioCol)
                                 val duracionMs = c.getLong(duracionCol)
                                 val albumIdMediaStore = c.getLong(albumIdCol)
-                                var artistaFinal: String
-                                var tituloFinal: String
 
-                                // Verificamos si el metadato del artista es inválido o genérico.
-                                if (artistaCrudo.isNullOrBlank() || artistaCrudo == "<unknown>") {
-                                    Log.w(tag, "Metadato de artista ausente para '$tituloCrudo'. Intentando parsear desde el título.")
-                                    // Si es inválido, intentamos adivinar desde el título.
-                                    val (artistaParseado, tituloParseado) = parsearTituloYArtista(tituloCrudo)
-                                    artistaFinal = artistaParseado
-                                    tituloFinal = tituloParseado
-                                } else {
-                                    // Si el metadato es válido, lo usamos.
-                                    artistaFinal = artistaCrudo.trim()
-                                    tituloFinal = tituloCrudo
-                                }
+                                // NUEVO SISTEMA DE PARSING INTELIGENTE
+                                val resultadoParseo = parsearCancionInteligente(tituloCrudo, artistaCrudo)
 
-                                val tituloLimpio = limpiarTitulo(tituloFinal)
+                                val artistaFinal = resultadoParseo.artista
+                                val tituloFinal = resultadoParseo.titulo
+                                val versionInfo = resultadoParseo.versionInfo
 
-                                Log.d(tag, "'$tituloCrudo' es nueva. Procesada como -> Artista: '$artistaFinal', Título: '$tituloLimpio'.")
+                                Log.d(tag, "'$tituloCrudo' procesada como -> Artista: '$artistaFinal', Título: '$tituloFinal', Versión: $versionInfo")
 
                                 val artista = obtenerOCrearArtista(artistaFinal)
                                 val album = obtenerOCrearAlbum(tituloAlbumCrudo, artista.idArtista, anio, albumIdMediaStore)
@@ -110,11 +95,10 @@ class RepositorioDeMusicaLocal @Inject constructor(
                                     idAlbum = album.idAlbum,
                                     idArtista = artista.idArtista,
                                     idGenero = genero.idGenero,
-                                    titulo = tituloLimpio, // <-- Usamos el título ya limpio
+                                    titulo = tituloFinal,
                                     duracionSegundos = (duracionMs / 1000).toInt(),
                                     origen = "LOCAL",
                                     archivoPath = uriContenido,
-
                                 )
                                 cancionDao.insertarCancion(cancion)
                             }
@@ -131,45 +115,345 @@ class RepositorioDeMusicaLocal @Inject constructor(
         }
     }
 
-    private fun parsearTituloYArtista(texto: String): Pair<String, String> {
-        val separadores = listOf(" - ", " – ", " — ")
-        for (separador in separadores) {
-            if (texto.contains(separador)) {
-                val partes = texto.split(separador, limit = 2)
-                val artista = partes[0].trim()
-                val titulo = limpiarTitulo(partes[1].trim()) // <-- Limpiamos el título aquí también
-                if (artista.isNotBlank() && titulo.isNotBlank() && artista.length < 40) {
-                    return Pair(artista, titulo)
+    // NUEVO: SISTEMA COMPLETO DE PARSING INTELIGENTE
+    private data class ResultadoParseo(
+        val artista: String,
+        val titulo: String,
+        val versionInfo: String?
+    )
+
+    private fun parsearCancionInteligente(tituloCrudo: String, artistaCrudo: String?): ResultadoParseo {
+        // Primero, normalizamos el texto
+        val textoNormalizado = tituloCrudo
+            .replace(Regex("""[|\\/]"""), " - ") // Normalizar separadores
+            .replace(Regex("""\s+"""), " ") // Normalizar espacios
+            .trim()
+
+        // Verificamos si el artista de metadatos es válido
+        val artistaDeMetadatos = if (!artistaCrudo.isNullOrBlank() && artistaCrudo != "<unknown>") {
+            limpiarNombreArtista(artistaCrudo.trim())
+        } else {
+            null
+        }
+
+        // Intentamos extraer artista y título del texto
+        val resultadoExtraccion = extraerArtistaYTitulo(textoNormalizado, artistaDeMetadatos)
+
+        // Limpiamos y formateamos los resultados
+        val artistaLimpio = limpiarNombreArtista(resultadoExtraccion.artista)
+        val tituloLimpio = limpiarTituloCancion(resultadoExtraccion.titulo)
+
+        return ResultadoParseo(
+            artista = capitalizarNombrePropio(artistaLimpio),
+            titulo = capitalizarNombrePropio(tituloLimpio),
+            versionInfo = resultadoExtraccion.versionInfo
+        )
+    }
+
+    private data class ExtraccionResultado(
+        val artista: String,
+        val titulo: String,
+        val versionInfo: String?
+    )
+
+    private fun extraerArtistaYTitulo(texto: String, artistaDeMetadatos: String?): ExtraccionResultado {
+        // Patrones de separación comunes
+        val patronesSeparadores = listOf(
+            Regex("""\s+-\s+"""), // " - "
+            Regex("""\s+–\s+"""), // " – "
+            Regex("""\s+—\s+"""), // " — "
+            Regex("""\s+\|\|\s+"""), // " || "
+            Regex("""\s+\|\s+"""), // " | "
+            Regex("""\s+//\s+"""), // " // "
+            Regex("""\s+::\s+"""), // " :: "
+            Regex("""\s+–\s+""") // " – " (diferente tipo de guión)
+        )
+
+        // Intentar separar por patrones comunes
+        for (patron in patronesSeparadores) {
+            if (texto.contains(patron)) {
+                val partes = texto.split(patron, limit = 2)
+                if (partes.size == 2) {
+                    val posibleArtista = partes[0].trim()
+                    val posibleTitulo = partes[1].trim()
+
+                    // Validar que la separación sea razonable
+                    if (esSeparacionValida(posibleArtista, posibleTitulo)) {
+                        return procesarPartes(posibleArtista, posibleTitulo, artistaDeMetadatos)
+                    }
                 }
             }
         }
-        return Pair("Artista Desconocido", limpiarTitulo(texto))
+
+        // Si no hay separadores claros, usar lógica alternativa
+        return cuandoNoHaySeparadorClaro(texto, artistaDeMetadatos)
     }
 
+    private fun esSeparacionValida(artista: String, titulo: String): Boolean {
+        // Validar que ninguna parte esté vacía
+        if (artista.isBlank() || titulo.isBlank()) return false
 
-    private fun limpiarTitulo(texto: String): String {
-        var tituloLimpio = texto
+        // Validar que el artista no sea demasiado largo para ser un título
+        if (artista.length > 50) return false
 
-        // Lista de expresiones regulares para eliminar patrones comunes
+        // Validar que el título no sea demasiado corto
+        if (titulo.length < 2) return false
+
+        return true
+    }
+
+    private fun procesarPartes(parte1: String, parte2: String, artistaDeMetadatos: String?): ExtraccionResultado {
+        // Determinar cuál parte es artista y cuál es título
+        return when {
+            // Si tenemos artista de metadatos, usarlo como referencia
+            artistaDeMetadatos != null -> {
+                val similitud1 = calcularSimilitud(parte1, artistaDeMetadatos)
+                val similitud2 = calcularSimilitud(parte2, artistaDeMetadatos)
+
+                if (similitud1 > similitud2 && similitud1 > 0.3) {
+                    // parte1 es el artista, parte2 es el título
+                    ExtraccionResultado(parte1, extraerTituloDeTexto(parte2), detectarVersion(parte2))
+                } else if (similitud2 > 0.3) {
+                    // parte2 es el artista, parte1 es el título
+                    ExtraccionResultado(parte2, extraerTituloDeTexto(parte1), detectarVersion(parte1))
+                } else {
+                    // No hay similitud clara, usar heurísticas
+                    determinarPorHeuristicas(parte1, parte2, artistaDeMetadatos)
+                }
+            }
+            // Sin artista de metadatos, usar heurísticas
+            else -> determinarPorHeuristicas(parte1, parte2, null)
+        }
+    }
+
+    private fun determinarPorHeuristicas(parte1: String, parte2: String, artistaDeMetadatos: String?): ExtraccionResultado {
+        val heuristica1 = calcularProbabilidadArtista(parte1)
+        val heuristica2 = calcularProbabilidadArtista(parte2)
+
+        return if (heuristica1 > heuristica2) {
+            ExtraccionResultado(parte1, extraerTituloDeTexto(parte2), detectarVersion(parte2))
+        } else {
+            ExtraccionResultado(parte2, extraerTituloDeTexto(parte1), detectarVersion(parte1))
+        }
+    }
+
+    private fun calcularProbabilidadArtista(texto: String): Double {
+        var probabilidad = 0.0
+
+        // Características de nombres de artista
+        if (Regex("""\b(ft|feat|featuring|vs|&|and|con)\b""", RegexOption.IGNORE_CASE).containsMatchIn(texto)) {
+            probabilidad += 0.3
+        }
+
+        // Patrones de nombres artísticos
+        if (Regex("""^\$?[A-Za-z0-9]+\$?$""").containsMatchIn(texto)) {
+            probabilidad += 0.2 // Ej: $uicideboy$
+        }
+
+        // Longitud típica de artista vs título
+        if (texto.length in 2..30) probabilidad += 0.1
+        if (texto.length > 50) probabilidad -= 0.2 // Demasiado largo para artista
+
+        // Presencia de palabras comunes en títulos
+        if (Regex("""\b(lyric|video|audio|official|remix|cover|slowed|reverb)\b""", RegexOption.IGNORE_CASE).containsMatchIn(texto)) {
+            probabilidad -= 0.3
+        }
+
+        return probabilidad
+    }
+
+    private fun cuandoNoHaySeparadorClaro(texto: String, artistaDeMetadatos: String?): ExtraccionResultado {
+        // Si tenemos artista de metadatos, usarlo
+        if (artistaDeMetadatos != null) {
+            return ExtraccionResultado(
+                artista = artistaDeMetadatos,
+                titulo = extraerTituloDeTexto(texto),
+                versionInfo = detectarVersion(texto)
+            )
+        }
+
+        // Si no, intentar detectar patrones específicos
+        val patronesEspecificos = listOf(
+            Regex("""^(.+?)\s*[(\[]\s*(.+?)\s*[)\]]$"""), // "Artista (Título)" o "Título (Artista)"
+        )
+
+        for (patron in patronesEspecificos) {
+            val match = patron.find(texto)
+            if (match != null) {
+                val grupo1 = match.groupValues[1].trim()
+                val grupo2 = match.groupValues[2].trim()
+                return determinarPorHeuristicas(grupo1, grupo2, null)
+            }
+        }
+
+        // Último recurso: tratar todo como título
+        return ExtraccionResultado(
+            artista = "Artista Desconocido",
+            titulo = extraerTituloDeTexto(texto),
+            versionInfo = detectarVersion(texto)
+        )
+    }
+
+    private fun extraerTituloDeTexto(texto: String): String {
+        var titulo = texto
+
+        // Eliminar información de versión
+        titulo = eliminarPatronesVersion(titulo)
+
+        // Eliminar extensiones y sufijos comunes
+        titulo = eliminarSufijosComunes(titulo)
+
+        return titulo.trim()
+    }
+
+    private fun detectarVersion(texto: String): String? {
+        val patronesVersion = listOf(
+            Regex("""\b(slowed|reverb|sped up|nightcore|revisited)\b""", RegexOption.IGNORE_CASE),
+            Regex("""\b(remix|mix|version|edit)\b""", RegexOption.IGNORE_CASE),
+            Regex("""\b(cover|live|acoustic|instrumental)\b""", RegexOption.IGNORE_CASE)
+        )
+
+        patronesVersion.forEach { patron ->
+            val match = patron.find(texto)
+            if (match != null) {
+                return match.value.lowercase().replaceFirstChar { it.uppercase() }
+
+            }
+        }
+
+        return null
+    }
+
+    private fun eliminarPatronesVersion(texto: String): String {
+        var resultado = texto
+
         val patronesAEliminar = listOf(
-            Regex("""\s*[(\[].*?oficial.*?[)\]]\s*""", RegexOption.IGNORE_CASE), // (Official Video), [official]
-            Regex("""\s*[(\[].*?video.*?[)\]]\s*""", RegexOption.IGNORE_CASE), // (Video), [Music Video]
-            Regex("""\s*[(\[].*?lyrics.*?[)\]]\s*""", RegexOption.IGNORE_CASE), // (Lyrics), [Lyric Video]
-            Regex("""\s*[(\[].*?audio.*?[)\]]\s*""", RegexOption.IGNORE_CASE), // (Official Audio)
-            Regex("""\s*[(\[].*?visualizer.*?[)\]]\s*""", RegexOption.IGNORE_CASE), // (Visualizer)
-            Regex("""\s*[(\[].*?sub español.*?[)\]]\s*""", RegexOption.IGNORE_CASE), // (sub español)
-            Regex("""\s*[(\[].*?hd.*?[)\]]\s*""", RegexOption.IGNORE_CASE), // (HD), (HQ)
-            Regex("""\s*[(\[].*?kbps.*?[)\]]\s*""", RegexOption.IGNORE_CASE), // (128 kbps), (320kbps)
-            Regex("""y2meta\.app\s*-\s*""", RegexOption.IGNORE_CASE), // Prefijo de sitios de descarga
-            Regex("""-\(mp3convert\.org\)""", RegexOption.IGNORE_CASE) // Sufijo de sitios de descarga
+            Regex("""\s*[(\[].*?(slowed|reverb|sped up|nightcore|revisited).*?[)\]]\s*""", RegexOption.IGNORE_CASE),
+            Regex("""\s*[(\[].*?(remix|mix|version|edit).*?[)\]]\s*""", RegexOption.IGNORE_CASE),
+            Regex("""\s*[(\[].*?(cover|live|acoustic|instrumental).*?[)\]]\s*""", RegexOption.IGNORE_CASE)
+        )
+
+        patronesAEliminar.forEach { patron ->
+            resultado = patron.replace(resultado, " ")
+        }
+
+        return resultado
+    }
+
+    private fun limpiarNombreArtista(nombre: String): String {
+        var artista = nombre
+
+        // Eliminar sufijos comunes
+        val sufijosArtista = listOf(
+            Regex("""\s*-?\s*topic\s*$""", RegexOption.IGNORE_CASE),
+            Regex("""\s*-?\s*vevo\s*$""", RegexOption.IGNORE_CASE),
+            Regex("""\s*-?\s*official\s*$""", RegexOption.IGNORE_CASE),
+            Regex("""\s*-?\s*oficial\s*$""", RegexOption.IGNORE_CASE),
+            Regex("""\s*-?\s*channel\s*$""", RegexOption.IGNORE_CASE)
+        )
+
+        sufijosArtista.forEach { sufijo ->
+            artista = sufijo.replace(artista, "")
+        }
+
+        return artista.trim()
+    }
+
+    private fun limpiarTituloCancion(titulo: String): String {
+        var tituloLimpio = titulo
+
+        // Lista completa de expresiones regulares para eliminar
+        val patronesAEliminar = listOf(
+            // Patrones de metadatos de video/música
+            Regex("""\s*[(\[].*?(official|oficial).*?[)\]]\s*""", RegexOption.IGNORE_CASE),
+            Regex("""\s*[(\[].*?video.*?[)\]]\s*""", RegexOption.IGNORE_CASE),
+            Regex("""\s*[(\[].*?lyric.*?[)\]]\s*""", RegexOption.IGNORE_CASE),
+            Regex("""\s*[(\[].*?audio.*?[)\]]\s*""", RegexOption.IGNORE_CASE),
+            Regex("""\s*[(\[].*?visualizer.*?[)\]]\s*""", RegexOption.IGNORE_CASE),
+            Regex("""\s*[(\[].*?sub.*?español.*?[)\]]\s*""", RegexOption.IGNORE_CASE),
+            Regex("""\s*[(\[].*?sub.*?english.*?[)\]]\s*""", RegexOption.IGNORE_CASE),
+            Regex("""\s*[(\[].*?letra.*?[)\]]\s*""", RegexOption.IGNORE_CASE),
+
+            // Patrones de calidad/formato
+            Regex("""\s*[(\[].*?(hd|hq|4k|1080p|720p).*?[)\]]\s*""", RegexOption.IGNORE_CASE),
+            Regex("""\s*[(\[].*?kbps.*?[)\]]\s*""", RegexOption.IGNORE_CASE),
+
+            // Sitios de descarga y conversión
+            Regex("""y2meta\.app\s*-\s*""", RegexOption.IGNORE_CASE),
+            Regex("""-\(mp3convert\.org\)""", RegexOption.IGNORE_CASE),
+            Regex("""\s*\[.*?download.*?]\s*""", RegexOption.IGNORE_CASE),
+
+            // Contenido no musical
+            Regex("""\s*\|\s*\d+\s*minutes?\s*of.*""", RegexOption.IGNORE_CASE),
+            Regex("""\s*\|\s*imax.*""", RegexOption.IGNORE_CASE),
+            Regex("""\s*//.*"""), // Eliminar comentarios después de //
+            Regex("""\s*✨.*""") // Eliminar emojis y texto decorativo
         )
 
         patronesAEliminar.forEach { patron ->
             tituloLimpio = patron.replace(tituloLimpio, " ")
         }
 
-        // Finalmente, eliminamos espacios extra y devolvemos el resultado.
-        return tituloLimpio.trim()
+        // Eliminar espacios extra y devolver
+        return tituloLimpio.trim().replace(Regex("""\s+"""), " ")
+    }
+
+    private fun eliminarSufijosComunes(texto: String): String {
+        var resultado = texto
+
+        val sufijos = listOf(
+            Regex("""\.(mp3|m4a|wav|flac|aac)$""", RegexOption.IGNORE_CASE),
+        )
+
+        sufijos.forEach { sufijo ->
+            resultado = sufijo.replace(resultado, "")
+        }
+
+        return resultado
+    }
+
+    private fun capitalizarNombrePropio(texto: String): String {
+        if (texto.isBlank()) return texto
+
+        // Lista de palabras que no deben capitalizarse (excepto si son la primera palabra)
+        val palabrasMinusculas = setOf(
+            "de", "del", "la", "las", "el", "los", "y", "e", "o", "u",
+            "a", "ante", "bajo", "cabe", "con", "contra", "de", "desde",
+            "en", "entre", "hacia", "hasta", "para", "por", "según", "sin",
+            "so", "sobre", "tras", "vs", "ft", "feat", "featuring", "con"
+        )
+
+        return texto.split(" ").mapIndexed { index, palabra ->
+            when {
+                // Mantener siglas y ciertos patrones en mayúsculas
+                palabra.matches(Regex("""^\$?[A-Z0-9]+\$?$""")) -> palabra // Ej: $UICIDEBOY$, BZRP
+                palabra.matches(Regex("""^[a-z]+\.[a-z]+$""")) -> palabra // Ej: a.l.e.x
+                palabra.matches(Regex("""^#\w+$""")) -> palabra // Ej: #54
+
+                // Primera palabra siempre se capitaliza
+                index == 0 -> palabra.lowercase().replaceFirstChar{it.uppercase()}
+
+                // Palabras en la lista de minúsculas
+                palabra.lowercase() in palabrasMinusculas -> palabra.lowercase()
+
+                // Demás palabras se capitalizan
+                else -> palabra.lowercase().replaceFirstChar{it.uppercase()}
+            }
+        }.joinToString(" ")
+    }
+
+    private fun calcularSimilitud(texto1: String, texto2: String): Double {
+        if (texto1.equals(texto2, ignoreCase = true)) return 1.0
+
+        val palabras1 = texto1.lowercase().split(Regex("""\W+""")).toSet()
+        val palabras2 = texto2.lowercase().split(Regex("""\W+""")).toSet()
+
+        if (palabras1.isEmpty() || palabras2.isEmpty()) return 0.0
+
+        val interseccion = palabras1.intersect(palabras2).size
+        val union = palabras1.union(palabras2).size
+
+        return interseccion.toDouble() / union.toDouble()
     }
 
     // --- El resto de las funciones 'obtenerOCrear' se mantienen igual ---
@@ -185,24 +469,20 @@ class RepositorioDeMusicaLocal @Inject constructor(
 
     private suspend fun obtenerOCrearAlbum(titulo: String, artistaId: Int, anio: Int, albumIdMediaStore: Long): AlbumEntity {
         val albumExistente = cancionDao.obtenerAlbumPorNombreYArtista(titulo, artistaId)
-        // Si el álbum ya existe, y quizás ya tiene una carátula, no hacemos nada.
         if (albumExistente != null) {
             return albumExistente
         }
 
-        // Si el álbum es nuevo, construimos la URI para su carátula.
-        // Esta es la forma estándar en Android para referenciar el arte de un álbum.
         val uriCaratula = ContentUris.withAppendedId(
             "content://media/external/audio/albumart".toUri(),
             albumIdMediaStore
         )
 
-        // Creamos la nueva entidad de álbum, ahora guardando la ruta de la carátula.
         val nuevoAlbum = AlbumEntity(
             idArtista = artistaId,
             titulo = titulo,
             anio = if (anio > 0) anio else null,
-            portadaPath = uriCaratula.toString() // Guardamos la URI como un String
+            portadaPath = uriCaratula.toString()
         )
 
         cancionDao.insertarAlbum(nuevoAlbum)

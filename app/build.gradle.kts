@@ -1,3 +1,5 @@
+import java.util.Properties
+
 // Archivo build.gradle.kts del módulo de la aplicación
 plugins {
     alias(libs.plugins.android.application)
@@ -7,9 +9,12 @@ plugins {
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.google.gms.google.services)
 
-
 }
-
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { localProperties.load(it) }
+}
 android {
     namespace = "com.example.freeplayerm"
     compileSdk = 36 // Usamos la última API estable
@@ -21,6 +26,13 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField(
+            "String",
+            "GENIUS_CLIENT_ACCESS_TOKEN",
+            "\"${localProperties.getProperty("GENIUS_CLIENT_ACCESS_TOKEN", "")}\""
+        )
+
     }
 
     buildTypes {
@@ -38,6 +50,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         // Vinculamos la versión del compilador de Compose a la que definimos en el catálogo
@@ -54,6 +67,14 @@ kotlin {
 }
 
 dependencies {
+
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.converter.moshi)
+    implementation(libs.moshi.kotlin)
+    implementation(libs.okhttp.logging.interceptor) // Útil para debug
+
+    // --- Scraping ---
+    implementation(libs.jsoup)
 
     implementation(libs.constraintlayout.compose)
     implementation(libs.androidx.media3.exoplayer)

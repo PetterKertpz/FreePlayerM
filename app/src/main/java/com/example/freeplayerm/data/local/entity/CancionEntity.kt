@@ -53,5 +53,11 @@ data class CancionEntity(
     val origen: String, // "LOCAL", "REMOTA"
 
     @ColumnInfo(name = "archivo_path")
-    val archivoPath: String? // Ruta local si el origen es "LOCAL"
+    val archivoPath: String?, // Ruta local si el origen es "LOCAL"
+
+    @ColumnInfo(name = "genius_id")
+    val geniusId: String? = null,
+
+    @ColumnInfo(name = "genius_url")
+    val geniusUrl: String? = null // URL de la página de la canción
 )
