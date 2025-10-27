@@ -3,7 +3,6 @@ package com.example.freeplayerm.data.repository
 
 import android.content.Context
 import android.util.Log
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ArtistaEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.LetraEntity
 import com.example.freeplayerm.data.local.dao.CancionDao
@@ -50,168 +49,20 @@ class GeniusRepository @Inject constructor(
     private var ultimaBusqueda = 0L
     private val intervaloMinimo = 2500L // 2.5 segundos entre búsquedas
 
-    private fun corregirArtistaTituloInvertidos(titulo: String, artista: String?): Pair<String, String?> {
-        if (artista == null) return Pair(titulo, artista)
-
-        var tituloCorregido = titulo
-        var artistaCorregido = artista
-
-        // Patrones que indican que el "artista" podría ser realmente un título de canción
-        val patronesTituloCancion = listOf(
-            // 1. Cualquier texto entre paréntesis, corchetes o llaves (indicativo de descriptores como "live", "sub español", etc.)
-            Regex("""[(\[{].{2,50}?[)\]}]"""),
-
-            // 2. Palabras comunes asociadas a versiones, traducciones o metadatos
-            Regex("""\b(sub|subtitulado|subtitulos|subtitulada|traducci[oó]n|lyrics?|letra|video|audio|oficial|official)\b""", RegexOption.IGNORE_CASE),
-
-            // 3. Modificadores y variantes de estilo o mezcla
-            Regex("""\b(remix|mix|edit|bootleg|slowed|reverb|speed(ed)?|bass|bassboosted|mashup|extended|cut|blend|nightcore)\b""", RegexOption.IGNORE_CASE),
-
-            // 4. Versiones o formatos de interpretación
-            Regex("""\b(version|versi[oó]n|cover|demo|live|en vivo|acoustic|instrumental|studio|remaster(ed)?|orchestral|karaoke|performance)\b""", RegexOption.IGNORE_CASE),
-
-            // 5. Indicadores de idioma o subtitulación
-            Regex("""\b(espa[nñ]ol|english|ingl[eé]s|franc[eé]s|portugu[eé]s|italiano|alem[aá]n|chino|japon[eé]s)\b""", RegexOption.IGNORE_CASE),
-
-            // 6. Elementos comunes de títulos digitales o descripciones multimedia
-            Regex("""\b(audio|video|clip|mv|hd|hq|official|visualizer|fanmade|editado|remake)\b""", RegexOption.IGNORE_CASE),
-
-            // 7. Indicadores de colaboración o featuring dentro del campo erróneo
-            Regex("""\b(ft|feat|featuring|con|x|&|vs\.?)\b""", RegexOption.IGNORE_CASE),
-
-            // 8. Menciones a álbumes, tracks o números de versión
-            Regex("""\b(track|single|album|disc|cd|ep|lp|side\s?[abAB]|bonus)\b""", RegexOption.IGNORE_CASE),
-
-            // 9. Títulos con exceso de puntuación o símbolos (ej. “--”, “//”, “•••”, etc.)
-            Regex("""[-_/•~]{2,}"""),
-
-            // 10. Inclusión de años, que suelen acompañar versiones o remasters (ej. "Remix 2020", "Live 1998")
-            Regex("""\b(19|20)\d{2}\b""")
-        )
-
-        // Patrones que indican que el "título" podría ser realmente un artista
-        val patronesNombreArtista = listOf(
-            // 1. Palabras asociadas a colectivos, bandas o agrupaciones musicales
-            Regex("""\b(band|banda|group|grupo|crew|collective|colectivo|project|proyecto|orchestra|ensemble|choir|quartet|duo|trio|squad)\b""", RegexOption.IGNORE_CASE),
-
-            // 2. Formatos "Nombre Apellido", "Nombre Inicial", o múltiples nombres propios (ej. "John Mayer", "David Guetta", "Carlos Vives")
-            Regex("""^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+){0,3}$"""),
-
-            // 3. Formato "Nombre Artístico" con iniciales o alias (ej. "J Balvin", "A$AP Rocky", "DJ Snake", "MC Kevinho")
-            Regex("""^(DJ|MC|Mr\.?|Mrs\.?|Miss|Sir|Saint|San|King|Queen|Prince|Lil|Big|Young|El|La|Los|Las|The)\s?[A-Z0-9$€¥£_.\-]+(?:\s[A-Z0-9$€¥£_.\-]+)*$""", RegexOption.IGNORE_CASE),
-
-            // 4. Alias o seudónimos con mayúsculas estilizadas (ej. "Avicii", "Skrillex", "Beyoncé", "Daft Punk")
-            Regex("""^[A-Z0-9$€¥£_.\-]{2,}(?:\s[A-Z0-9$€¥£_.\-]{2,})*$"""),
-
-            // 5. Agrupaciones con conectores comunes (ej. "Simon & Garfunkel", "Selena y Los Dinos", "Guns N' Roses")
-            Regex("""\b(&|and|y|with|n'|feat\.?|ft\.?)\b""", RegexOption.IGNORE_CASE),
-
-            // 6. Nombres compuestos con números o identificadores de banda (ej. "Maroon 5", "Blink-182", "U2")
-            Regex("""^[A-Z][a-zA-Z]*[-\s]?\d{1,3}$"""),
-
-            // 7. Palabras clave que suelen estar en nombres de artistas o bandas
-            Regex("""\b(crew|unit|gang|posse|sound|collective|records|productions|studios|inc|ent|entertainment|label)\b""", RegexOption.IGNORE_CASE),
-
-            // 8. Acrónimos o siglas de 2–5 letras en mayúsculas (ej. "BTS", "ABBA", "NSYNC")
-            Regex("""^[A-Z]{2,5}$"""),
-
-            // 9. Artistas con apodos entre comillas o paréntesis (ej. “Marshall (Eminem) Mathers”)
-            Regex("""["'\(\[]?[A-Z][a-z]+["'\)\]]?(?:\s*\([A-Z0-9$€¥£_.\-]+\))?"""),
-
-            // 10. Nombres que comienzan con el artículo "The" seguido de una o más palabras (ej. "The Weeknd", "The Beatles")
-            Regex("""^The\s[A-Z][a-zA-Z0-9\s'\-]+$""", RegexOption.IGNORE_CASE),
-
-            // 11. Artistas latinos con partículas comunes (ej. “De”, “Del”, “La”, “El”)
-            Regex("""^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s(de|del|la|las|el|los)\s[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)+$""", RegexOption.IGNORE_CASE),
-
-            // 12. Artistas con apellidos compuestos o dobles (ej. “Juan Luis Guerra”, “José José”, “Ricardo Arjona”)
-            Regex("""^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(\s[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+){1,2}$"""),
-
-            // 13. Detección de estructuras mixtas típicas de seudónimos (ej. “Bad Bunny”, “Kid Cudi”, “Ice Cube”)
-            Regex("""^(Bad|Kid|Ice|Young|Lil|Big|Fat|Slim|Don|El|La|Los|Las|King|Queen|Saint)\s[A-Z][a-z]+$""", RegexOption.IGNORE_CASE),
-
-            // 14. Artistas electrónicos con notación simbólica o de caracteres especiales (ej. “Deadmau5”, “Madeon”, “Øfdream”)
-            Regex("""^[A-Za-z0-9_\-@$€¥£øØäëïöüáéíóúñç]{3,20}$"""),
-
-            // 15. Inclusión de partículas honoríficas o apodos formales
-            Regex("""\b(Sir|Lord|Lady|Doctor|Dr\.|Profesor|Prof\.|DJ|MC)\b""", RegexOption.IGNORE_CASE)
-        )
-
-        val artistaPareceCancion = patronesTituloCancion.any { it.containsMatchIn(artista) }
-        val tituloPareceArtista = patronesNombreArtista.any { it.containsMatchIn(titulo) }
-
-        val resultado = if (artistaPareceCancion && tituloPareceArtista) {
-            Log.d(tag, "🔄 Corrigiendo inversión: '$titulo' <-> '$artista'")
-            Pair(artista, titulo) // Intercambiar
-        } else {
-            Pair(titulo, artista)
-        }
-
-        // === NUEVO: LIMPIAR "(sub. Español)" DEL TÍTULO CORREGIDO ===
-        val tituloLimpio = resultado.first
-            .replace(
-                Regex(
-                    """\s*[(\[{]# Paréntesis o corchetes de apertura
-               [^)\]}]*# Contenido interno
-               (sub|subtitulado|subtitulada|traducci[oó]n|traduction|translation|
-                español|english|lyrics?|letra|audio|video|oficial|official|
-                slowed|reverb|remix|mix|cover|live|acoustic|instrumental)
-               [^)\]}]*# Más texto interno
-               [)\]}]# Cierre
-            """.trimMargin(),
-                    setOf(RegexOption.IGNORE_CASE, RegexOption.COMMENTS)
-                ),
-                ""
-            )
-            .replace(Regex("""\s{2,}"""), " ") // Limpieza de espacios redundantes
-            .trim()
-
-        return Pair(tituloLimpio, resultado.second)
-    }
-
-    private fun preprocesarBusqueda(titulo: String, artista: String?): Pair<String, String?> {
-        // Limpieza avanzada de ruido textual, anotaciones y descriptores no relevantes
+    private fun preprocesarBusqueda(titulo: String, artista: String?): Pair<String, String> {
         var tituloLimpio = titulo
-            // 1. Remover sufijos frecuentes en títulos de YouTube o catálogos
-            .replace(Regex("""(?i)\b(-|\|)?\s*(official\s*(music)?\s*(video|audio|clip)|visualizer|mv|hd|hq|lyrics?|letra|subtitulado|sub\s?espa[nñ]ol|traducci[oó]n|version|ver\.|remix|mix|edit|live|acoustic|instrumental|performance|karaoke)\b"""), "")
-            // 2. Eliminar paréntesis, corchetes o llaves con texto interno irrelevante
-            .replace(Regex("""[\(\[\{][^)\]\}]{0,80}[\)\]\}]"""), "")
-            // 3. Remover colaboraciones, dejando solo el nombre principal
-            .replace(Regex("""(?i)\s*(ft\.?|feat\.?|featuring|con|x|y)\s+[A-Z0-9$€¥£_.\- ]+"""), "")
-            // 4. Limpieza de conectores o símbolos finales redundantes
-            .replace(Regex("""[\-\|\·•~_]+$"""), "")
-            // 5. Normalización de caracteres especiales y espacios
-            .replace(Regex("""\s{2,}"""), " ")
-            .replace(Regex("""[–—]+"""), "-")
-            .replace(Regex("""^\s*[-|]+\s*"""), "")
+            .replace("- Topic", "", ignoreCase = true)
+            .replace("(Official Video)", "", ignoreCase = true)
+            .replace("(Official Audio)", "", ignoreCase = true)
+            .replace("\\[.*]".toRegex(), "") // Remove brackets content
+            .replace("\\(.*\\)".toRegex(), "") // Remove parentheses content
+            .replace("ft\\.|feat\\.|featuring".toRegex(RegexOption.IGNORE_CASE), "")
             .trim()
 
         var artistaLimpio = (artista ?: "")
-            // 1. Remover términos comunes de canales o distribuidoras
-            .replace(
-                Regex(
-                    """(?i)\b([-|])?\s*(topic|official|vevo|channel|records?|music|productions?|entertainment|media|studios?|label|network|tv)\b""",
-                    RegexOption.IGNORE_CASE
-                ),
-                ""
-            )
-            // 2. Eliminar elementos decorativos o símbolos redundantes
-            .replace(Regex("""[\-|·•~_]+$"""), "")
-            .replace(Regex("""^\s*[-|]+\s*"""), "")
-            // 3. Normalizar espacios múltiples y recortar
-            .replace(Regex("""\s{2,}"""), " ")
-            .trim()
-
-        // === NUEVO: CORREGIR INVERSIÓN ARTISTA/TÍTULO ===
-        val (tituloCorregido, artistaCorregido) = corregirArtistaTituloInvertidos(tituloLimpio, artistaLimpio)
-        tituloLimpio = tituloCorregido
-        artistaLimpio = artistaCorregido.toString()
-
-        // Limpiar subtítulos entre paréntesis del título (después de la corrección)
-        tituloLimpio = tituloLimpio.replace(Regex("""\s*\([^)]*sub[^)]*\)""", RegexOption.IGNORE_CASE), "")
-            .replace(Regex("""\s*\([^)]*traducción[^)]*\)""", RegexOption.IGNORE_CASE), "")
-            .replace(Regex("""\s*\([^)]*español[^)]*\)""", RegexOption.IGNORE_CASE), "")
-            .replace(Regex("""\s*\([^)]*lyrics[^)]*\)""", RegexOption.IGNORE_CASE), "")
+            .replace("- Topic", "", ignoreCase = true)
+            .replace("VEVO", "", ignoreCase = true)
+            .replace("Official", "", ignoreCase = true)
             .trim()
 
         // Detectar y eliminar contenido que no es música
@@ -414,87 +265,42 @@ class GeniusRepository @Inject constructor(
     /**
      * Función principal mejorada con rate limiting y búsqueda inteligente
      */
-    suspend fun sincronizarCancionAlReproducir(cancionConArtista: CancionConArtista): CancionConArtista? =
+    suspend fun sincronizarCancionAlReproducir(cancionConArtista: CancionConArtista): Boolean =
         withContext(Dispatchers.IO) {
             val cancion = cancionConArtista.cancion
 
-            // === CORREGIR METADATOS EN LA BASE DE DATOS ===
-            val (tituloCorregido, artistaCorregido) = corregirArtistaTituloInvertidos(
-                cancion.titulo,
-                cancionConArtista.artistaNombre
-            )
-
-            var cancionActualizada: CancionEntity? = null
-            var artistaActualizado: ArtistaEntity? = null
-
-            // Si hay corrección, actualizar la base de datos
-            if (cancion.titulo != tituloCorregido || cancionConArtista.artistaNombre != artistaCorregido) {
-                Log.d(tag, "🔄 Aplicando corrección en BD: '${cancion.titulo}' -> '$tituloCorregido'")
-
-                // Actualizar canción si el título cambió
-                if (cancion.titulo != tituloCorregido) {
-                    cancionActualizada = cancion.copy(titulo = tituloCorregido)
-                    cancionDao.actualizarCancion(cancionActualizada)
-                }
-
-                // Actualizar artista si tenemos su ID y el nombre cambió
-                artistaCorregido?.let { nuevoArtista ->
-                    if (cancion.idArtista != null && cancionConArtista.artistaNombre != nuevoArtista) {
-                        val artistaActual = cancionDao.obtenerArtistaPorId(cancion.idArtista)
-                        artistaActual?.let { artista ->
-                            artistaActualizado = artista.copy(nombre = nuevoArtista)
-                            cancionDao.actualizarArtista(artistaActualizado)
-                            Log.d(tag, "🔄 Artista actualizado: '${artista.nombre}' -> '$nuevoArtista'")
-                        }
-                    }
-                }
-            }
-
-            // Verificar si ya tenemos datos completos (con los metadatos corregidos)
+            // Verificar si ya tenemos datos completos
             if (tieneDatosCompletos(cancion)) {
-                Log.d(tag, "✅ Canción '${tituloCorregido}' ya tiene datos completos, omitiendo búsqueda")
-                // Devolver versión corregida incluso si ya tiene datos completos
-                return@withContext crearCancionConArtistaCorregida(
-                    cancionConArtista,
-                    tituloCorregido,
-                    artistaCorregido
-                )
+                Log.d(tag, "✅ Canción '${cancion.titulo}' ya tiene datos completos, omitiendo búsqueda")
+                return@withContext true
             }
 
             // Verificar rate limiting
             if (!rateLimiter.tryAcquire()) {
-                Log.w(tag, "⏳ Rate limit alcanzado para: ${tituloCorregido}")
-                return@withContext crearCancionConArtistaCorregida(
-                    cancionConArtista,
-                    tituloCorregido,
-                    artistaCorregido
-                )
+                Log.w(tag, "⏳ Rate limit alcanzado para: ${cancion.titulo}")
+                return@withContext false
             }
 
-            Log.d(tag, "🎵 Sincronizando al reproducir: '$tituloCorregido'")
+            Log.d(tag, "🎵 Sincronizando al reproducir: '${cancion.titulo}'")
 
             val resultadoBusqueda = buscarCancionEnGenius(cancion.titulo, cancionConArtista.artistaNombre)
             if (resultadoBusqueda == null) {
-                Log.w(tag, "❌ No se pudo encontrar '$tituloCorregido' en Genius")
-                return@withContext crearCancionConArtistaCorregida(
-                    cancionConArtista,
-                    tituloCorregido,
-                    artistaCorregido
-                )
+                Log.w(tag, "❌ No se pudo encontrar '${cancion.titulo}' en Genius")
+                return@withContext false
             }
 
             // Actualizar datos básicos de la canción
-            val cancionFinal = (cancionActualizada ?: cancion).copy(
+            val cancionActualizada = cancion.copy(
                 geniusId = resultadoBusqueda.id,
                 geniusUrl = resultadoBusqueda.url
             )
-            cancionDao.actualizarCancion(cancionFinal)
+            cancionDao.actualizarCancion(cancionActualizada)
 
             // Descargar letra en segundo plano (no bloqueante)
             withContext(Dispatchers.IO) {
                 descargarYGuardarLetraMejorada(resultadoBusqueda.url, cancion.idCancion)
 
-                // Sincronizar artista si es necesario (con nombre corregido)
+                // Sincronizar artista si es necesario
                 resultadoBusqueda.primary_artist?.let { artista ->
                     if (cancion.idArtista != null) {
                         sincronizarDatosArtista(artista.id, cancion.idArtista)
@@ -502,29 +308,13 @@ class GeniusRepository @Inject constructor(
                 }
 
                 // Procesar portada
-                procesarPortadaCancion(resultadoBusqueda.url, resultadoBusqueda.song_art_image_url, cancionFinal)
+                procesarPortadaCancion(resultadoBusqueda.url, resultadoBusqueda.song_art_image_url, cancion)
             }
 
-            Log.d(tag, "✅ Sincronización completada para: '$tituloCorregido'")
-
-            // Devolver la versión corregida
-            return@withContext crearCancionConArtistaCorregida(
-                cancionConArtista,
-                tituloCorregido,
-                artistaCorregido
-            )
+            Log.d(tag, "✅ Sincronización completada para: '${cancion.titulo}'")
+            return@withContext true
         }
 
-    private fun crearCancionConArtistaCorregida(
-        original: CancionConArtista,
-        tituloCorregido: String,
-        artistaCorregido: String?
-    ): CancionConArtista {
-        return original.copy(
-            cancion = original.cancion.copy(titulo = tituloCorregido),
-            artistaNombre = artistaCorregido ?: original.artistaNombre
-        )
-    }
     /**
      * Verifica si una canción ya tiene todos los datos necesarios
      */
@@ -564,7 +354,7 @@ class GeniusRepository @Inject constructor(
                 return@withContext null
             }
 
-            // 2. Preprocesar búsqueda (INCLUYE CORRECCIÓN DE INVERSIÓN)
+            // 2. Preprocesar búsqueda
             val (tituloLimpio, artistaLimpio) = preprocesarBusqueda(titulo, artista)
 
             if (tituloLimpio.isEmpty()) {
@@ -805,78 +595,57 @@ class GeniusRepository @Inject constructor(
         withContext(Dispatchers.IO) {
             val scrapedData = obtenerDatosCompletosViaScraping(url)
 
-            if (scrapedData != null && !scrapedData.lyrics.isNullOrBlank()) {
-                // Guardar letra si existe
-                val letraEntity = LetraEntity(idCancion = idCancion, letra = scrapedData.lyrics)
-                letraDao.insertarLetra(letraEntity)
-                Log.d(tag, "💾 Letra guardada (${scrapedData.lyrics.length} caracteres)")
-
-                // Verificar si la letra parece completa
-                if (scrapedData.lyrics.length < 100) {
-                    Log.w(tag, "⚠️ Letra muy corta, posiblemente incompleta. Intentando método alternativo...")
-                    descargarYGuardarLetraLegacyMejorada(url, idCancion)
-                }
-            } else {
-                Log.w(tag, "⚠️ No se pudieron obtener datos via scraping, usando método antiguo")
-                descargarYGuardarLetraLegacyMejorada(url, idCancion)
-            }
-
-            // Procesar portada y metadata...
             if (scrapedData != null) {
+                // Guardar letra si existe
+                if (!scrapedData.lyrics.isNullOrBlank()) {
+                    val letraEntity = LetraEntity(idCancion = idCancion, letra = scrapedData.lyrics)
+                    letraDao.insertarLetra(letraEntity)
+                    Log.d(tag, "💾 Letra guardada (${scrapedData.lyrics.length} caracteres)")
+                }
+
+                // Descargar y guardar portada si existe - ESTRUCTURA SIMPLIFICADA
                 if (!scrapedData.coverArtUrl.isNullOrBlank()) {
                     val nombreArchivo = "album_cover_${idCancion}.jpg"
                     val portadaPath = descargarYGuardarImagen(scrapedData.coverArtUrl, nombreArchivo)
+
+                    // Actualizar información del álbum si tenemos datos
                     actualizarInformacionAlbumDesdeScraping(idCancion, scrapedData, portadaPath)
                 }
+
+                // Log adicional de metadata obtenida
                 Log.d(tag, "📊 Metadata obtenida - Artista: ${scrapedData.artistName}, Álbum: ${scrapedData.albumName}")
+            } else {
+                Log.w(tag, "⚠️ No se pudieron obtener datos via scraping, usando método antiguo")
+                // Fallback a método antiguo
+                descargarYGuardarLetraLegacy(url, idCancion)
             }
         }
 
     /**
      * Método legacy como fallback
      */
-    private suspend fun descargarYGuardarLetraLegacyMejorada(url: String, idCancion: Int) =
+    private suspend fun descargarYGuardarLetraLegacy(url: String, idCancion: Int) =
         withContext(Dispatchers.IO) {
-            Log.d(tag, "Descargando letra (método legacy MEJORADO) desde: $url")
+            Log.d(tag, "Descargando letra (método legacy) desde: $url")
 
             try {
                 val userAgent = USER_AGENTS.random()
                 val doc: Document = Jsoup.connect(url).userAgent(userAgent).timeout(15000).followRedirects(true).get()
 
-                // MÚLTIPLES ESTRATEGIAS para encontrar letras
-                val lyricsContent = StringBuilder()
-
-                // Estrategia 1: Contenedor principal de Genius
                 val container = doc.select("div[data-lyrics-container='true']").firstOrNull()
-                if (container != null) {
-                    Log.d(tag, "✅ Encontrado contenedor principal de letras")
-                    container.childNodes().forEach { node ->
-                        extractTextWithLineBreaks(node, lyricsContent)
-                    }
+                if (container == null) {
+                    Log.w(tag, "No se encontró contenedor de letras en $url")
+                    return@withContext
                 }
 
-                // Estrategia 2: Fallback a otros selectores comunes
-                if (lyricsContent.isEmpty()) {
-                    Log.d(tag, "⚠️ Intentando estrategia alternativa de selectores...")
-                    val alternativeContainers = doc.select("div.lyrics, section[data-lyrics], .Lyrics__Container")
-                    alternativeContainers.forEach { container ->
-                        container.childNodes().forEach { node ->
-                            extractTextWithLineBreaks(node, lyricsContent)
-                        }
-                    }
-                }
+                // Limpiar elementos no deseados
+                container.select("div[class*='LyricsHeader__Container']").remove()
+                container.select("div[class*='Advertisement']").remove()
+                container.select("div[class*='Ad']").remove()
 
-                // Estrategia 3: Extraer todos los párrafos que parecen letras
-                if (lyricsContent.isEmpty()) {
-                    Log.d(tag, "⚠️ Intentando extracción por párrafos...")
-                    val paragraphs = doc.select("p, div, span").filter { element ->
-                        val text = element.text().trim()
-                        text.length > 20 && text.contains(Regex("""[a-zA-Z]{3,}""")) &&
-                                !text.contains(Regex("""\d+\.\d+|\d+:\d+""")) // Excluir timestamps
-                    }
-                    paragraphs.forEach { paragraph ->
-                        lyricsContent.append(paragraph.text().trim()).append("\n\n")
-                    }
+                val lyricsContent = StringBuilder()
+                container.childNodes().forEach { node ->
+                    extractTextWithLineBreaks(node, lyricsContent)
                 }
 
                 val letraFinal = lyricsContent.toString()
@@ -887,17 +656,11 @@ class GeniusRepository @Inject constructor(
                 if (letraFinal.isNotBlank()) {
                     val letraEntity = LetraEntity(idCancion = idCancion, letra = letraFinal)
                     letraDao.insertarLetra(letraEntity)
-                    Log.d(tag, "💾 Letra guardada (legacy mejorado) - ${letraFinal.length} caracteres")
-
-                    if (letraFinal.length < 100) {
-                        Log.w(tag, "❌ Letra aún muy corta, posible bloqueo anti-scraping")
-                    }
-                } else {
-                    Log.w(tag, "❌ No se pudo extraer ninguna letra")
+                    Log.d(tag, "Letra guardada (legacy) para idCancion: $idCancion")
                 }
 
             } catch (e: Exception) {
-                Log.e(tag, "❌ Error en método legacy mejorado: ${e.message}")
+                Log.e(tag, "Error en método legacy: ${e.message}")
             }
         }
 
@@ -1057,42 +820,34 @@ class GeniusRepository @Inject constructor(
         when (node) {
             is TextNode -> {
                 val text = node.text().replace(Regex("\\s+"), " ").trim()
-                if (text.isNotEmpty() && text.length > 1) { // Filtrar texto muy corto
+                if (text.isNotEmpty()) {
                     if (builder.isNotEmpty() && !builder.endsWith("\n") && !builder.endsWith(" ")) {
                         builder.append(" ")
                     }
                     builder.append(text)
                 }
             }
+
             is Element -> {
-                when {
-                    node.tagName().equals("br", ignoreCase = true) -> {
-                        if (builder.isNotEmpty() && !builder.endsWith("\n")) {
-                            builder.append("\n")
-                        }
+                if (node.tagName().equals("br", ignoreCase = true)) {
+                    if (builder.endsWith(" ")) {
+                        builder.setLength(builder.length - 1)
                     }
-                    node.tagName().equals("p", ignoreCase = true) ||
-                            node.hasClass("ReferentFragmentdesktop__Fragment-") -> {
-                        if (builder.isNotEmpty() && !builder.endsWith("\n\n")) {
-                            builder.append("\n\n")
-                        }
-                        node.childNodes().forEach { child -> extractTextWithLineBreaks(child, builder) }
-                        if (!builder.endsWith("\n\n")) {
-                            builder.append("\n\n")
-                        }
+                    if (!builder.endsWith("\n")) {
+                        builder.append("\n")
                     }
-                    node.isBlock -> {
-                        if (builder.isNotEmpty() && !builder.endsWith("\n")) {
-                            builder.append("\n")
-                        }
-                        node.childNodes().forEach { child -> extractTextWithLineBreaks(child, builder) }
-                        if (!builder.endsWith("\n")) {
-                            builder.append("\n")
-                        }
+                } else if (node.isBlock || node.tagName().equals("p", ignoreCase = true)) {
+                    if (builder.isNotEmpty() && !builder.endsWith("\n\n") && !builder.endsWith("\n")) {
+                        if (builder.endsWith(" ")) builder.setLength(builder.length - 1)
+                        builder.append("\n\n")
                     }
-                    else -> {
-                        node.childNodes().forEach { child -> extractTextWithLineBreaks(child, builder) }
+                    node.childNodes().forEach { child -> extractTextWithLineBreaks(child, builder) }
+                    if (builder.isNotEmpty() && !builder.endsWith("\n\n")) {
+                        if (builder.endsWith(" ")) builder.setLength(builder.length - 1)
+                        builder.append(if (builder.endsWith("\n")) "\n" else "\n\n")
                     }
+                } else {
+                    node.childNodes().forEach { child -> extractTextWithLineBreaks(child, builder) }
                 }
             }
         }
