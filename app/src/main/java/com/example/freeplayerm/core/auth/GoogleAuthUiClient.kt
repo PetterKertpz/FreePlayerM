@@ -1,12 +1,12 @@
 package com.example.freeplayerm.core.auth
 
 import android.content.Context
+import android.util.Log
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
-import com.example.freeplayerm.R
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.Firebase
@@ -16,13 +16,13 @@ import kotlinx.coroutines.tasks.await
 import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
 
-// (Los data class no cambian)
 data class DatosUsuarioGoogle(
     val userId: String,
     val correo: String?,
     val nombreUsuario: String?,
     val fotoPerfilUrl: String?
 )
+
 sealed class SignInResult {
     data class Success(val data: DatosUsuarioGoogle) : SignInResult()
     data class Error(val message: String) : SignInResult()
@@ -34,13 +34,16 @@ class GoogleAuthUiClient(
     private val credentialManager: CredentialManager
 ) {
     private val auth = Firebase.auth
+    private val TAG = "GoogleAuthUiClient"
 
-    // Esta es la única función que debe existir. No usa 'pendingIntent'.
     suspend fun iniciarSesion(): SignInResult {
-        val serverClientId = context.getString(R.string.default_web_client_id)
+        // Este es el ID de tipo "Web client" que Google necesita para generar el Token
+        val serverClientId = "1055393121843-3f1a2uqhenuug5gf03539p87pn51l49e.apps.googleusercontent.com"
+
         val googleIdOption = GetGoogleIdOption.Builder()
             .setFilterByAuthorizedAccounts(false)
             .setServerClientId(serverClientId)
+            .setAutoSelectEnabled(false) // Obliga a mostrar la selección de cuenta
             .setNonce(UUID.randomUUID().toString())
             .build()
 
@@ -67,19 +70,28 @@ class GoogleAuthUiClient(
                     )
                 )
             } else {
-                SignInResult.Error("Error: Credencial de tipo inesperado.")
+                SignInResult.Error("Tipo de credencial no reconocido.")
             }
-            // --- ✅ CORRECCIÓN 1: Manejar la cancelación del usuario explícitamente ---
         } catch (e: NoCredentialException) {
-            e.printStackTrace()
+            Log.w(TAG, "No hay credenciales guardadas o el usuario canceló.")
             SignInResult.Cancelled
         } catch (e: GetCredentialException) {
-            e.printStackTrace()
-            SignInResult.Error("Error de Credential Manager: ${e.message}")
+            Log.e(TAG, "Error de Credential Manager: ${e.message}")
+            // Este es el mensaje que verás si el SHA-1 no coincide
+            SignInResult.Error("Error de seguridad de Google. Revisa el SHA-1 en la consola.")
         } catch (e: Exception) {
-            e.printStackTrace()
             if (e is CancellationException) throw e
-            SignInResult.Error("Error inesperado: ${e.message}")
+            Log.e(TAG, "Error inesperado en login", e)
+            SignInResult.Error("Error: ${e.localizedMessage}")
+        }
+    }
+
+    suspend fun cerrarSesion() {
+        try {
+            auth.signOut()
+            credentialManager.clearCredentialState(androidx.credentials.ClearCredentialStateRequest())
+        } catch (e: Exception) {
+            Log.e(TAG, "Error al cerrar sesión", e)
         }
     }
 }
