@@ -1,4 +1,4 @@
-// en: app/src/main/java/com/example/freeplayerm/data/local/entity/CancionEntity.kt
+
 package com.example.freeplayerm.com.example.freeplayerm.data.local.entity
 
 import androidx.room.ColumnInfo

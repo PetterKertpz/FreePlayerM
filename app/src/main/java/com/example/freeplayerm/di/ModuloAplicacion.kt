@@ -3,16 +3,14 @@ package com.example.freeplayerm.di
 import android.content.Context
 import androidx.credentials.CredentialManager
 import androidx.room.Room
-import com.example.freeplayerm.com.example.freeplayerm.services.CancionSyncService
 import com.example.freeplayerm.core.auth.GoogleAuthUiClient
 import com.example.freeplayerm.data.local.AppDatabase
-import com.example.freeplayerm.data.local.dao.CancionDao // <-- Importante
+import com.example.freeplayerm.data.local.dao.CancionDao
 import com.example.freeplayerm.data.local.dao.LetraDao
 import com.example.freeplayerm.data.local.dao.UsuarioDao
 import com.example.freeplayerm.data.remote.GeniusApiService
 import com.example.freeplayerm.data.remote.GeniusScraper
 import com.example.freeplayerm.data.remote.GeniusServiceOptimizado
-import com.example.freeplayerm.data.repository.GeniusRepository
 import com.example.freeplayerm.data.repository.SessionRepository
 import com.example.freeplayerm.data.repository.UsuarioRepository
 import com.example.freeplayerm.data.repository.UsuarioRepositoryImpl
@@ -32,12 +30,6 @@ object ModuloAplicacion {
     @Singleton
     fun provideGeniusScraper(okHttpClient: OkHttpClient): GeniusScraper {
         return GeniusScraper(okHttpClient)
-    }
-
-    @Provides
-    @Singleton
-    fun provideCancionSyncService(geniusRepository: GeniusRepository): CancionSyncService {
-        return CancionSyncService(geniusRepository)
     }
 
     @Provides

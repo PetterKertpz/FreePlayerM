@@ -1,7 +1,9 @@
 package com.example.freeplayerm.utils
 
 import android.util.Log
+import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
+import androidx.media3.common.util.UnstableApi
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
 import com.example.freeplayerm.data.local.dao.CancionDao
 import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
@@ -9,6 +11,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
+@OptIn(UnstableApi::class) // 👈 ESTO SOLUCIONA EL ERROR DE LINT
 class MediaItemHelper @Inject constructor(
     private val cancionDao: CancionDao
 ) {
@@ -29,10 +32,11 @@ class MediaItemHelper @Inject constructor(
             val mediaId = mediaItem.mediaId
             val idCancion = mediaId.toIntOrNull() ?: return null
             val usuarioActualId = 1 // ID temporal para testing
+
             // Buscar en base de datos primero
             val desdeBD = cancionDao.obtenerCancionConArtistaPorId(
                 idCancion = idCancion.toInt(),
-                usuarioId = usuarioActualId // ← Aquí va el ID real del usuario
+                usuarioId = usuarioActualId
             )
             if (desdeBD != null) {
                 Log.d(TAG, "  Encontrado en BD: ${desdeBD.cancion.titulo}")
@@ -65,6 +69,7 @@ class MediaItemHelper @Inject constructor(
             val album = metadata.albumTitle?.toString()?.trim() ?: ""
             val genero = metadata.genre?.toString()?.trim() ?: ""
 
+            // Aquí estaba el error de Lint, ahora corregido por la anotación de la clase
             val duracionSegundos = metadata.durationMs?.let { (it / 1000).toInt() } ?: 0
 
             // Crear CancionEntity
@@ -81,9 +86,9 @@ class MediaItemHelper @Inject constructor(
                 geniusUrl = null
             )
 
-            // Crear CancionConArtista - ESTRUCTURA CORRECTA
+            // Crear CancionConArtista
             CancionConArtista(
-                cancion = cancionEntity, // ✅ Propiedad correcta
+                cancion = cancionEntity,
                 artistaNombre = artista,
                 albumNombre = album,
                 generoNombre = genero,
@@ -120,7 +125,7 @@ class MediaItemHelper @Inject constructor(
             val datosBasicos = extraerDatosBusquedaBasicos(mediaItem)
             if (datosBasicos != null) {
                 val (titulo, artista) = datosBasicos
-                val mediaId = mediaItem.mediaId?.toIntOrNull() ?: 0
+                val mediaId = mediaItem.mediaId.toIntOrNull() ?: 0
 
                 Log.d(TAG, "🆘 Usando datos mínimos: '$titulo' - '$artista'")
 
@@ -138,7 +143,7 @@ class MediaItemHelper @Inject constructor(
                 )
 
                 val resultadoMinimo = CancionConArtista(
-                    cancion = cancionMinima, // ✅ Propiedad correcta
+                    cancion = cancionMinima,
                     artistaNombre = artista,
                     albumNombre = "",
                     generoNombre = "",
@@ -201,7 +206,7 @@ class MediaItemHelper @Inject constructor(
             val metadata = mediaItem.mediaMetadata
             """
             🎵 MediaItem Debug:
-            ID: ${mediaItem.mediaId ?: "N/A"}
+            ID: ${mediaItem.mediaId}
             Título: ${metadata.title ?: "N/A"}
             Artista: ${metadata.artist ?: "N/A"} 
             Álbum: ${metadata.albumTitle ?: "N/A"}

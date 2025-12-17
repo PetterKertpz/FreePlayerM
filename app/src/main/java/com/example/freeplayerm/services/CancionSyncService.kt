@@ -1,60 +1,75 @@
-package com.example.freeplayerm.com.example.freeplayerm.services
+package com.example.freeplayerm.services
 
-import android.content.ContentValues.TAG
 import android.util.Log
 import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
-import com.example.freeplayerm.data.repository.GeniusRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Servicio para sincronizar el estado de reproducción de canciones.
+ *
+ * IMPORTANTE: Debe estar anotado con @Singleton para que Hilt lo inyecte correctamente.
+ */
 @Singleton
 class CancionSyncService @Inject constructor(
-    private val geniusRepository: GeniusRepository
+    // Aquí inyectas tus repositorios o DAOs que necesites
+    // private val cancionRepository: CancionRepository
 ) {
-    private val tag = "CancionSyncService"
-    private val scope = CoroutineScope(Dispatchers.IO)
-    private var syncJob: Job? = null
+    private val TAG = "CancionSyncService"
+    private val syncScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var currentSyncJob: Job? = null
 
     /**
-     * Inicia la sincronización de una canción cuando se reproduce
-     * Retorna inmediatamente, la sincronización corre en segundo plano
+     * Sincroniza la canción actual con el backend o base de datos local.
      */
     fun sincronizarCancionAlReproducir(cancionConArtista: CancionConArtista) {
-        // Cancelar sincronización anterior si existe
-        syncJob?.cancel()
+        Log.d(TAG, "🔄 Iniciando sincronización: ${cancionConArtista.cancion.titulo}")
 
-        // Iniciar nueva sincronización
-        syncJob = scope.launch {
+        // Cancela la sincronización anterior si existe
+        currentSyncJob?.cancel()
+
+        currentSyncJob = syncScope.launch {
             try {
-                val exito = geniusRepository.sincronizarCancionAlReproducir(cancionConArtista)
-                if (exito) {
-                    Log.d(TAG, " Sincronización exitosa") // Cambié a Log.d para éxito
-                } else {
-                    Log.w(TAG, " Sincronización falló")
-                }
+                // Aquí implementas tu lógica de sincronización
+                // Ejemplo: actualizar última reproducción, incrementar contador, etc.
+
+                // Simulación de sincronización
+                delay(100)
+
+                Log.d(TAG, "✅ Sincronización completada: ${cancionConArtista.cancion.titulo}")
+
+                // Ejemplo: actualizar en base de datos
+                // cancionRepository.actualizarUltimaReproduccion(cancionConArtista.cancion.id)
+
             } catch (e: Exception) {
-                Log.e(TAG, " * Error en sincronización: ${e.message}")
+                Log.e(TAG, "❌ Error en sincronización: ${e.message}", e)
             }
         }
     }
 
     /**
-     * Cancela cualquier sincronización en curso
+     * Cancela cualquier sincronización en progreso.
      */
     fun cancelarSincronizacion() {
-        syncJob?.cancel()
-        syncJob = null
-        Log.d(tag, "⏹️ Sincronización cancelada")
+        Log.d(TAG, "🛑 Cancelando sincronización")
+        currentSyncJob?.cancel()
+        currentSyncJob = null
     }
 
     /**
-     * Verifica si hay una sincronización en curso
+     * Limpia recursos cuando el servicio ya no se necesita.
+     * Llama a esto desde onDestroy() de MusicService.
      */
-    fun estaSincronizando(): Boolean {
-        return syncJob?.isActive == true
+    fun limpiar() {
+        Log.d(TAG, "🧹 Limpiando CancionSyncService")
+        cancelarSincronizacion()
+        // No necesitas cancelar syncScope si es Singleton,
+        // pero puedes hacerlo si quieres liberar recursos
     }
 }

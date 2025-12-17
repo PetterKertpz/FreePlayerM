@@ -1,8 +1,9 @@
 [versions]
 # --- CORE VERSIONS (GOD MODE 2025) ---
-agp = "8.13.2"              #  La versión correcta del Plugin
-kotlin = "2.3.0"           # [cite: 30] Tu versión deseada de Kotlin
-ksp = "2.2.21-2.0.4"       # (Ajustado a Kotlin 2.2.21)
+accompanistPermissions = "0.37.3"
+agp = "8.13.2"
+kotlin = "2.3.0"
+ksp = "2.2.21-2.0.4"  # ⚠️ ACTUALIZADO: Debe coincidir con tu versión de Kotlin
 
 # --- ANDROID & GOOGLE ---
 coreKtx = "1.17.0"
@@ -30,16 +31,19 @@ datastorePreferences = "1.2.0"
 
 # --- UI & MEDIA ---
 coilCompose = "2.7.0"
-media3Exoplayer = "1.8.0"
+media3 = "1.5.0"  # ⚠️ CAMBIADO: Versión unificada para todos los módulos de Media3
 bcrypt = "0.10.2"
 
 # --- TESTING ---
 junit = "4.13.2"
 androidxJunit = "1.3.0"
-espressoCore = "3.6.1"
+espressoCore = "3.7.0"
+mockk = "1.14.7"
+coroutinesTest = "1.10.2"
 
 [libraries]
 # --- Core Android ---
+accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanistPermissions" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
@@ -58,7 +62,6 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 
 # --- Icons ---
 androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
-# (Tus iconos externos se mantienen igual, resumidos aquí por brevedad)
 composeIcons-feather = { module = "br.com.devsrsouza.compose.icons:feather", version = "1.1.1" }
 composeIcons-fontAwesome = { module = "br.com.devsrsouza.compose.icons:font-awesome", version = "1.1.1" }
 
@@ -81,9 +84,12 @@ androidx-credentials = { group = "androidx.credentials", name = "credentials", v
 androidx-credentials-play-services-auth = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentialManager" }
 google-id = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleId" }
 
-# --- Media & Tools ---
-androidx-media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3Exoplayer" }
-androidx-media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3Exoplayer" }
+# --- Media3 (COMPLETO CON SESSION) ---
+androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
+androidx-media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3" }  # ⚠️ AGREGADO
+androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
+
+# --- Other UI & Tools ---
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 bcrypt = { group = "at.favre.lib", name = "bcrypt", version.ref = "bcrypt" }
@@ -100,8 +106,8 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "a
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
-mockk = { module = "io.mockk:mockk", version = "1.14.7" }
-kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version = "1.10.2" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutinesTest" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

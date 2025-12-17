@@ -1,7 +1,8 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose) // Usamos el plugin oficial de Compose para Kotlin 2.0+
+    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.google.gms.google.services)
@@ -9,7 +10,7 @@ plugins {
 
 android {
     namespace = "com.example.freeplayerm"
-    compileSdk = 36 // [cite: 622]
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.freeplayerm"
@@ -17,11 +18,12 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        buildConfigField("String", "GENIUS_CLIENT_ACCESS_TOKEN", "\"Fttc_OdldxyyXh2JvHA_SBC70t7-GMvnunPHIOJ7_-LKwvIooWCJYN-kTGyz9590\"")
     }
 
     buildTypes {
@@ -35,10 +37,9 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17 //
+        sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
 
     buildFeatures {
         compose = true
@@ -49,6 +50,12 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
@@ -79,6 +86,7 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.google.id)
+    implementation(libs.accompanist.permissions)
 
     // --- Data & Network ---
     implementation(libs.retrofit.core)
@@ -93,9 +101,12 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
-    // --- Media & Utils ---
+    // --- Media3 (CRÍTICO: Faltaba media3-session) ---
     implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.session) // ⚠️ ESTA ES LA DEPENDENCIA CRÍTICA QUE FALTABA
     implementation(libs.androidx.media3.ui)
+
+    // --- Utils ---
     implementation(libs.coil.compose)
     implementation(libs.bcrypt)
 
@@ -103,7 +114,6 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.composeIcons.feather)
     implementation(libs.composeIcons.fontAwesome)
-    // (Añade el resto de tus iconos aquí)
 
     // --- Debug & Test ---
     debugImplementation(libs.androidx.ui.tooling)
