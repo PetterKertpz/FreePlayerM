@@ -25,7 +25,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ListaReproduccionEntity
+import com.example.freeplayerm.data.local.entity.ListaReproduccionEntity
 import com.example.freeplayerm.ui.theme.AppColors
 
 @Composable

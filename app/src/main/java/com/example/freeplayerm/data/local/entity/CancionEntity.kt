@@ -1,5 +1,5 @@
 
-package com.example.freeplayerm.com.example.freeplayerm.data.local.entity
+package com.example.freeplayerm.data.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity

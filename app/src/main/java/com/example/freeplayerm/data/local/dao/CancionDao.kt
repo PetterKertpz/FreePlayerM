@@ -6,13 +6,14 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.AlbumEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ArtistaEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.DetalleListaReproduccionEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.FavoritoEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.GeneroEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ListaReproduccionEntity
+import com.example.freeplayerm.data.local.entity.AlbumEntity
+import com.example.freeplayerm.data.local.entity.ArtistaEntity
+import com.example.freeplayerm.data.local.entity.CancionEntity
+import com.example.freeplayerm.data.local.entity.DetalleListaReproduccionEntity
+import com.example.freeplayerm.data.local.entity.FavoritoEntity
+import com.example.freeplayerm.data.local.entity.GeneroEntity
+import com.example.freeplayerm.data.local.entity.ListaReproduccionEntity
+
 import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
 import kotlinx.coroutines.flow.Flow
 

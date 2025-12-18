@@ -4,17 +4,17 @@ package com.example.freeplayerm.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.AlbumEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ArtistaEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.DetalleListaReproduccionEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.FavoritoEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.GeneroEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.LetraEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ListaReproduccionEntity
+import com.example.freeplayerm.data.local.entity.ArtistaEntity
 import com.example.freeplayerm.data.local.dao.CancionDao
 import com.example.freeplayerm.data.local.dao.LetraDao
 import com.example.freeplayerm.data.local.dao.UsuarioDao
+import com.example.freeplayerm.data.local.entity.AlbumEntity
+import com.example.freeplayerm.data.local.entity.CancionEntity
+import com.example.freeplayerm.data.local.entity.DetalleListaReproduccionEntity
+import com.example.freeplayerm.data.local.entity.FavoritoEntity
+import com.example.freeplayerm.data.local.entity.GeneroEntity
+import com.example.freeplayerm.data.local.entity.LetraEntity
+import com.example.freeplayerm.data.local.entity.ListaReproduccionEntity
 import com.example.freeplayerm.data.local.entity.UsuarioEntity
 
 // --- CAMBIO AQUÍ ---

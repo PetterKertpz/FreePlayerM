@@ -48,7 +48,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
+import com.example.freeplayerm.data.local.entity.CancionEntity
 import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
 import com.example.freeplayerm.ui.theme.AppColors
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme

@@ -7,13 +7,13 @@ import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.util.UnstableApi
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
-import com.example.freeplayerm.data.local.dao.CancionDao
 import com.example.freeplayerm.data.local.entity.CancionEntity
+import com.example.freeplayerm.data.local.dao.CancionDao
 import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
+import androidx.core.net.toUri
 
 @Singleton
 @OptIn(UnstableApi::class)
@@ -53,11 +53,11 @@ class MediaItemHelper @Inject constructor(
         }
         // Prioridad 2: Ruta de archivo (si existe en la entidad)
         else if (!cancion.portadaPath.isNullOrBlank()) {
-            metadataBuilder.setArtworkUri(Uri.parse(cancion.portadaPath))
+            metadataBuilder.setArtworkUri(cancion.portadaPath.toUri())
         }
 
         // 3. Agregar duración (opcional, ayuda a la UI del sistema)
-        cancion.cancion.duracionSegundos?.let { segundos ->
+        cancion.cancion.duracionSegundos.let { segundos ->
             if (segundos > 0) {
                 // Convertir a ms si es necesario, ExoPlayer lo maneja mejor automáticamente
                 // pero establecerlo aquí ayuda a la metadata estática
@@ -222,7 +222,7 @@ class MediaItemHelper @Inject constructor(
     fun esMediaItemValido(mediaItem: MediaItem): Boolean {
         return try {
             val metadata = mediaItem.mediaMetadata
-            val tieneMediaId = !mediaItem.mediaId.isNullOrBlank()
+            val tieneMediaId = mediaItem.mediaId.isNotBlank()
             val tieneTitulo = !metadata.title?.toString().isNullOrBlank()
             val valido = tieneMediaId && tieneTitulo
 

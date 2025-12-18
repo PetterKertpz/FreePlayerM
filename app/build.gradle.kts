@@ -55,8 +55,7 @@ android {
 
 kotlin {
     compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-        // CORRECCIÓN: Usa .add() en lugar de signos + o =
+        jvmTarget.set(JvmTarget.JVM_17)
         freeCompilerArgs.add("-Xannotation-default-target=param-property")
     }
 
@@ -106,7 +105,7 @@ dependencies {
 
     // --- Media3 (CRÍTICO: Faltaba media3-session) ---
     implementation(libs.androidx.media3.exoplayer)
-    implementation(libs.androidx.media3.session) // ⚠️ ESTA ES LA DEPENDENCIA CRÍTICA QUE FALTABA
+    implementation(libs.androidx.media3.session)
     implementation(libs.androidx.media3.ui)
 
     // --- Utils ---

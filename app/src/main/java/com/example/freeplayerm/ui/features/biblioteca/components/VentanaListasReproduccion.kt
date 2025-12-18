@@ -64,7 +64,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import coil.compose.AsyncImage
 import com.example.freeplayerm.R
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ListaReproduccionEntity
+import com.example.freeplayerm.data.local.entity.ListaReproduccionEntity
 import com.example.freeplayerm.ui.theme.AppColors
 
 @Composable

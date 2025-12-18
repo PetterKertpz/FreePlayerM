@@ -51,11 +51,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.AlbumEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ArtistaEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.GeneroEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ListaReproduccionEntity
+import com.example.freeplayerm.data.local.entity.AlbumEntity
+import com.example.freeplayerm.data.local.entity.ArtistaEntity
+import com.example.freeplayerm.data.local.entity.CancionEntity
+import com.example.freeplayerm.data.local.entity.GeneroEntity
+import com.example.freeplayerm.data.local.entity.ListaReproduccionEntity
 import com.example.freeplayerm.com.example.freeplayerm.ui.features.biblioteca.components.DialogoCrearLista
 import com.example.freeplayerm.com.example.freeplayerm.ui.features.biblioteca.components.VentanaListasReproduccion
 import com.example.freeplayerm.data.local.entity.UsuarioEntity

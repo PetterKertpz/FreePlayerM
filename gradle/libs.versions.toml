@@ -3,13 +3,13 @@
 accompanistPermissions = "0.37.3"
 agp = "8.13.2"
 kotlin = "2.3.0"
-ksp = "2.2.21-2.0.4"  # ⚠️ ACTUALIZADO: Debe coincidir con tu versión de Kotlin
+ksp = "2.2.21-2.0.4"
 
 # --- ANDROID & GOOGLE ---
 coreKtx = "1.17.0"
 lifecycleKtx = "2.10.0"
-activityCompose = "1.12.1"
-composeBom = "2025.12.00"
+activityCompose = "1.12.2"
+composeBom = "2025.12.01"
 room = "2.8.4"
 navigationCompose = "2.9.6"
 hilt = "2.57.2"
@@ -31,7 +31,7 @@ datastorePreferences = "1.2.0"
 
 # --- UI & MEDIA ---
 coilCompose = "2.7.0"
-media3 = "1.5.0"  # ⚠️ CAMBIADO: Versión unificada para todos los módulos de Media3
+media3 = "1.9.0"
 bcrypt = "0.10.2"
 
 # --- TESTING ---
@@ -86,7 +86,7 @@ google-id = { group = "com.google.android.libraries.identity.googleid", name = "
 
 # --- Media3 (COMPLETO CON SESSION) ---
 androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
-androidx-media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3" }  # ⚠️ AGREGADO
+androidx-media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3" }
 androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
 
 # --- Other UI & Tools ---

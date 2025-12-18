@@ -3,8 +3,8 @@ package com.example.freeplayerm.data.repository
 
 import android.content.Context
 import android.util.Log
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.LetraEntity
+import com.example.freeplayerm.data.local.entity.CancionEntity
+import com.example.freeplayerm.data.local.entity.LetraEntity
 import com.example.freeplayerm.data.local.dao.CancionDao
 import com.example.freeplayerm.data.local.dao.LetraDao
 import com.example.freeplayerm.data.local.entity.relations.CancionConArtista

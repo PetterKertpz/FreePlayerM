@@ -7,60 +7,57 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.Build
 import android.os.Bundle
-import android.util.Log
+import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.IconCompat
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaNotification
 import androidx.media3.session.MediaSession
+import androidx.media3.session.MediaStyleNotificationHelper
 import com.example.freeplayerm.MainActivity
 import com.example.freeplayerm.R
 import com.google.common.collect.ImmutableList
-import kotlinx.coroutines.*
 
 /**
- * Proveedor de notificaciones personalizado usando MediaStyle.
+ * Proveedor de notificaciones personalizado para Media3.
  *
- * ✅ Compatible con Android 13+ lockscreen
- * ✅ Integración nativa con Media3
- * ✅ Diseño personalizado con colores de tu marca
- * ✅ Actualización automática de metadatos
- * ✅ Funciona con Bluetooth, Android Auto, WearOS
+ * NOTA: Asegúrate de tener la dependencia 'androidx.media3:media3-session'
+ * en tu build.gradle para usar MediaStyleNotificationHelper.
  */
 @UnstableApi
 class CustomNotificationProvider(
     private val context: Context
 ) : MediaNotification.Provider {
 
-    private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-    private var currentNotificationId = MusicService.NOTIFICATION_ID
+    private val notificationManager =
+        context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    private val currentNotificationId = MusicService.NOTIFICATION_ID
     private val TAG = "CustomNotification"
-
-    // Scope para actualizaciones en tiempo real
-    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    private var updateJob: Job? = null
 
     init {
         createNotificationChannel()
-        Log.d(TAG, "✅ CustomNotificationProvider inicializado")
     }
 
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            MusicService.CHANNEL_ID,
-            "Reproducción de Música",
-            NotificationManager.IMPORTANCE_LOW
-        ).apply {
-            description = "Control de reproducción musical"
-            setShowBadge(false)
-            lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
-            setSound(null, null) // Sin sonido para notificación de media
+        // Solo necesario para Android 8.0 (Oreo) en adelante
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                MusicService.CHANNEL_ID,
+                "Reproducción de Música",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Control de reproducción musical"
+                setShowBadge(false)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+                setSound(null, null) // Importante para que no interrumpa el audio
+            }
+            notificationManager.createNotificationChannel(channel)
         }
-        notificationManager.createNotificationChannel(channel)
-        Log.d(TAG, "📢 Canal de notificación creado")
     }
 
     override fun createNotification(
@@ -73,23 +70,50 @@ class CustomNotificationProvider(
         val player = mediaSession.player
         val metadata = player.mediaMetadata
 
-        // Obtener información de la canción
-        val titulo = metadata.title?.toString() ?: "Canción desconocida"
-        val artista = metadata.artist?.toString() ?: "Artista desconocido"
+        // 1. Obtener datos de la canción
+        val titulo = metadata.title?.toString() ?: "FreePlayer"
+        val artista = metadata.artist?.toString() ?: "Reproduciendo música"
 
-        Log.d(TAG, "🎵 Creando notificación para: $titulo - $artista")
-
-        // Obtener artwork (portada del álbum)
+        // 2. Obtener la portada (Artwork)
         val albumArt = metadata.artworkData?.let {
             try {
                 BitmapFactory.decodeByteArray(it, 0, it.size)
             } catch (e: Exception) {
-                Log.w(TAG, "⚠️ Error decodificando artwork: ${e.message}")
-                null
+                getDefaultArtwork()
             }
         } ?: getDefaultArtwork()
 
-        // Intent para abrir la app al tocar la notificación
+        // 3. Crear Acciones (Botones) usando la API de Media3 correctamente
+
+        // Acción Anterior
+        val prevAction = actionFactory.createMediaAction(
+            mediaSession,
+            IconCompat.createWithResource(context, R.drawable.ic_previous),
+            "Anterior",
+            Player.COMMAND_SEEK_TO_PREVIOUS
+        )
+
+        // Acción Play/Pause (Dinámica)
+        val isPlaying = player.isPlaying
+        val playPauseIcon = if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play
+        val playPauseTitle = if (isPlaying) "Pausar" else "Reproducir"
+
+        val playPauseAction = actionFactory.createMediaAction(
+            mediaSession,
+            IconCompat.createWithResource(context, playPauseIcon),
+            playPauseTitle,
+            Player.COMMAND_PLAY_PAUSE
+        )
+
+        // Acción Siguiente
+        val nextAction = actionFactory.createMediaAction(
+            mediaSession,
+            IconCompat.createWithResource(context, R.drawable.ic_next),
+            "Siguiente",
+            Player.COMMAND_SEEK_TO_NEXT
+        )
+
+        // 4. Configurar el Intent para abrir la App al tocar la notificación
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
@@ -100,173 +124,72 @@ class CustomNotificationProvider(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Crear acciones usando el actionFactory de Media3
-        // Esto asegura que los comandos se envíen correctamente al player
+        // 5. Configurar el estilo Media3 (Reemplaza al estilo Legacy)
+        // Esto vincula automáticamente el token de sesión y habilita controles en Lockscreen
+        val mediaStyle = MediaStyleNotificationHelper.MediaStyle(mediaSession)
+            .setShowActionsInCompactView(0, 1, 2) // Índices de botones: [Prev, Play, Next]
 
-        val playPauseAction = if (player.isPlaying) {
-            NotificationCompat.Action(
-                R.drawable.ic_pause,
-                "Pausar",
-                actionFactory.createMediaAction(
-                    mediaSession,
-                    androidx.media3.session.MediaSession.ControllerInfo.LEGACY_CONTROLLER,
-                    Player.COMMAND_PLAY_PAUSE,
-                    Bundle.EMPTY
-                )
-            )
-        } else {
-            NotificationCompat.Action(
-                R.drawable.ic_play,
-                "Reproducir",
-                actionFactory.createMediaAction(
-                    mediaSession,
-                    androidx.media3.session.MediaSession.ControllerInfo.LEGACY_CONTROLLER,
-                    Player.COMMAND_PLAY_PAUSE,
-                    Bundle.EMPTY
-                )
-            )
-        }
-
-        val previousAction = NotificationCompat.Action(
-            R.drawable.ic_previous,
-            "Anterior",
-            actionFactory.createMediaAction(
-                mediaSession,
-                androidx.media3.session.MediaSession.ControllerInfo.LEGACY_CONTROLLER,
-                Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
-                Bundle.EMPTY
-            )
-        )
-
-        val nextAction = NotificationCompat.Action(
-            R.drawable.ic_next,
-            "Siguiente",
-            actionFactory.createMediaAction(
-                mediaSession,
-                androidx.media3.session.MediaSession.ControllerInfo.LEGACY_CONTROLLER,
-                Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
-                Bundle.EMPTY
-            )
-        )
-
-        // Construir notificación con MediaStyle
-        val notification = NotificationCompat.Builder(context, MusicService.CHANNEL_ID)
-            // --- CONTENIDO BÁSICO ---
+        // 6. Construir la notificación
+        val builder = NotificationCompat.Builder(context, MusicService.CHANNEL_ID)
+            // Datos básicos
             .setSmallIcon(R.drawable.ic_notification)
             .setLargeIcon(albumArt)
             .setContentTitle(titulo)
             .setContentText(artista)
-            .setSubText("FreePlayer") // Opcional: muestra el nombre de tu app
+            .setSubText("FreePlayer") // Opcional
 
-            // --- PERSONALIZACIÓN DE COLOR (TU MARCA) ---
-            // Esto hace que la notificación use el color de tu app
+            // Personalización visual
             .setColorized(true)
             .setColor(getNotificationColor())
 
-            // --- MEDIASTYLE (CRÍTICO PARA LOCKSCREEN Y ANDROID 13+) ---
-            .setStyle(
-                androidx.media.app.NotificationCompat.MediaStyle()
-                    .setMediaSession(mediaSession.sessionToken.legacyToken)
-                    .setShowActionsInCompactView(0, 1, 2) // Muestra 3 botones en vista compacta
-                    .setShowCancelButton(false)
+            // Configuración Media
+            .setStyle(mediaStyle)
+            .setContentIntent(openAppPendingIntent)
+
+            // Botón de cierre (deslizar o X en algunas versiones)
+            .setDeleteIntent(
+                actionFactory.createMediaActionPendingIntent(mediaSession,
+                    Player.COMMAND_STOP.toLong()
+                )
             )
 
-            // --- ACCIONES (BOTONES) ---
-            .addAction(previousAction)
-            .addAction(playPauseAction)
-            .addAction(nextAction)
-
-            // --- COMPORTAMIENTO ---
-            .setContentIntent(openAppPendingIntent)
-            .setDeleteIntent(createStopPendingIntent()) // Al deslizar para quitar
-            .setOngoing(player.isPlaying) // No se puede quitar si está reproduciendo
-            .setOnlyAlertOnce(true) // No vibra/suena cada vez que se actualiza
-            .setShowWhen(false)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // Visible en lockscreen
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            // Comportamiento del sistema
+            .setOngoing(isPlaying) // No se puede quitar si está sonando
+            .setOnlyAlertOnce(true) // Evita vibración constante al actualizar
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // Visible en pantalla de bloqueo
+            .setPriority(NotificationCompat.PRIORITY_LOW) // Baja prioridad para evitar sonido de notificación
             .setAutoCancel(false)
-            .build()
 
-        Log.d(TAG, "✅ Notificación creada (Playing: ${player.isPlaying})")
+        // Agregar las acciones al builder en orden (Prev -> Play -> Next)
+        prevAction?.let { builder.addAction(it) }
+        playPauseAction?.let { builder.addAction(it) }
+        nextAction?.let { builder.addAction(it) }
 
-        // Iniciar actualizaciones automáticas si está reproduciendo
-        startProgressUpdates(player, onNotificationChangedCallback)
-
-        return MediaNotification(currentNotificationId, notification)
+        // Retornar la notificación construida
+        return MediaNotification(currentNotificationId, builder.build())
     }
 
     /**
-     * Obtiene el color de la notificación desde los recursos
-     * Prioriza colores personalizados, fallback a colores del sistema
+     * Obtiene el color de marca o un fallback
      */
     private fun getNotificationColor(): Int {
         return try {
-            // Intenta obtener un color personalizado
             ContextCompat.getColor(context, R.color.purple_500)
         } catch (e: Exception) {
-            // Fallback a un color por defecto
-            try {
-                ContextCompat.getColor(context, android.R.color.holo_purple)
-            } catch (e: Exception) {
-                // Último fallback
-                0xFF6B4EFF.toInt() // Morado en hex
-            }
+            // Color de respaldo (Morado)
+            0xFF6200EE.toInt()
         }
     }
 
     /**
-     * Crea un PendingIntent para detener la reproducción
-     * cuando el usuario desliza la notificación
-     */
-    private fun createStopPendingIntent(): PendingIntent {
-        val stopIntent = Intent(context, MusicService::class.java).apply {
-            action = "ACTION_STOP"
-        }
-        return PendingIntent.getService(
-            context,
-            1,
-            stopIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-    }
-
-    /**
-     * Obtiene un artwork por defecto cuando la canción no tiene portada
+     * Obtiene una imagen por defecto si no hay portada
      */
     private fun getDefaultArtwork(): Bitmap {
         return try {
             BitmapFactory.decodeResource(context.resources, R.drawable.ic_notification)
         } catch (e: Exception) {
-            Log.w(TAG, "⚠️ Error cargando artwork por defecto: ${e.message}")
-            // Crear un bitmap simple de 1x1 como fallback
+            // Bitmap vacío 1x1 para evitar crash
             Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
-        }
-    }
-
-    /**
-     * Inicia actualizaciones periódicas de la notificación
-     * para reflejar el progreso de reproducción en tiempo real
-     */
-    private fun startProgressUpdates(
-        player: Player,
-        callback: MediaNotification.Provider.Callback
-    ) {
-        // Cancelar job anterior si existe
-        updateJob?.cancel()
-
-        if (player.isPlaying) {
-            Log.d(TAG, "⏱️ Iniciando actualizaciones de progreso")
-            updateJob = scope.launch {
-                while (player.isPlaying) {
-                    delay(1000) // Actualizar cada segundo
-                    try {
-                        callback.onNotificationChanged(this@CustomNotificationProvider)
-                    } catch (e: Exception) {
-                        Log.e(TAG, "❌ Error actualizando notificación: ${e.message}")
-                    }
-                }
-                Log.d(TAG, "⏸️ Deteniendo actualizaciones de progreso")
-            }
         }
     }
 
@@ -275,16 +198,7 @@ class CustomNotificationProvider(
         action: String,
         extras: Bundle
     ): Boolean {
-        Log.d(TAG, "🎮 Comando recibido: $action")
-        return false // Retornar true si manejas comandos personalizados
-    }
-
-    /**
-     * Limpieza de recursos cuando se destruye el provider
-     */
-    fun release() {
-        updateJob?.cancel()
-        scope.cancel()
-        Log.d(TAG, "🔚 CustomNotificationProvider liberado")
+        // Aquí puedes manejar comandos extra si los necesitas
+        return false
     }
 }

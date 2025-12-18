@@ -1,11 +1,12 @@
 // en: app/src/main/java/com/example/freeplayerm/data/local/entity/AlbumEntity.kt
-package com.example.freeplayerm.com.example.freeplayerm.data.local.entity
+package com.example.freeplayerm.data.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index // <-- Asegúrate de importar Index
 import androidx.room.PrimaryKey
+import com.example.freeplayerm.data.local.entity.ArtistaEntity
 
 @Entity(
     tableName = "albumes",

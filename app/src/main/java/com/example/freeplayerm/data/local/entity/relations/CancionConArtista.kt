@@ -1,7 +1,7 @@
 // en: app/src/main/java/com/example/freeplayerm/data/local/entity/relations/CancionConArtista.kt
 package com.example.freeplayerm.data.local.entity.relations
 import androidx.room.Embedded
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
+import com.example.freeplayerm.data.local.entity.CancionEntity
 
 data class CancionConArtista(
     @Embedded

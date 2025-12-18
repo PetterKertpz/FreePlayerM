@@ -6,10 +6,10 @@ import android.content.Context
 import android.provider.MediaStore
 import android.util.Log
 import androidx.core.net.toUri
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.AlbumEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ArtistaEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.GeneroEntity
+import com.example.freeplayerm.data.local.entity.AlbumEntity
+import com.example.freeplayerm.data.local.entity.ArtistaEntity
+import com.example.freeplayerm.data.local.entity.CancionEntity
+import com.example.freeplayerm.data.local.entity.GeneroEntity
 import com.example.freeplayerm.data.local.dao.CancionDao
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers

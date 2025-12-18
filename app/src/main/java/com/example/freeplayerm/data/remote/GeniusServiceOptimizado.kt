@@ -2,8 +2,8 @@
 package com.example.freeplayerm.data.remote
 
 import android.util.Log
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.ArtistaEntity
-import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
+import com.example.freeplayerm.data.local.entity.ArtistaEntity
+import com.example.freeplayerm.data.local.entity.CancionEntity
 import com.example.freeplayerm.data.remote.dto.GeniusSearchResponse
 import com.example.freeplayerm.data.remote.dto.SongResult
 import kotlinx.coroutines.Dispatchers

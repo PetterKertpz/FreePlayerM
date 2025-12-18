@@ -7,7 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.example.freeplayerm.data.local.entity.UsuarioEntity
-import kotlinx.coroutines.flow.Flow // <-- Importante añadir
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface UsuarioDao {
