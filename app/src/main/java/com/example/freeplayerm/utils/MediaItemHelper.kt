@@ -1,21 +1,77 @@
 package com.example.freeplayerm.utils
 
+import android.graphics.Bitmap
+import android.net.Uri
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.util.UnstableApi
 import com.example.freeplayerm.com.example.freeplayerm.data.local.entity.CancionEntity
 import com.example.freeplayerm.data.local.dao.CancionDao
+import com.example.freeplayerm.data.local.entity.CancionEntity
 import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
+import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-@OptIn(UnstableApi::class) // 👈 ESTO SOLUCIONA EL ERROR DE LINT
+@OptIn(UnstableApi::class)
 class MediaItemHelper @Inject constructor(
     private val cancionDao: CancionDao
 ) {
     private val TAG = "MediaItemHelper"
+
+    /**
+     * ✅ NUEVO: Crea un MediaItem con todos los metadatos necesarios para la notificación.
+     * Úsalo en tu ViewModel antes de enviar la canción al player.
+     */
+    fun crearMediaItemDesdeEntidad(
+        cancion: CancionConArtista,
+        artworkBitmap: Bitmap? = null
+    ): MediaItem {
+
+        // 1. Preparar metadatos (Título, Artista, Album, etc.)
+        val metadataBuilder = MediaMetadata.Builder()
+            .setTitle(cancion.cancion.titulo)
+            .setArtist(cancion.artistaNombre ?: "Artista Desconocido")
+            .setAlbumTitle(cancion.albumNombre ?: "")
+            .setGenre(cancion.generoNombre ?: "")
+            .setIsPlayable(true)
+
+        // 2. Agregar Portada (Artwork)
+        // Prioridad 1: Bitmap en memoria (si se pasa como argumento)
+        if (artworkBitmap != null) {
+            try {
+                val stream = ByteArrayOutputStream()
+                artworkBitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+                val byteArray = stream.toByteArray()
+                metadataBuilder.setArtworkData(byteArray, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error comprimiendo artwork: ${e.message}")
+            }
+        }
+        // Prioridad 2: Ruta de archivo (si existe en la entidad)
+        else if (!cancion.portadaPath.isNullOrBlank()) {
+            metadataBuilder.setArtworkUri(Uri.parse(cancion.portadaPath))
+        }
+
+        // 3. Agregar duración (opcional, ayuda a la UI del sistema)
+        cancion.cancion.duracionSegundos?.let { segundos ->
+            if (segundos > 0) {
+                // Convertir a ms si es necesario, ExoPlayer lo maneja mejor automáticamente
+                // pero establecerlo aquí ayuda a la metadata estática
+                // metadataBuilder.setDurationMs(segundos * 1000L)
+            }
+        }
+
+        // 4. Construir el MediaItem final
+        return MediaItem.Builder()
+            .setUri(cancion.cancion.archivoPath)
+            .setMediaId(cancion.cancion.idCancion.toString())
+            .setMediaMetadata(metadataBuilder.build())
+            .build()
+    }
 
     /**
      * Convierte un MediaItem en CancionConArtista para sincronización
