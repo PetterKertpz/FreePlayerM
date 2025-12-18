@@ -55,8 +55,11 @@ android {
 
 kotlin {
     compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_17)
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        // CORRECCIÓN: Usa .add() en lugar de signos + o =
+        freeCompilerArgs.add("-Xannotation-default-target=param-property")
     }
+
 }
 
 dependencies {
