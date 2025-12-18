@@ -14,7 +14,7 @@
       },
       "oauth_client": [
         {
-          "client_id": "1055393121843-iruirtubfs1ou8di8v4av9k39kevsu6i.apps.googleusercontent.com",
+          "client_id": "1055393121843-sd47ndjsuth265q6q4kh82c32jlpfrsg.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.example.freeplayerm",
@@ -22,7 +22,15 @@
           }
         },
         {
-          "client_id": "1055393121843-71ib1ul418ljaofa942sggpv19kf17oa.apps.googleusercontent.com",
+          "client_id": "1055393121843-vf0nbfo4n40q0i8tu1veei1le5e3es5n.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.freeplayerm",
+            "certificate_hash": "9cd63d78edffc0bb992a3240f2434ed2b80bc73e"
+          }
+        },
+        {
+          "client_id": "1055393121843-p1ob2qacorbvq5kk5ojmgu73n3s0mjrv.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
@@ -35,7 +43,7 @@
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "1055393121843-71ib1ul418ljaofa942sggpv19kf17oa.apps.googleusercontent.com",
+              "client_id": "1055393121843-p1ob2qacorbvq5kk5ojmgu73n3s0mjrv.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

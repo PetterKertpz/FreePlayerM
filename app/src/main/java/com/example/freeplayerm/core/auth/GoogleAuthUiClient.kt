@@ -38,7 +38,7 @@ class GoogleAuthUiClient(
 
     suspend fun iniciarSesion(): SignInResult {
         // Este es el ID de tipo "Web client" que Google necesita para generar el Token
-        val serverClientId = "1055393121843-3f1a2uqhenuug5gf03539p87pn51l49e.apps.googleusercontent.com"
+        val serverClientId = "1055393121843-p1ob2qacorbvq5kk5ojmgu73n3s0mjrv.apps.googleusercontent.com"
 
         val googleIdOption = GetGoogleIdOption.Builder()
             .setFilterByAuthorizedAccounts(false)
