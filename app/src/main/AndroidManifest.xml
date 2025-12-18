@@ -1,48 +1,63 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Permisos -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
-            android:maxSdkVersion="32" />
+        android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"
-            tools:ignore="ForegroundServicesPolicy" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
-
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:name=".FreePlayerApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/iconfreeplayer"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@mipmap/iconfreeplayer_foreground"
         android:supportsRtl="true"
         android:theme="@style/Theme.FreePlayerM"
         tools:targetApi="36">
-        <activity
 
+        <!-- ============================================ -->
+        <!-- ICONO DE NOTIFICACIÓN MEDIA3 -->
+        <!-- Usa el ic_notification.xml que ya existe en drawable -->
+        <!-- ============================================ -->
+        <meta-data
+            android:name="androidx.media3.session.notification.small_icon"
+            android:resource="@drawable/ic_notification" />
+        <!-- ============================================ -->
+
+        <!-- Activity Principal -->
+        <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.FreePlayerM">
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.FreePlayerM"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
         </activity>
 
+        <!-- Servicio de Música -->
         <service
             android:name=".services.MusicService"
             android:exported="true"
             android:foregroundServiceType="mediaPlayback">
+
             <intent-filter>
-                <action android:name="androidx.media3.session.MediaSessionService"/>
+                <action android:name="androidx.media3.session.MediaSessionService" />
             </intent-filter>
+
         </service>
 
     </application>

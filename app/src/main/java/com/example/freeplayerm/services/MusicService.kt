@@ -51,7 +51,7 @@ class MusicService : MediaSessionService() {
 
     companion object {
         const val NOTIFICATION_ID = 101
-        const val CHANNEL_ID = "media_playback_channel"
+        const val CHANNEL_ID = "media_playback_channel" // Ahora es accesible públicamente
     }
 
     @OptIn(UnstableApi::class)
@@ -61,6 +61,8 @@ class MusicService : MediaSessionService() {
         createNotificationChannel()
         setupPlayerListeners()
 
+        // Configuramos el proveedor de notificaciones personalizado
+        // IMPORTANTE: Usar el constructor simple, NO .create()
         val notificationProvider = CustomNotificationProvider(this)
         setMediaNotificationProvider(notificationProvider)
 
@@ -166,6 +168,7 @@ class MusicService : MediaSessionService() {
             }
             val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
+            Log.d(TAG, "✅ Canal de notificación creado correctamente")
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error creando canal: ${e.message}")
         }
