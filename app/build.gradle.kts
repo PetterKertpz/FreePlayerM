@@ -103,10 +103,12 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
-    // --- Media3 (CRÍTICO: Faltaba media3-session) ---
+    //Media
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.media3.ui)
+
+
 
     // --- Utils ---
     implementation(libs.coil.compose)
@@ -127,4 +129,5 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+    implementation(libs.kotlinx.coroutines.guava)
 }

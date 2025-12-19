@@ -21,7 +21,10 @@ class CancionSyncService @Inject constructor(
     // Aquí inyectas tus repositorios o DAOs que necesites
     // private val cancionRepository: CancionRepository
 ) {
-    private val TAG = "CancionSyncService"
+
+    companion object {
+        private const val TAG = "CancionSyncService"
+    }
     private val syncScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var currentSyncJob: Job? = null
 

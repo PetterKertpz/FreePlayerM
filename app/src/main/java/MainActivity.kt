@@ -1,5 +1,3 @@
-// en: app/src/main/java/com/example/freeplayerm/MainActivity.kt
-
 package com.example.freeplayerm
 
 import android.Manifest
@@ -23,7 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
-import com.example.freeplayerm.com.example.freeplayerm.ui.features.splash.PantallaDeCarga
+import com.example.freeplayerm.ui.features.splash.PantallaDeCarga
 import com.example.freeplayerm.ui.features.nav.GrafoDeNavegacion
 import com.example.freeplayerm.ui.features.nav.Rutas
 import com.example.freeplayerm.ui.features.reproductor.ReproductorViewModel

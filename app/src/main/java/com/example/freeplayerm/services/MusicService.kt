@@ -1,17 +1,19 @@
 package com.example.freeplayerm.services
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
+import android.app.Notification
 import android.app.PendingIntent
 import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.Build
 import android.util.Log
 import androidx.annotation.OptIn
+import androidx.core.app.NotificationCompat
 import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import com.example.freeplayerm.R
 import com.example.freeplayerm.utils.MediaItemHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -22,13 +24,12 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * Servicio de reproducción de música usando Media3 (ExoPlayer).
+ * ✅ VERSIÓN FINAL - SIN DefaultActionFactory
  *
- * ✅ Soporta notificaciones con MediaStyle
- * ✅ Actualización automática de metadatos
- * ✅ Sincronización con base de datos
- * ✅ Compatible con Android 13+ lockscreen
+ * Esta versión crea una notificación básica inicialmente para cumplir
+ * con startForeground(), y luego Media3 la actualiza automáticamente.
  */
+@UnstableApi
 @AndroidEntryPoint
 class MusicService : MediaSessionService() {
 
@@ -44,173 +45,216 @@ class MusicService : MediaSessionService() {
     @Inject
     lateinit var mediaItemHelper: MediaItemHelper
 
-    private val TAG = "MusicService"
-    private val syncScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private var syncJob: Job? = null
+    private var notificationProvider: CustomNotificationProvider? = null
 
     companion object {
         const val NOTIFICATION_ID = 101
         const val CHANNEL_ID = "media_playback_channel"
+        private const val TAG = "MusicService"
     }
+
+    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var syncJob: Job? = null
 
     @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
+        Log.d(TAG, "🎵 ========== INICIANDO MusicService ==========")
 
-        Log.d(TAG, "🎵 Iniciando MusicService...")
+        // 1. Crear el Provider
+        notificationProvider = CustomNotificationProvider(this)
+        setMediaNotificationProvider(notificationProvider!!)
+        Log.d(TAG, "🔥 Provider asignado: CustomNotificationProvider")
 
-        createNotificationChannel()
+        // 2. Configurar Listeners
         setupPlayerListeners()
+        Log.d(TAG, "✅ Listeners del Player configurados")
 
-        // Configuramos el proveedor de notificaciones personalizado
-        val notificationProvider = CustomNotificationProvider(this)
-        setMediaNotificationProvider(notificationProvider)
-
-        // Configurar session activity (para abrir la app desde la notificación)
+        // 3. Configurar Session Activity (Click en notificación)
         try {
-            val pendingIntent = packageManager?.getLaunchIntentForPackage(packageName)?.let { intent ->
-                PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+            val sessionIntent = packageManager?.getLaunchIntentForPackage(packageName)?.let { intent ->
+                PendingIntent.getActivity(
+                    this,
+                    0,
+                    intent,
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                )
             }
-
-            if (pendingIntent != null) {
-                mediaSession.setSessionActivity(pendingIntent)
+            if (sessionIntent != null) {
+                mediaSession.setSessionActivity(sessionIntent)
                 Log.d(TAG, "✅ SessionActivity configurada")
             } else {
-                Log.w(TAG, "⚠️ No se pudo crear el PendingIntent para la sesión")
+                Log.w(TAG, "⚠️ No se pudo crear SessionActivity")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error configurando SessionActivity: ${e.message}")
+            Log.e(TAG, "❌ Error configurando SessionActivity: ${e.message}", e)
         }
 
-        Log.d(TAG, "✅ MusicService creado correctamente")
+        // 4. ✅ CRÍTICO: INICIAR COMO FOREGROUND SERVICE
+        iniciarComoForegroundService()
+
+        Log.d(TAG, "✅ MusicService iniciado correctamente")
+    }
+
+    /**
+     * ✅ MÉTODO CORREGIDO - Sin usar DefaultActionFactory
+     *
+     * Crea una notificación básica inicialmente, luego Media3 la actualiza
+     * automáticamente con el CustomNotificationProvider cuando sea necesario.
+     */
+    private fun iniciarComoForegroundService() {
+        try {
+            Log.d(TAG, "🚀 Iniciando servicio en Foreground...")
+
+            // Crear una notificación básica inicial
+            val notificacionInicial = crearNotificacionBasica()
+
+            // ✅ AQUÍ ESTÁ LA MAGIA: startForeground()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notificacionInicial,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                )
+                Log.d(TAG, "✅ Foreground iniciado con FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK")
+            } else {
+                startForeground(NOTIFICATION_ID, notificacionInicial)
+                Log.d(TAG, "✅ Foreground iniciado (pre-Android Q)")
+            }
+
+            Log.d(TAG, "🔔 Servicio en Foreground con notificación ID: $NOTIFICATION_ID")
+            Log.d(TAG, "📢 Media3 actualizará la notificación automáticamente cuando reproduzcas")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ ERROR CRÍTICO al iniciar foreground: ${e.message}", e)
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * ✅ Crea una notificación básica para cumplir con startForeground()
+     *
+     * Esta notificación es temporal - Media3 la reemplazará automáticamente
+     * con tu CustomNotificationProvider cuando empieces a reproducir.
+     */
+    private fun crearNotificacionBasica(): Notification {
+        // Intent para abrir la app al tocar la notificación
+        val openAppIntent = packageManager?.getLaunchIntentForPackage(packageName)
+        val pendingIntent = if (openAppIntent != null) {
+            PendingIntent.getActivity(
+                this,
+                0,
+                openAppIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+        } else {
+            null
+        }
+
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("FreePlayer")
+            .setContentText("Listo para reproducir música")
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(false)
+            .setContentIntent(pendingIntent)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .build()
+    }
+
+    /**
+     * 🕵️ MÉTODO DE DIAGNÓSTICO (mantenido de tu código)
+     *
+     * Este método es llamado por Media3 cuando actualiza la notificación.
+     * Si este log NO sale, Media3 no sabe que estás reproduciendo.
+     */
+    override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
+        Log.d(TAG, "🔥 onUpdateNotification LLAMADO")
+        Log.d(TAG, "   ├─ Foreground requerido: $startInForegroundRequired")
+        Log.d(TAG, "   ├─ Player.isPlaying: ${player.isPlaying}")
+        Log.d(TAG, "   ├─ MediaItem actual: ${player.currentMediaItem?.mediaMetadata?.title}")
+        Log.d(TAG, "   └─ MediaItemCount: ${player.mediaItemCount}")
+
+        // Delegamos al comportamiento normal
+        super.onUpdateNotification(session, startInForegroundRequired)
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession {
-        Log.d(TAG, "🎭 Sesión media solicitada por: ${controllerInfo.packageName}")
+        Log.d(TAG, "📱 Cliente conectado: ${controllerInfo.packageName}")
         return mediaSession
     }
 
     private fun setupPlayerListeners() {
         player.addListener(object : Player.Listener {
-
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                super.onMediaItemTransition(mediaItem, reason)
+                val reasonText = when (reason) {
+                    Player.MEDIA_ITEM_TRANSITION_REASON_AUTO -> "AUTO"
+                    Player.MEDIA_ITEM_TRANSITION_REASON_SEEK -> "SEEK"
+                    Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED -> "PLAYLIST_CHANGED"
+                    Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT -> "REPEAT"
+                    else -> "UNKNOWN($reason)"
+                }
 
-                mediaItem?.let { item ->
-                    Log.d(TAG, "🔄 Transición de canción detectada")
+                Log.d(TAG, "🎵 Transición de canción")
+                Log.d(TAG, "   ├─ Razón: $reasonText")
+                Log.d(TAG, "   └─ Canción: ${mediaItem?.mediaMetadata?.title}")
 
-                    // ⭐ NUEVO: Actualizar metadatos para la notificación
-                    updateMediaMetadata(item)
-
+                mediaItem?.let {
                     if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO ||
-                        reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK) {
-                        Log.d(TAG, "📡 Iniciando sincronización ($reason)")
-                        iniciarSincronizacionCancion(item)
-                    }
-                }
-            }
-
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                super.onPlaybackStateChanged(playbackState)
-
-                Log.d(TAG, "🎬 Estado de reproducción cambió: $playbackState")
-
-                when (playbackState) {
-                    Player.STATE_ENDED, Player.STATE_IDLE -> {
-                        Log.d(TAG, "⏹️ Reproducción finalizada/inactiva")
-                        cancionSyncService.cancelarSincronizacion()
-                    }
-                    Player.STATE_READY -> {
-                        if (player.isPlaying) {
-                            Log.d(TAG, "▶️ Reproducción lista y activa")
-                            player.currentMediaItem?.let {
-                                updateMediaMetadata(it)
-                                iniciarSincronizacionCancion(it)
-                            }
-                        }
-                    }
-                    Player.STATE_BUFFERING -> {
-                        Log.d(TAG, "⏳ Buffering...")
-                    }
-                }
-            }
-
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                super.onIsPlayingChanged(isPlaying)
-
-                Log.d(TAG, if (isPlaying) "▶️ Reproducción iniciada" else "⏸️ Reproducción pausada")
-
-                if (!isPlaying) {
-                    cancionSyncService.cancelarSincronizacion()
-                } else {
-                    player.currentMediaItem?.let {
-                        updateMediaMetadata(it)
+                        reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK
+                    ) {
                         iniciarSincronizacionCancion(it)
                     }
                 }
             }
 
-            override fun onPositionDiscontinuity(
-                oldPosition: Player.PositionInfo,
-                newPosition: Player.PositionInfo,
-                reason: Int
-            ) {
-                super.onPositionDiscontinuity(oldPosition, newPosition, reason)
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                val stateText = when (playbackState) {
+                    Player.STATE_IDLE -> "IDLE"
+                    Player.STATE_BUFFERING -> "BUFFERING"
+                    Player.STATE_READY -> "READY"
+                    Player.STATE_ENDED -> "ENDED"
+                    else -> "UNKNOWN($playbackState)"
+                }
 
-                if (reason == Player.DISCONTINUITY_REASON_SEEK ||
-                    reason == Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT) {
-                    Log.d(TAG, "⏩ Usuario buscó en la canción")
+                Log.d(TAG, "🎬 Estado Playback cambió")
+                Log.d(TAG, "   ├─ Nuevo estado: $stateText")
+                Log.d(TAG, "   └─ IsPlaying: ${player.isPlaying}")
+
+                when (playbackState) {
+                    Player.STATE_ENDED, Player.STATE_IDLE -> {
+                        cancionSyncService.cancelarSincronizacion()
+                    }
+                    Player.STATE_READY -> {
+                        if (player.isPlaying) {
+                            player.currentMediaItem?.let { iniciarSincronizacionCancion(it) }
+                        }
+                    }
+                }
+            }
+
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                Log.d(TAG, "⏯️ IsPlaying cambió a: $isPlaying")
+
+                if (!isPlaying) {
+                    cancionSyncService.cancelarSincronizacion()
+                } else {
                     player.currentMediaItem?.let { iniciarSincronizacionCancion(it) }
                 }
             }
         })
-
-        Log.d(TAG, "👂 Listeners del player configurados")
-    }
-
-    /**
-     * ⭐ NUEVO: Actualiza los metadatos de la sesión
-     * Esto permite que la notificación se actualice automáticamente
-     * sin necesidad de recrearla manualmente.
-     *
-     * Los metadatos incluyen:
-     * - Título de la canción
-     * - Artista
-     * - Álbum
-     * - Portada (artwork)
-     * - Duración
-     */
-    private fun updateMediaMetadata(mediaItem: MediaItem) {
-        try {
-            val currentMetadata = mediaItem.mediaMetadata
-
-            Log.d(TAG, """
-                📝 Actualizando metadatos:
-                   Título: ${currentMetadata.title}
-                   Artista: ${currentMetadata.artist}
-                   Álbum: ${currentMetadata.albumTitle}
-                   Artwork: ${if (currentMetadata.artworkData != null) "Sí" else "No"}
-            """.trimIndent())
-
-            // Media3 usa los metadatos del MediaItem actual automáticamente
-            // No necesitamos hacer nada más, solo asegurarnos de que estén bien configurados
-
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Error actualizando metadatos: ${e.message}", e)
-        }
     }
 
     private fun iniciarSincronizacionCancion(mediaItem: MediaItem) {
         syncJob?.cancel()
-        syncJob = syncScope.launch {
+        syncJob = serviceScope.launch {
             try {
+                Log.d(TAG, "🔄 Iniciando sincronización: ${mediaItem.mediaMetadata.title}")
                 val cancionConArtista = mediaItemHelper.obtenerDatosCancionConResiliencia(mediaItem)
-
                 if (cancionConArtista != null) {
-                    Log.d(TAG, "✅ Sincronizando: ${cancionConArtista.cancion.titulo}")
                     cancionSyncService.sincronizarCancionAlReproducir(cancionConArtista)
                 } else {
-                    Log.w(TAG, "⚠️ No se pudieron obtener datos para sincronización")
+                    Log.w(TAG, "⚠️ No se pudo obtener datos para sincronizar")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "💥 Error en sincronización: ${e.message}", e)
@@ -218,32 +262,32 @@ class MusicService : MediaSessionService() {
         }
     }
 
-    private fun createNotificationChannel() {
-        try {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Reproducción de Música",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Notificaciones del reproductor"
-                setShowBadge(false)
-                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
-            }
-            val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
-            Log.d(TAG, "📢 Canal de notificación creado correctamente")
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Error creando canal: ${e.message}", e)
-        }
-    }
-
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Manejar acción de detener desde la notificación
-        if (intent?.action == "ACTION_STOP") {
-            Log.d(TAG, "⏹️ Acción de detener recibida")
-            player.stop()
-            stopSelf()
-            return START_NOT_STICKY
+        Log.d(TAG, "⚡ onStartCommand recibido")
+        Log.d(TAG, "   ├─ Action: ${intent?.action ?: "null"}")
+        Log.d(TAG, "   ├─ Flags: $flags")
+        Log.d(TAG, "   └─ StartId: $startId")
+
+        when (intent?.action) {
+            "ACTION_STOP" -> {
+                Log.d(TAG, "🛑 Deteniendo servicio por ACTION_STOP")
+                player.stop()
+                stopSelf()
+                return START_NOT_STICKY
+            }
+            "ACTION_PLAY" -> {
+                Log.d(TAG, "▶️ Reproducir solicitado")
+                if (player.mediaItemCount > 0) {
+                    player.prepare()
+                    player.play()
+                }
+            }
+        }
+
+        // Asegurar que el player esté listo si es necesario
+        if (player.playWhenReady && player.mediaItemCount > 0 && player.playbackState == Player.STATE_IDLE) {
+            Log.d(TAG, "🔧 Preparando player automáticamente")
+            player.prepare()
         }
 
         return super.onStartCommand(intent, flags, startId)
@@ -251,35 +295,41 @@ class MusicService : MediaSessionService() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
-        Log.d(TAG, "📱 Task removida - Evaluando detención del servicio")
+        Log.d(TAG, "📱 App removida de recientes")
+        Log.d(TAG, "   ├─ IsPlaying: ${player.isPlaying}")
+        Log.d(TAG, "   ├─ PlayWhenReady: ${player.playWhenReady}")
+        Log.d(TAG, "   └─ MediaItemCount: ${player.mediaItemCount}")
 
-        // Solo detener el servicio si no está reproduciendo
+        // Solo detener si no está reproduciendo
         if (!player.playWhenReady || player.mediaItemCount == 0) {
             Log.d(TAG, "🛑 Deteniendo servicio (no hay reproducción activa)")
             stopSelf()
         } else {
-            Log.d(TAG, "▶️ Manteniendo servicio activo (reproducción en curso)")
+            Log.d(TAG, "⏸️ Servicio continúa (reproducción activa)")
         }
     }
 
     override fun onDestroy() {
-        Log.d(TAG, "🔚 Destruyendo MusicService...")
+        Log.d(TAG, "💀 ========== DESTRUYENDO MusicService ==========")
 
-        // Cancelar sincronización
-        cancionSyncService.cancelarSincronizacion()
+        // Limpiar recursos
         syncJob?.cancel()
+        cancionSyncService.limpiar()
+        Log.d(TAG, "✅ Sincronización cancelada")
 
         // Liberar sesión
         mediaSession.release()
-        Log.d(TAG, "🔓 MediaSession liberada")
+        Log.d(TAG, "✅ MediaSession liberada")
 
-        // Liberar player solo si está idle
+        // Liberar player si está idle
         if (player.playbackState == Player.STATE_IDLE) {
             player.release()
-            Log.d(TAG, "🔓 Player liberado")
+            Log.d(TAG, "✅ Player liberado")
+        } else {
+            Log.d(TAG, "⚠️ Player NO liberado (aún en uso)")
         }
 
         super.onDestroy()
-        Log.d(TAG, "✅ MusicService destruido")
+        Log.d(TAG, "👋 MusicService destruido completamente")
     }
 }

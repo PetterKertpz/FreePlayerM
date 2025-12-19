@@ -1,5 +1,6 @@
 package com.example.freeplayerm
 
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.freeplayerm.data.local.entity.UsuarioEntity
@@ -7,82 +8,74 @@ import com.example.freeplayerm.data.repository.RepositorioDeMusicaLocal
 import com.example.freeplayerm.data.repository.SessionRepository
 import com.example.freeplayerm.data.repository.UsuarioRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
+// Definición de estados de autenticación
 sealed class AuthState {
     object Cargando : AuthState()
     data class Autenticado(val usuario: UsuarioEntity) : AuthState()
     object NoAutenticado : AuthState()
 }
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val sessionRepository: SessionRepository,
-    private val usuarioRepository: UsuarioRepository, // <-- Inyectamos el UsuarioRepository
+    private val usuarioRepository: UsuarioRepository,
     private val musicRepository: RepositorioDeMusicaLocal
 ) : ViewModel() {
 
-    private val _authState = MutableStateFlow<AuthState>(AuthState.Cargando)
-    val authState = _authState.asStateFlow()
-
-
-    val usuarioActual: StateFlow<UsuarioEntity?> =
-        sessionRepository.idDeUsuarioActivo.flatMapLatest { id ->
-                // flatMapLatest reacciona a cada nuevo ID emitido por el Flow de sesión.
-                if (id != null) {
-                    // Si hay un ID, usamos el UsuarioRepository para obtener el Flow del usuario.
-                    usuarioRepository.obtenerUsuarioPorIdFlow(id)
-                } else {
-                    // Si no hay ID (sesión cerrada), emitimos un Flow con valor nulo.
-                    flowOf(null)
+    /**
+     * ✅ FLUJO REACTIVO DE ESTADO DE AUTENTICACIÓN
+     * -----------------------------------------------------
+     * Este StateFlow observa cambios en el ID de sesión.
+     * 1. Si el ID es null -> Emite NoAutenticado inmediatamente.
+     * 2. Si hay ID -> Busca el usuario en la BD.
+     * 3. Si encuentra usuario -> Emite Autenticado.
+     * 4. Si hay ID pero no usuario (error de datos) -> Emite NoAutenticado.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val authState: StateFlow<AuthState> = sessionRepository.idDeUsuarioActivo
+        .flatMapLatest { id ->
+            if (id == null) {
+                // No hay sesión activa en DataStore
+                flowOf(AuthState.NoAutenticado)
+            } else {
+                // Hay sesión, buscamos los detalles del usuario en tiempo real
+                usuarioRepository.obtenerUsuarioPorIdFlow(id).map { usuario ->
+                    if (usuario != null) {
+                        AuthState.Autenticado(usuario)
+                    } else {
+                        // Caso borde: Hay ID de sesión pero el usuario no existe en la BD local
+                        AuthState.NoAutenticado
+                    }
                 }
-            }.stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5000),
-                initialValue = null // El valor inicial es nulo mientras se determina la sesión.
-            )
-    init {
-        comprobarSesion()
-        viewModelScope.launch {
-            try {
-                // Usamos el repositorio para escanear y guardar la música.
-                // Esto no bloqueará la UI.
-                musicRepository.escanearYGuardarMusica()
-            } catch (e: Exception) {
-                // Manejar el error silenciosamente si es necesario
-                e.printStackTrace()
             }
         }
-    }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = AuthState.Cargando
+        )
 
-    private fun comprobarSesion() {
-        viewModelScope.launch {
-            // Con withTimeoutOrNull, esperamos un máximo de 2 segundos.
-            val usuario = withTimeoutOrNull(2000) {
-                // filterNotNull() ignora el valor inicial nulo.
-                // first() suspende la ejecución y espera hasta que llegue el primer usuario (no nulo).
-                usuarioActual.filterNotNull().first()
-            }
-
-            // Cuando el código continúa, 'usuario' tendrá el usuario logueado
-            // o será nulo si pasaron 2 segundos sin respuesta.
-            if (usuario != null) {
-                _authState.value = AuthState.Autenticado(usuario)
-            } else {
-                _authState.value = AuthState.NoAutenticado
+    init {
+        // Iniciamos el escaneo de música en segundo plano al arrancar la App.
+        // NOTA: Esto solo funcionará si el usuario ya concedió permisos previamente.
+        // Si es la primera instalación, esto fallará silenciosamente (lo cual está bien,
+        // ya que el escaneo se volverá a pedir en la pantalla de Biblioteca).
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                musicRepository.escanearYGuardarMusica()
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }

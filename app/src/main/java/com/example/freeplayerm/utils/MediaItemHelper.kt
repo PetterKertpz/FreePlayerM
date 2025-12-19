@@ -1,7 +1,6 @@
 package com.example.freeplayerm.utils
 
 import android.graphics.Bitmap
-import android.net.Uri
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
@@ -20,8 +19,10 @@ import androidx.core.net.toUri
 class MediaItemHelper @Inject constructor(
     private val cancionDao: CancionDao
 ) {
-    private val TAG = "MediaItemHelper"
 
+    companion object {
+    private const val TAG = "MediaItemHelper"
+    }
     /**
      * ✅ NUEVO: Crea un MediaItem con todos los metadatos necesarios para la notificación.
      * Úsalo en tu ViewModel antes de enviar la canción al player.
@@ -91,7 +92,7 @@ class MediaItemHelper @Inject constructor(
 
             // Buscar en base de datos primero
             val desdeBD = cancionDao.obtenerCancionConArtistaPorId(
-                idCancion = idCancion.toInt(),
+                idCancion = idCancion,
                 usuarioId = usuarioActualId
             )
             if (desdeBD != null) {

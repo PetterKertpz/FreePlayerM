@@ -1,4 +1,4 @@
-package com.example.freeplayerm.com.example.freeplayerm.ui.features.shared
+package com.example.freeplayerm.ui.features.shared
 
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode

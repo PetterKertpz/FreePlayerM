@@ -1,4 +1,4 @@
-package com.example.freeplayerm.com.example.freeplayerm.ui.features.splash
+package com.example.freeplayerm.ui.features.splash
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize

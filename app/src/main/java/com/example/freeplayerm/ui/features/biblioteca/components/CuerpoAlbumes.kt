@@ -39,7 +39,7 @@ import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import com.example.freeplayerm.R
 import com.example.freeplayerm.data.local.entity.AlbumEntity
-import com.example.freeplayerm.com.example.freeplayerm.ui.features.shared.MarqueeTextConDesvanecido
+import com.example.freeplayerm.ui.features.shared.MarqueeTextConDesvanecido
 import com.example.freeplayerm.ui.theme.AppColors
 
 /**
