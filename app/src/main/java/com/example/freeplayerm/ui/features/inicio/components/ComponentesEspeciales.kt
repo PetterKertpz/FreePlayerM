@@ -4,8 +4,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayCircleFilled
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,7 +27,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.freeplayerm.R
-import com.example.freeplayerm.ui.features.login.components.FondoGalaxiaAnimado
+import com.example.freeplayerm.ui.features.inicio.components.FondoGalaxiaAnimado
 
 // 5. Título con flotación lenta (Sin cambios)
 // ui/features/login/components/ComponentesEspeciales.kt
@@ -110,8 +109,7 @@ fun EncabezadoLogoAnimado() {
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.padding(bottom = 20.dp)
+        verticalArrangement = Arrangement.Top
     ) {
         // --- EL ÍCONO (Justo encima) ---
         AnimatedVisibility(
@@ -126,9 +124,6 @@ fun EncabezadoLogoAnimado() {
             )
         }
 
-        // Espacio reducido entre icono y texto
-        Spacer(modifier = Modifier.height(8.dp))
-
         // --- EL TEXTO ESTILIZADO (Relleno Morado + Borde Oscuro) ---
         AnimatedVisibility(
             visible = visible,
@@ -138,7 +133,7 @@ fun EncabezadoLogoAnimado() {
             ) + fadeIn(tween(800))
         ) {
             // Usamos un Box para superponer el texto dos veces
-            Box(contentAlignment = Alignment.Center) {
+            Box() {
                 // CAPA 1: El Borde (Stroke) - Se dibuja atrás y más grueso
                 Text(
                     text = "FreePlayer",
@@ -318,7 +313,7 @@ fun PreviewLayoutCompleto() {
             ) {
                 // Aquí irían tus campos de texto
                 // Pongo un placeholder visual para ver el espacio
-                androidx.compose.material3.Text(
+                Text(
                     "Area de Inputs (Correo/Pass)",
                     color = Color.White.copy(0.3f)
                 )

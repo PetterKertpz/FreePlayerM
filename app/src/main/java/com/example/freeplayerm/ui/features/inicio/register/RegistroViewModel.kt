@@ -1,25 +1,23 @@
-package com.example.freeplayerm.ui.features.login
+package com.example.freeplayerm.ui.features.inicio.register
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.freeplayerm.data.repository.SessionRepository
 import com.example.freeplayerm.data.repository.UsuarioRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 data class RegistroEstado(
     val nombreUsuario: String = "",
     val correo: String = "",
     val contrasena: String = "",
-    val estaCargando: Boolean = false,
+    val confirmarContrasena: String = "", // <-- NUEVO CAMPO
     val error: String? = null,
+    val estaCargando: Boolean = false,
     val usuarioIdExitoso: Int? = null
 )
 
@@ -27,6 +25,7 @@ sealed class RegistroEvento {
     data class NombreUsuarioCambiado(val valor: String) : RegistroEvento()
     data class CorreoCambiado(val valor: String) : RegistroEvento()
     data class ContrasenaCambiada(val valor: String) : RegistroEvento()
+    data class ConfirmarContrasenaCambiada(val valor: String) : RegistroEvento() // <-- NUEVO EVENTO
     object BotonRegistroPresionado : RegistroEvento()
     object ConsumirEventoDeNavegacion : RegistroEvento()
     object ConsumirError : RegistroEvento()
@@ -35,7 +34,7 @@ sealed class RegistroEvento {
 @HiltViewModel
 class RegistroViewModel @Inject constructor(
     private val repositorio: UsuarioRepository,
-    private val sessionRepository: SessionRepository // <-- Inyectamos el repositorio de sesión
+    private val sessionRepository: SessionRepository
 ) : ViewModel() {
 
     private val _estadoUi = MutableStateFlow(RegistroEstado())
@@ -46,6 +45,7 @@ class RegistroViewModel @Inject constructor(
             is RegistroEvento.NombreUsuarioCambiado -> _estadoUi.update { it.copy(nombreUsuario = evento.valor, error = null) }
             is RegistroEvento.CorreoCambiado -> _estadoUi.update { it.copy(correo = evento.valor, error = null) }
             is RegistroEvento.ContrasenaCambiada -> _estadoUi.update { it.copy(contrasena = evento.valor, error = null) }
+            is RegistroEvento.ConfirmarContrasenaCambiada -> _estadoUi.update { it.copy(confirmarContrasena = evento.valor, error = null) }
             RegistroEvento.BotonRegistroPresionado -> registrarseLocalmente()
             RegistroEvento.ConsumirEventoDeNavegacion -> _estadoUi.update { it.copy(usuarioIdExitoso = null) }
             RegistroEvento.ConsumirError -> _estadoUi.update { it.copy(error = null) }
@@ -53,32 +53,33 @@ class RegistroViewModel @Inject constructor(
     }
 
     private fun registrarseLocalmente() {
-        val estadoActual = _estadoUi.value
+        val estado = _estadoUi.value
 
-        if (estadoActual.nombreUsuario.isBlank() || estadoActual.correo.isBlank() || estadoActual.contrasena.isBlank()) {
+        // 1. Validar campos vacíos
+        if (estado.nombreUsuario.isBlank() || estado.correo.isBlank() || estado.contrasena.isBlank()) {
             _estadoUi.update { it.copy(error = "Todos los campos son obligatorios.") }
             return
         }
 
+        // 2. Validar coincidencia de contraseñas
+        if (estado.contrasena != estado.confirmarContrasena) {
+            _estadoUi.update { it.copy(error = "Las contraseñas no coinciden.") }
+            return
+        }
+
+        // 3. Iniciar carga
         _estadoUi.update { it.copy(estaCargando = true) }
 
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             repositorio.registrarUsuarioLocal(
-                nombreUsuario = estadoActual.nombreUsuario,
-                correo = estadoActual.correo,
-                contrasena = estadoActual.contrasena
+                nombreUsuario = estado.nombreUsuario,
+                correo = estado.correo,
+                contrasena = estado.contrasena
             ).onSuccess { usuarioCreado ->
-                // Ahora pasamos solo el ID
                 sessionRepository.guardarIdDeUsuario(usuarioCreado.id)
-
-                withContext(Dispatchers.Main) {
-                    _estadoUi.update { it.copy(estaCargando = false, usuarioIdExitoso = usuarioCreado.id) }
-                }
-                // ------------------------
+                _estadoUi.update { it.copy(estaCargando = false, usuarioIdExitoso = usuarioCreado.id) }
             }.onFailure { error ->
-                withContext(Dispatchers.Main) {
-                    _estadoUi.update { it.copy(estaCargando = false, error = error.message) }
-                }
+                _estadoUi.update { it.copy(estaCargando = false, error = error.message ?: "Error al registrar") }
             }
         }
     }

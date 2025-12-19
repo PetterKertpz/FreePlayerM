@@ -10,9 +10,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.freeplayerm.ui.features.biblioteca.PantallaBiblioteca
-import com.example.freeplayerm.ui.features.login.PantallaLogin
-import com.example.freeplayerm.ui.features.login.PantallaRecuperarClave
-import com.example.freeplayerm.ui.features.login.PantallaRegistro
+import com.example.freeplayerm.ui.features.inicio.login.PantallaLogin
+import com.example.freeplayerm.ui.features.inicio.recuperarcontrasena.PantallaRecuperarClave
+import com.example.freeplayerm.ui.features.inicio.register.PantallaRegistro
 import com.example.freeplayerm.ui.features.reproductor.ReproductorViewModel
 
 

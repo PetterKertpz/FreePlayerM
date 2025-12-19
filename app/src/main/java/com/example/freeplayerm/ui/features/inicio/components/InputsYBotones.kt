@@ -1,4 +1,4 @@
-package com.example.freeplayerm.ui.features.login.components
+package com.example.freeplayerm.ui.features.inicio.components
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.*
