@@ -8,16 +8,13 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.tasks.await
-import java.util.Date
 
-// Clase que implementa la interfaz UsuarioRepository.
-// Es la implementación concreta que interactúa con el DAO.
 class UsuarioRepositoryImpl(
     private val usuarioDao: UsuarioDao,
-    private val sessionRepository: SessionRepository // <-- ¡Nueva inyección!
+    private val sessionRepository: SessionRepository
 ) : UsuarioRepository {
     private val auth = Firebase.auth
-    // Simplemente llama al método correspondiente en el DAO.
+
     override suspend fun insertarUsuario(usuario: UsuarioEntity) {
         usuarioDao.insertarUsuario(usuario)
     }
@@ -33,77 +30,62 @@ class UsuarioRepositoryImpl(
     override suspend fun eliminarUsuario(usuario: UsuarioEntity) {
         usuarioDao.eliminarUsuario(usuario)
     }
+
     override suspend fun enviarCorreoRecuperacion(correo: String): Result<Unit> {
         return try {
-            // --- ✅ LÓGICA DE VALIDACIÓN AÑADIDA ---
-
-            // 1. Buscamos al usuario por su correo en nuestra base de datos local.
             val usuario = usuarioDao.obtenerUsuarioPorCorreo(correo)
 
-            // 2. Comprobamos si el usuario existe y si es una cuenta LOCAL.
             if (usuario == null) {
                 return Result.failure(Exception("No existe una cuenta registrada con ese correo electrónico."))
             }
-            if (usuario.tipoAutenticacion != "LOCAL") {
+            if (usuario.tipoAutenticacion != UsuarioEntity.TIPO_LOCAL) {
                 return Result.failure(Exception("Esa cuenta fue registrada usando un método social y no tiene contraseña local."))
             }
 
-            // 3. Si todo está en orden, procedemos a llamar a Firebase.
             auth.sendPasswordResetEmail(correo).await()
             Result.success(Unit)
 
         } catch (e: Exception) {
-            // Devolvemos el mensaje de error original de Firebase si la validación pasa pero el envío falla.
             e.printStackTrace()
             Result.failure(e)
         }
     }
-    /**
-     * Registra un nuevo usuario con correo y contraseña.
-     * Ventajas:
-     * - Centraliza toda la lógica de registro.
-     * - Usa Result<> para un manejo de errores limpio en el ViewModel.
-     * - Asegura que no se registren correos duplicados.
-     * Desventajas:
-     * - Podría crecer si se añade más lógica (ej. validación de contraseña compleja).
-     */
+
     override suspend fun registrarUsuarioLocal(
         nombreUsuario: String,
         correo: String,
         contrasena: String
     ): Result<UsuarioEntity> {
         return try {
-            // 1. Verificamos si ya existe un usuario con ese correo.
-            if (usuarioDao.obtenerUsuarioPorCorreo(correo) != null) {
+            if (usuarioDao.existeCorreo(correo)) {
                 return Result.failure(Exception("El correo electrónico ya está registrado."))
             }
 
-            // 2. Hasheamos la contraseña para no guardarla en texto plano.
+            if (usuarioDao.existeNombreUsuario(nombreUsuario)) {
+                return Result.failure(Exception("El nombre de usuario ya está en uso."))
+            }
+
             val contrasenaHasheada = SeguridadHelper.hashContrasena(contrasena)
 
-            // 3. Generamos una URL para una foto de perfil genérica usando las iniciales.
             val iniciales = nombreUsuario.split(" ")
                 .mapNotNull { it.firstOrNull()?.toString()?.uppercase() }
                 .take(2)
                 .joinToString("")
             val fotoUrlPredeterminada = "https://ui-avatars.com/api/?name=$iniciales&background=random&color=fff&size=256"
 
-            // 4. Creamos el objeto UsuarioEntity con todos los datos necesarios.
             val nuevoUsuario = UsuarioEntity(
                 nombreUsuario = nombreUsuario,
                 correo = correo,
-                contrasenaHash = contrasenaHasheada,
-                fechaRegistro = Date(),
-                fotoPerfilUrl = fotoUrlPredeterminada,
-                tipoAutenticacion = "LOCAL"
+                contrasenia = contrasenaHasheada,
+                fechaCreacion = System.currentTimeMillis(),
+                fotoPerfil = fotoUrlPredeterminada,
+                tipoAutenticacion = UsuarioEntity.TIPO_LOCAL,
+                activo = true
             )
 
-            // 5. Insertamos en la BD y obtenemos el nuevo ID.
             val nuevoId = usuarioDao.insertarUsuario(nuevoUsuario)
-
-            // 6. Obtenemos el usuario recién creado desde la BD para asegurar consistencia.
-            // El '!!' es seguro aquí porque acabamos de insertarlo.
             val usuarioCreado = usuarioDao.obtenerUsuarioPorId(nuevoId.toInt())!!
+
             Result.success(usuarioCreado)
 
         } catch (e: Exception) {
@@ -111,41 +93,33 @@ class UsuarioRepositoryImpl(
         }
     }
 
-    /**
-     * Inicia sesión para un usuario local.
-     * Ventajas:
-     * - Permite al usuario usar su correo O su nombre de usuario para ingresar.
-     * - Devuelve mensajes de error genéricos por seguridad.
-     * Formas alternativas:
-     * - Podrías tener dos funciones separadas: una para iniciar por correo y otra por nombre de usuario,
-     * pero unificarlas aquí simplifica el ViewModel.
-     */
     override suspend fun iniciarSesionLocal(identificador: String, contrasena: String): Result<UsuarioEntity> {
         return try {
-            // 1. Buscamos al usuario por correo primero.
             var usuario = usuarioDao.obtenerUsuarioPorCorreo(identificador)
 
-            // 2. Si no se encuentra, intentamos por nombre de usuario.
             if (usuario == null) {
                 usuario = usuarioDao.obtenerUsuarioPorNombreUsuario(identificador)
             }
 
-            // 3. Si no se encontró de ninguna forma, el usuario no existe.
             if (usuario == null) {
                 return Result.failure(Exception("Usuario o contraseña incorrectos."))
             }
 
-            // 4. Verificamos la contraseña.
-            // Si el hash es nulo, es una cuenta social (Google) y no puede iniciar sesión localmente.
-            val contrasenaHasheada = usuario.contrasenaHash
-                ?: return Result.failure(Exception("Este usuario se registró usando un método social."))
+            if (!usuario.activo) {
+                return Result.failure(Exception("Esta cuenta ha sido desactivada."))
+            }
+
+            if (usuario.tipoAutenticacion != UsuarioEntity.TIPO_LOCAL) {
+                return Result.failure(Exception("Este usuario se registró usando un método social."))
+            }
 
             val contrasenaEsValida = SeguridadHelper.verificarContrasena(
                 contrasenaPlana = contrasena,
-                contrasenaHasheada = contrasenaHasheada
+                contrasenaHasheada = usuario.contrasenia
             )
 
             if (contrasenaEsValida) {
+                usuarioDao.actualizarUltimaSesion(usuario.idUsuario)
                 Result.success(usuario)
             } else {
                 Result.failure(Exception("Usuario o contraseña incorrectos."))
@@ -159,59 +133,48 @@ class UsuarioRepositoryImpl(
         return usuarioDao.obtenerUsuarioPorId(id)
     }
 
-    /**
-     * Busca un usuario de Google por su correo. Si existe, lo actualiza. Si no, lo crea.
-     * Ventajas:
-     * - Maneja ambos casos (creación y actualización) en un solo lugar.
-     * - Valida la URL de la foto de perfil para evitar guardar imágenes genéricas o nulas de Google.
-     */
     override suspend fun buscarOCrearUsuarioGoogle(
         correo: String,
         nombreUsuario: String,
         fotoUrl: String?
     ): Result<UsuarioEntity> {
         return try {
-            // --- LÓGICA DE VALIDACIÓN DE FOTO DE PERFIL ---
-            // 1. Verificamos si la URL de Google es válida o es una genérica.
             val urlFinalParaGuardar = if (fotoUrl.isNullOrEmpty()) {
-                // 2. Si es nula o vacía, generamos nuestra propia URL de avatar.
                 val iniciales = nombreUsuario.split(" ")
                     .mapNotNull { it.firstOrNull()?.toString()?.uppercase() }
                     .take(2)
                     .joinToString("")
                 "https://ui-avatars.com/api/?name=$iniciales&background=random&color=fff&size=256"
             } else {
-                // 3. Si es válida, usamos la que nos dio Google.
                 fotoUrl
             }
 
             val usuarioExistente = usuarioDao.obtenerUsuarioPorCorreo(correo)
 
             if (usuarioExistente == null) {
-                // --- SOLUCIÓN: Lógica de creación que faltaba ---
-                // El usuario no existe, así que lo creamos.
                 val nuevoUsuario = UsuarioEntity(
                     nombreUsuario = nombreUsuario,
                     correo = correo,
-                    contrasenaHash = null, // Las cuentas de Google no tienen contraseña local.
-                    fechaRegistro = Date(),
-                    fotoPerfilUrl = urlFinalParaGuardar, // Usamos la URL validada.
-                    tipoAutenticacion = "GOOGLE"
+                    contrasenia = "",
+                    fechaCreacion = System.currentTimeMillis(),
+                    fotoPerfil = urlFinalParaGuardar,
+                    tipoAutenticacion = UsuarioEntity.TIPO_GOOGLE,
+                    activo = true
                 )
                 val nuevoId = usuarioDao.insertarUsuario(nuevoUsuario)
                 val usuarioCreado = usuarioDao.obtenerUsuarioPorId(nuevoId.toInt())!!
+
+                usuarioDao.actualizarUltimaSesion(usuarioCreado.idUsuario)
                 Result.success(usuarioCreado)
 
             } else {
-                // El usuario ya existe, lo actualizamos.
-                // Usamos .copy() para crear una nueva instancia con los datos actualizados,
-                // manteniendo intactos los que no cambiamos (como el id o la fecha de registro).
                 val usuarioActualizado = usuarioExistente.copy(
                     nombreUsuario = nombreUsuario,
-                    fotoPerfilUrl = urlFinalParaGuardar, // Actualizamos la foto por si cambió en Google.
-                    tipoAutenticacion = "GOOGLE" // Aseguramos que el tipo sea Google.
+                    fotoPerfil = urlFinalParaGuardar,
+                    tipoAutenticacion = UsuarioEntity.TIPO_GOOGLE
                 )
                 usuarioDao.actualizarUsuario(usuarioActualizado)
+                usuarioDao.actualizarUltimaSesion(usuarioActualizado.idUsuario)
                 Result.success(usuarioActualizado)
             }
         } catch (e: Exception) {
@@ -222,5 +185,4 @@ class UsuarioRepositoryImpl(
     override fun obtenerUsuarioPorIdFlow(id: Int): Flow<UsuarioEntity?> {
         return usuarioDao.obtenerUsuarioPorIdFlow(id)
     }
-
 }

@@ -1,7 +1,7 @@
 package com.example.freeplayerm.data.repository
 
 import com.example.freeplayerm.data.local.entity.UsuarioEntity
-import kotlinx.coroutines.flow.Flow // <-- Importante añadir
+import kotlinx.coroutines.flow.Flow
 
 interface UsuarioRepository {
 
@@ -12,7 +12,6 @@ interface UsuarioRepository {
     suspend fun obtenerUsuarioPorId(id: Int): UsuarioEntity?
     suspend fun enviarCorreoRecuperacion(correo: String): Result<Unit>
 
-    // --- NUEVA FUNCIÓN AÑADIDA A LA INTERFAZ ---
     fun obtenerUsuarioPorIdFlow(id: Int): Flow<UsuarioEntity?>
 
     suspend fun registrarUsuarioLocal(
@@ -22,7 +21,7 @@ interface UsuarioRepository {
     ): Result<UsuarioEntity>
 
     suspend fun iniciarSesionLocal(
-        identificador:String,
+        identificador: String,
         contrasena: String
     ): Result<UsuarioEntity>
 

@@ -140,6 +140,7 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    @NetworkClient
     fun provideOkHttpClient(
         @ApplicationContext context: Context,
         @AuthInterceptor authInterceptor: Interceptor,
@@ -180,7 +181,8 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideRetrofit(okHttpClient: OkHttpClient, moshi: Moshi): Retrofit {
+    fun provideRetrofit(okHttpClient: OkHttpClient,
+        moshi: Moshi): Retrofit {
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(okHttpClient)

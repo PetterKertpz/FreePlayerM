@@ -192,15 +192,13 @@ fun ContenidoPantallaLogin(
                     }
                 }
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(10.dp))
 
                 // Divisor
                 HorizontalDivider(
                     modifier = Modifier.fillMaxWidth(0.5f),
                     color = Color.White.copy(alpha = 0.2f)
                 )
-
-                Spacer(Modifier.height(24.dp))
 
                 // BOTÓN GOOGLE
                 BotonGooglePulsante(

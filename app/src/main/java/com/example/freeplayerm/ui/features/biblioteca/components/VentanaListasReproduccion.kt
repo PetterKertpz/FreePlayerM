@@ -1,5 +1,5 @@
-// en: app/src/main/java/com/example/freeplayerm/ui/features/biblioteca/components/VentanaListasReproduccion.kt
-package com.example.freeplayerm.com.example.freeplayerm.ui.features.biblioteca.components
+// ui/features/biblioteca/components/VentanaListasReproduccion.kt
+package com.example.freeplayerm.ui.features.biblioteca.components
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -16,17 +16,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -35,27 +25,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -93,18 +70,22 @@ fun VentanaListasReproduccion(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 200.dp, max = 600.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            // Fondo oscuro para el diálogo principal
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "Añadir a...",
                     style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    color = Color.White,
+                    modifier = Modifier.padding(bottom = 16.dp)
                 )
 
                 OutlinedButton(
                     onClick = { mostrarDialogoCrearLista = true },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFD500F9)),
+                    border = BorderStroke(1.dp, Color(0xFFD500F9))
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Crear lista")
                     Spacer(modifier = Modifier.width(8.dp))
@@ -134,7 +115,12 @@ fun VentanaListasReproduccion(
                 Button(
                     onClick = { onAnadirAListas(listasSeleccionadas.toList()) },
                     enabled = listasSeleccionadas.isNotEmpty(),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFD500F9),
+                        contentColor = Color.White,
+                        disabledContainerColor = Color.Gray
+                    )
                 ) {
                     Text("Añadir")
                 }
@@ -142,6 +128,7 @@ fun VentanaListasReproduccion(
         }
     }
 }
+
 @Composable
 private fun PlaylistItem(
     lista: ListaReproduccionEntity,
@@ -155,7 +142,12 @@ private fun PlaylistItem(
             .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onToggle),
         shape = RoundedCornerShape(12.dp),
-        border = if (estaSeleccionada) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+        // Borde morado si está seleccionado
+        border = if (estaSeleccionada) BorderStroke(2.dp, Color(0xFFD500F9)) else null,
+        colors = CardDefaults.cardColors(
+            // Fondo ligeramente más claro que el diálogo para destacar
+            containerColor = Color(0xFF2D2D2D)
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -170,7 +162,7 @@ private fun PlaylistItem(
                     .clip(RoundedCornerShape(8.dp))
                     .background(AppColors.GrisProfundo),
                 contentScale = ContentScale.Crop,
-                // Un fallback por si no hay portada
+                // Fallback si no hay portada (asegúrate de tener este icono o usa otro)
                 error = painterResource(id = R.drawable.ic_notification)
             )
             Spacer(modifier = Modifier.width(16.dp))
@@ -178,6 +170,7 @@ private fun PlaylistItem(
                 text = lista.nombre,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
+                color = Color.White,
                 modifier = Modifier.weight(1f)
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -199,9 +192,9 @@ private fun SelectorAnimado(seleccionado: Boolean) {
             .size(24.dp)
             .clip(CircleShape)
             .background(
-                if (seleccionado) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                if (seleccionado) Color(0xFFD500F9) else Color.White.copy(alpha = 0.1f)
             )
-            .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
+            .border(2.dp, if (seleccionado) Color(0xFFD500F9) else Color.Gray, CircleShape),
         contentAlignment = Alignment.Center
     ) {
         AnimatedVisibility(
@@ -212,7 +205,7 @@ private fun SelectorAnimado(seleccionado: Boolean) {
             Icon(
                 imageVector = Icons.Default.Check,
                 contentDescription = "Seleccionado",
-                tint = MaterialTheme.colorScheme.onPrimary,
+                tint = Color.White,
                 modifier = Modifier.scale(scale)
             )
         }
@@ -229,39 +222,38 @@ fun DialogoCrearLista(
     var descripcion by rememberSaveable { mutableStateOf(listaAEditar?.descripcion ?: "") }
     val nombreValido = nombre.isNotBlank()
 
-    // --- ✅ LÓGICA DEL PHOTO PICKER ---
     // 1. Estado para guardar el Uri de la imagen seleccionada
     var imagenSeleccionadaUri by remember(listaAEditar?.idLista) {
         mutableStateOf<Uri?>(listaAEditar?.portadaUrl?.toUri())
     }
-    // 2. Creamos el lanzador que abrirá la galería
+
+    // 2. Lanzador del Photo Picker
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri ->
-            // Solo actualizamos la imagen si el usuario realmente seleccionó una nueva.
-            // Si cancela (uri es null), no hacemos nada y la portada original se mantiene.
             if (uri != null) {
                 imagenSeleccionadaUri = uri
             }
         }
     )
 
-
     AlertDialog(
         onDismissRequest = onDismiss,
-        // El título cambia dependiendo del modo
+        // Configuración de colores oscuros para el AlertDialog
+        containerColor = Color(0xFF1E1E1E),
+        titleContentColor = Color.White,
+        textContentColor = Color.White.copy(alpha = 0.8f),
+
         title = { Text(if (listaAEditar != null) "Editar Lista" else "Nueva Lista") },
         text = {
-            Column (horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
                     modifier = Modifier
                         .size(128.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .background(Color(0xFF2D2D2D))
                         .clickable {
-                            // 3. Lanzamos el Photo Picker al hacer clic
                             photoPickerLauncher.launch(
-                                // La llamada correcta usa el Builder de la clase "PickVisualMediaRequest"
                                 PickVisualMediaRequest.Builder()
                                     .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly)
                                     .build()
@@ -281,45 +273,74 @@ fun DialogoCrearLista(
                             imageVector = Icons.Default.AddPhotoAlternate,
                             contentDescription = "Añadir portada",
                             modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = Color.Gray
                         )
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Input Nombre estilizado para Dark Mode
                 OutlinedTextField(
                     value = nombre,
                     onValueChange = { nombre = it },
                     label = { Text("Nombre *") },
                     singleLine = true,
-                    isError = !nombreValido
+                    isError = !nombreValido,
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        cursorColor = Color(0xFFD500F9),
+                        focusedLabelColor = Color(0xFFD500F9),
+                        unfocusedLabelColor = Color.Gray,
+                        focusedIndicatorColor = Color(0xFFD500F9),
+                        unfocusedIndicatorColor = Color.Gray
+                    )
                 )
                 Spacer(modifier = Modifier.height(8.dp))
+
+                // Input Descripción estilizado
                 OutlinedTextField(
                     value = descripcion,
                     onValueChange = { descripcion = it },
-                    label = { Text("Descripción (opcional)") }
+                    label = { Text("Descripción (opcional)") },
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        cursorColor = Color(0xFFD500F9),
+                        focusedLabelColor = Color(0xFFD500F9),
+                        unfocusedLabelColor = Color.Gray,
+                        focusedIndicatorColor = Color(0xFFD500F9),
+                        unfocusedIndicatorColor = Color.Gray
+                    )
                 )
             }
-
         },
         confirmButton = {
             Button(
                 onClick = {
                     onCrear(nombre, descripcion.ifBlank { null }, imagenSeleccionadaUri?.toString())
                 },
-                enabled = nombreValido
+                enabled = nombreValido,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFD500F9),
+                    contentColor = Color.White,
+                    disabledContainerColor = Color.Gray
+                )
             ) {
-                // El texto del botón cambia dependiendo del modo
                 Text(if (listaAEditar != null) "Guardar" else "Crear")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.textButtonColors(contentColor = Color.White.copy(alpha = 0.7f))
+            ) {
                 Text("Cancelar")
             }
         }
     )
 }
-
-

@@ -26,7 +26,6 @@ class GeniusServiceOptimizado @Inject constructor(
             try {
                 var resultado: ResultadoBusquedaGenius
 
-                // Estrategia 1: Búsqueda directa
                 resultado = busquedaDirecta(cancion, artista)
                 if (resultado is ResultadoBusquedaGenius.Exito) {
                     Log.d("GeniusOptimizado", "✅ Éxito con estrategia: ${resultado.estrategia}")
@@ -34,7 +33,6 @@ class GeniusServiceOptimizado @Inject constructor(
                 }
                 delay(200)
 
-                // Estrategia 2: Búsqueda sin caracteres especiales
                 resultado = busquedaSinCaracteresEspeciales(cancion, artista)
                 if (resultado is ResultadoBusquedaGenius.Exito) {
                     Log.d("GeniusOptimizado", "✅ Éxito con estrategia: ${resultado.estrategia}")
@@ -42,7 +40,6 @@ class GeniusServiceOptimizado @Inject constructor(
                 }
                 delay(200)
 
-                // Estrategia 3: Búsqueda por artista primero
                 resultado = busquedaPorArtistaPrimero(cancion, artista)
                 if (resultado is ResultadoBusquedaGenius.Exito) {
                     Log.d("GeniusOptimizado", "✅ Éxito con estrategia: ${resultado.estrategia}")
@@ -50,7 +47,6 @@ class GeniusServiceOptimizado @Inject constructor(
                 }
                 delay(200)
 
-                // Estrategia 4: Búsqueda por título solo
                 resultado = busquedaPorTituloSolo(cancion)
                 if (resultado is ResultadoBusquedaGenius.Exito) {
                     Log.d("GeniusOptimizado", "✅ Éxito con estrategia: ${resultado.estrategia}")
@@ -58,7 +54,6 @@ class GeniusServiceOptimizado @Inject constructor(
                 }
                 delay(200)
 
-                // Estrategia 5: Búsqueda por artista solo
                 resultado = busquedaPorArtistaSolo(artista)
                 if (resultado is ResultadoBusquedaGenius.Exito) {
                     Log.d("GeniusOptimizado", "✅ Éxito con estrategia: ${resultado.estrategia}")
@@ -134,10 +129,8 @@ class GeniusServiceOptimizado @Inject constructor(
         return resultadosValidos.maxByOrNull { resultado ->
             var score = 0.0
 
-            // Puntuar por similitud con el título
             score += calcularSimilitud(resultado.title, queryOriginal) * 0.6
 
-            // Bonus por match exacto de artista
             if (resultado.primary_artist?.name?.contains(queryOriginal, ignoreCase = true) == true) {
                 score += 0.3
             }
@@ -160,8 +153,8 @@ class GeniusServiceOptimizado @Inject constructor(
 
     private fun limpiarParaBusqueda(texto: String): String {
         return texto
-            .replace(Regex("""[^\w\s]"""), "") // Eliminar caracteres especiales
-            .replace(Regex("""\s+"""), " ")    // Normalizar espacios
+            .replace(Regex("""[^\w\s]"""), "")
+            .replace(Regex("""\s+"""), " ")
             .trim()
     }
 
@@ -170,7 +163,6 @@ class GeniusServiceOptimizado @Inject constructor(
     }
 }
 
-// Resultados de búsqueda
 sealed class ResultadoBusquedaGenius {
     data class Exito(val resultado: SongResult, val estrategia: String) : ResultadoBusquedaGenius()
     object NoEncontrado : ResultadoBusquedaGenius()

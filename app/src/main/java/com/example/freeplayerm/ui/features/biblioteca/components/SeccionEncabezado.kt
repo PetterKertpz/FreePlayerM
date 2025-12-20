@@ -1,53 +1,39 @@
+// ui/features/biblioteca/components/SeccionEncabezado.kt
 package com.example.freeplayerm.ui.features.biblioteca.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.freeplayerm.data.local.entity.UsuarioEntity
 import com.example.freeplayerm.ui.features.biblioteca.TipoDeCuerpoBiblioteca
-import com.example.freeplayerm.ui.theme.AppColors
-import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SeccionEncabezado(
-    usuario: UsuarioEntity?, // <-- CAMBIO CLAVE 1: Recibe el usuario como parámetro
-    cuerpoActual: TipoDeCuerpoBiblioteca, // <-- NUEVO: Para saber qué botón resaltar
+    usuario: UsuarioEntity?,
+    cuerpoActual: TipoDeCuerpoBiblioteca,
     escaneoManualEnProgreso: Boolean,
-    onMenuClick: (TipoDeCuerpoBiblioteca) -> Unit, // <-- NUEVO: Callback para notificar clics
+    onMenuClick: (TipoDeCuerpoBiblioteca) -> Unit,
     onReescanearClick: () -> Unit
 ) {
     val menus = listOf(
@@ -58,148 +44,104 @@ fun SeccionEncabezado(
         "Géneros" to TipoDeCuerpoBiblioteca.GENEROS,
         "Favoritos" to TipoDeCuerpoBiblioteca.FAVORITOS
     )
-    Column (
+
+    Column(
         modifier = Modifier
+            .fillMaxWidth()
+            // Sombra degradada superior para legibilidad
             .background(
-                brush = Brush.linearGradient(
+                Brush.verticalGradient(
                     colors = listOf(
-                        AppColors.Negro,
-                        AppColors.PurpuraProfundo
-                    ),
-                    start = Offset(0f, Float.POSITIVE_INFINITY),
-                    end = Offset(0f, 0f)
+                        Color.Black.copy(alpha = 0.8f),
+                        Color.Transparent
+                    )
                 )
             )
-            .padding(0.dp)
+            .padding(bottom = 16.dp)
     ) {
         TopAppBar(
             title = {
+                // Texto con efecto Neón (reutilizando estilo del Login)
                 Text(
-                    "FreePlayer",
-                    color = AppColors.Blanco, // Corregido para que se vea sobre el fondo oscuro
-                    fontSize = 45.sp,
+                    text = "FreePlayer",
+                    color = Color.White,
+                    fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
-                    fontStyle = FontStyle.Italic
+                    style = MaterialTheme.typography.displaySmall.copy(
+                        shadow = Shadow(
+                            color = Color(0xFFD500F9).copy(alpha = 0.6f),
+                            blurRadius = 20f
+                        )
+                    )
                 )
             },
             actions = {
-                // <-- CAMBIO CLAVE 2: Usamos el parámetro 'usuario'.
-                // La llamada segura '?.' protege contra un valor nulo mientras cargan los datos.
+                // Botón Refrescar (Estilo Glass)
                 IconButton(
                     onClick = onReescanearClick,
-                    enabled = !escaneoManualEnProgreso
+                    enabled = !escaneoManualEnProgreso,
+                    modifier = Modifier
+                        .background(Color.White.copy(alpha = 0.1f), CircleShape)
                 ) {
-                    // Si el escaneo manual está activo, muestra un indicador de carga.
                     if (escaneoManualEnProgreso) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp), // Un tamaño adecuado para la barra de título
-                            color = AppColors.Blanco,
+                            modifier = Modifier.size(20.dp),
+                            color = Color(0xFFD500F9),
                             strokeWidth = 2.dp
                         )
                     } else {
-                        // Si no, muestra el icono de refrescar.
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Actualizar biblioteca",
-                            tint = AppColors.Blanco
+                            contentDescription = "Refrescar",
+                            tint = Color.White
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Avatar
                 AsyncImage(
-                    model = usuario?.fotoPerfilUrl,
-                    contentDescription = "Foto de perfil",
-                    contentScale = ContentScale.Crop,// Icono si hay un error
+                    model = usuario?.fotoPerfil,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .padding(end = 8.dp)
-                        .size(48.dp)
+                        .padding(end = 16.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
-                        .background(AppColors.GrisProfundo)
-                        .border(
-                            width = 1.dp,
-                            color = AppColors.Negro,
-                            shape = CircleShape
-                        )
+                        .border(1.dp, Color(0xFFD500F9), CircleShape) // Borde Neón
                 )
             },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = AppColors.Transparente
-            )
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
         )
+
+        // Chips de Navegación (Estilo Glass/Neón)
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(5.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            contentPadding = PaddingValues(
-                start = 5.dp,
-                end = 5.dp,
-                bottom = 5.dp // Un poco de espacio inferior
-            ),
-            modifier = Modifier.fillMaxWidth()
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp)
         ) {
-            items(menus) { (nombreMenu, tipoDeCuerpo) ->
-                val estaSeleccionado = cuerpoActual == tipoDeCuerpo
-                Button(
-                    onClick = { onMenuClick(tipoDeCuerpo) }, // Notificamos qué menú se seleccionó
-                    colors = ButtonDefaults.buttonColors(
-                        // Cambia de color si es el menú activo
-                        containerColor = if (estaSeleccionado) AppColors.Negro else AppColors.Negro.copy(alpha = 0.5f),
-                        contentColor = AppColors.Blanco
-                    ),
+            items(menus) { (nombreMenu, tipo) ->
+                val seleccionado = cuerpoActual == tipo
+
+                // Chip personalizado
+                Surface(
+                    onClick = { onMenuClick(tipo) },
+                    shape = RoundedCornerShape(50),
+                    color = if (seleccionado) Color(0xFFD500F9).copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f),
                     border = BorderStroke(
-                        width = if (estaSeleccionado) 2.5.dp
-                        else 1.5.dp,
-                        color = if (estaSeleccionado) AppColors.PurpuraMedio // 👈 borde rojo si está activo
-                        else AppColors.GrisOscuro
-                    ),
+                        width = 1.dp,
+                        color = if (seleccionado) Color(0xFFD500F9) else Color.White.copy(alpha = 0.2f)
+                    )
                 ) {
                     Text(
                         text = nombreMenu,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold
+                        color = if (seleccionado) Color.White else Color.White.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        fontSize = 14.sp,
+                        fontWeight = if (seleccionado) FontWeight.Bold else FontWeight.Normal
                     )
                 }
             }
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun PreviewSeccionEncabezado() {
-    val usuarioDePrueba = UsuarioEntity(
-        id = 1,
-        nombreUsuario = "Preview User",
-        correo = "preview@test.com",
-        contrasenaHash = "",
-        fechaRegistro = Date(),
-        fotoPerfilUrl = "",
-        tipoAutenticacion = "LOCAL"
-    )
-    SeccionEncabezado(
-        usuario = usuarioDePrueba,
-        cuerpoActual = TipoDeCuerpoBiblioteca.CANCIONES,
-        onMenuClick = {},
-        onReescanearClick = {},
-        escaneoManualEnProgreso = false
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun PreviewSeccionEncabezadoEscaneoActivo() {
-    val usuarioDePrueba = UsuarioEntity(
-        id = 1,
-        nombreUsuario = "Preview User",
-        correo = "preview@test.com",
-        contrasenaHash = "",
-        fechaRegistro = Date(),
-        fotoPerfilUrl = "",
-        tipoAutenticacion = "LOCAL"
-    )
-    SeccionEncabezado(
-        usuario = usuarioDePrueba,
-        cuerpoActual = TipoDeCuerpoBiblioteca.CANCIONES,
-        onMenuClick = {},
-        onReescanearClick = {},
-        escaneoManualEnProgreso = true
-    )
 }

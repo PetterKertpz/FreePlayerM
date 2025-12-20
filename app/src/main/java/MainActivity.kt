@@ -84,7 +84,7 @@ class MainActivity : ComponentActivity() {
                         is AuthState.Autenticado -> {
                             GrafoDeNavegacion(
                                 navController = navController,
-                                rutaDeInicio = Rutas.Biblioteca.crearRuta(state.usuario.id),
+                                rutaDeInicio = Rutas.Biblioteca.crearRuta(state.usuario.idUsuario),
                                 reproductorViewModel = reproductorViewModel
                             )
                         }

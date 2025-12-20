@@ -28,7 +28,9 @@ object ModuloAplicacion {
 
     @Provides
     @Singleton
-    fun provideGeniusScraper(okHttpClient: OkHttpClient): GeniusScraper {
+    fun provideGeniusScraper(
+        @NetworkClient okHttpClient: OkHttpClient // <--- ✅ AGREGA LA ETIQUETA AQUÍ
+    ): GeniusScraper {
         return GeniusScraper(okHttpClient)
     }
 
@@ -36,32 +38,6 @@ object ModuloAplicacion {
     @Singleton
     fun provideGeniusServiceOptimizado(apiService: GeniusApiService): GeniusServiceOptimizado {
         return GeniusServiceOptimizado(apiService)
-    }
-
-    @Provides
-    @Singleton
-    fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
-        return Room.databaseBuilder(
-            context,
-            AppDatabase::class.java,
-            "freeplayer_database"
-        )
-            .fallbackToDestructiveMigration(true)
-            .build()
-    }
-
-    @Provides
-    @Singleton
-    fun provideUsuarioDao(appDatabase: AppDatabase): UsuarioDao {
-        return appDatabase.usuarioDao()
-    }
-
-    // --- ¡RECETA AÑADIDA AQUÍ! ---
-    // Le decimos a Hilt cómo crear un CancionDao.
-    @Provides
-    @Singleton
-    fun provideCancionDao(appDatabase: AppDatabase): CancionDao {
-        return appDatabase.cancionDao() // Simplemente lo pedimos a nuestra base de datos.
     }
 
     @Provides
@@ -86,11 +62,5 @@ object ModuloAplicacion {
         credentialManager: CredentialManager
     ): GoogleAuthUiClient {
         return GoogleAuthUiClient(context, credentialManager)
-    }
-
-    @Provides
-    @Singleton
-    fun provideLetraDao(appDatabase: AppDatabase): LetraDao {
-        return appDatabase.letraDao()
     }
 }

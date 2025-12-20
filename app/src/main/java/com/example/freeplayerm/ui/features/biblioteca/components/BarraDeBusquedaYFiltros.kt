@@ -1,193 +1,113 @@
-// en: app/src/main/java/com/example/freeplayerm/ui/features/biblioteca/components/BarraDeBusquedaYFiltros.kt
+// ui/features/biblioteca/components/BarraDeBusquedaYFiltros.kt
 package com.example.freeplayerm.ui.features.biblioteca.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.KeyboardDoubleArrowDown
-import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.freeplayerm.ui.features.biblioteca.BibliotecaEvento
 import com.example.freeplayerm.ui.features.biblioteca.CriterioDeOrdenamiento
 import com.example.freeplayerm.ui.features.biblioteca.DireccionDeOrdenamiento
-import com.example.freeplayerm.ui.theme.AppColors
-import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 
 @Composable
 fun BarraDeBusquedaYFiltros(
-    modifier: Modifier = Modifier,
     textoDeBusqueda: String,
     criterioDeOrdenamiento: CriterioDeOrdenamiento,
     direccionDeOrdenamiento: DireccionDeOrdenamiento,
-    enEvento: (BibliotecaEvento) -> Unit
+    enEvento: (BibliotecaEvento) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    var menuExpandido by remember { mutableStateOf(false) }
-
+    // Contenedor Flotante "Capsula"
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(shape = RoundedCornerShape(0.dp, 0.dp, 15.dp, 15.dp))
+            .height(56.dp)
             .background(
-                brush = if (isSystemInDarkTheme()) {
-                    // Modo oscuro → gradiente
-                    Brush.verticalGradient(
-                        colorStops = arrayOf(
-                            0.1f to Color.Black,
-                            0.4f to Color.Black,
-                            0.9f to AppColors.Transparente
-                        )
-                    )
-                } else {
-                    // Modo claro → fondo sólido negro
-                    Brush.verticalGradient(
-                        colors = listOf(Color.Black, Color.Black) // equivalente a todo negro
-                    )
-                }
+                color = Color(0xFF1E1E1E).copy(alpha = 0.6f),
+                shape = RoundedCornerShape(28.dp)
             )
-            .padding(5.dp, 0.dp, 5.dp, 10.dp ),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(5.dp) // Añade espacio entre elementos
+            .border(
+                width = 1.dp,
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        Color(0xFFD500F9).copy(alpha = 0.5f),
+                        Color(0xFF00E5FF).copy(alpha = 0.5f)
+                    )
+                ),
+                shape = RoundedCornerShape(28.dp)
+            )
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // Usamos OutlinedTextField para un mejor control del estilo
-        OutlinedTextField(
+        // Icono Search
+        Icon(
+            imageVector = Icons.Default.Search,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.7f)
+        )
+
+        Spacer(Modifier.width(8.dp))
+
+        // Input Transparente
+        TextField(
             value = textoDeBusqueda,
             onValueChange = { enEvento(BibliotecaEvento.TextoDeBusquedaCambiado(it)) },
-            modifier = Modifier
-                .weight(1f)
-                .border(
-                width = 2.dp,
-                color = AppColors.PurpuraProfundo,
-                shape = RoundedCornerShape(30.dp)
-                )
-                .basicMarquee()
-                .fillMaxWidth(0.25f),
-            placeholder = {
-                Text(
-                    "Buscar",
-                    fontStyle = FontStyle.Italic,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Icono de búsqueda"
-                )
-            },
-            singleLine = true,
-            shape = RoundedCornerShape(30.dp), // Bordes completamente redondeados
+            placeholder = { Text("Buscar en tu universo...", color = Color.White.copy(alpha = 0.4f)) },
             colors = TextFieldDefaults.colors(
-                // --- ✅ COLORES CORREGIDOS PARA VISIBILIDAD ---
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
                 focusedTextColor = Color.White,
-                unfocusedTextColor = AppColors.GrisOscuro,
-                cursorColor = AppColors.PurpuraProfundo,
-                focusedPlaceholderColor = Color.LightGray,
-                unfocusedPlaceholderColor = Color.LightGray,
-                focusedLeadingIconColor = Color.White,
-                unfocusedLeadingIconColor = Color.White,
-                focusedContainerColor = AppColors.Negro,
-                unfocusedContainerColor = AppColors.Negro,
-                focusedIndicatorColor = Color.Transparent, // Sin línea debajo
-                unfocusedIndicatorColor = Color.Transparent // Sin línea debajo
-            )
+                unfocusedTextColor = Color.White,
+                cursorColor = Color(0xFFD500F9),
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent
+            ),
+            modifier = Modifier.weight(1f),
+            singleLine = true
         )
-        IconButton(onClick = { enEvento(BibliotecaEvento.DireccionDeOrdenamientoCambiada) }) {
+
+        // Botón Filtros
+        var menuExpandido by remember { mutableStateOf(false) }
+
+        IconButton(onClick = { menuExpandido = true }) {
             Icon(
-                imageVector = if (direccionDeOrdenamiento == DireccionDeOrdenamiento.ASCENDENTE) {
-                    Icons.Default.KeyboardDoubleArrowUp
-                } else {
-                    Icons.Default.KeyboardDoubleArrowDown
-                },
-                contentDescription = "Cambiar dirección de ordenamiento",
-                // --- ✅ ICONO EN BLANCO PARA SER VISIBLE ---
-                tint = Color.White
+                imageVector = Icons.Default.Sort,
+                contentDescription = "Ordenar",
+                tint = if (criterioDeOrdenamiento != CriterioDeOrdenamiento.NINGUNO) Color(0xFFD500F9) else Color.White
             )
         }
-        Box {
-            IconButton(onClick = { menuExpandido = !menuExpandido }) {
-                Icon(
-                    imageVector = Icons.Default.FilterList,
-                    contentDescription = "Ordenar por",
-                    // --- ✅ ICONO EN BLANCO (O PÚRPURA SI ESTÁ ACTIVO) ---
-                    tint = if (criterioDeOrdenamiento != CriterioDeOrdenamiento.NINGUNO) AppColors.PurpuraProfundo else Color.White
+
+        // Dropdown Oscuro
+        DropdownMenu(
+            expanded = menuExpandido,
+            onDismissRequest = { menuExpandido = false },
+            modifier = Modifier.background(Color(0xFF1E1E1E))
+        ) {
+            CriterioDeOrdenamiento.entries.forEach { criterio ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            criterio.etiqueta,
+                            color = if(criterio == criterioDeOrdenamiento) Color(0xFFD500F9) else Color.White
+                        )
+                    },
+                    onClick = {
+                        enEvento(BibliotecaEvento.CriterioDeOrdenamientoCambiado(criterio))
+                        menuExpandido = false
+                    }
                 )
             }
-            DropdownMenu(
-                expanded = menuExpandido,
-                // --- ✅ CORREGIDO PARA PODER CERRAR EL MENÚ ---
-                onDismissRequest = { menuExpandido = false }
-            ) {
-                CriterioDeOrdenamiento.entries.forEach { criterio ->
-                    DropdownMenuItem(
-                        text = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = criterio.etiqueta,
-                                    color = if (criterio == criterioDeOrdenamiento) AppColors.PurpuraProfundo else Color.Unspecified
-                                )
-                                if (criterio == criterioDeOrdenamiento) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = "Criterio seleccionado",
-                                        tint = AppColors.PurpuraProfundo,
-                                        modifier = Modifier.padding(start = 8.dp)
-                                    )
-                                }
-                            }
-                        },
-                        onClick = {
-                            enEvento(BibliotecaEvento.CriterioDeOrdenamientoCambiado(criterio))
-                            menuExpandido = false
-                        }
-                    )
-                }
-            }
         }
-    }
-}
-// Añadir al final de BarraDeBusquedaYFiltros.kt
-
-@Preview(showBackground = true)
-@Composable
-fun PreviewBarraDeBusquedaYFiltros() {
-    FreePlayerMTheme {
-        // --- CAMBIO #5: ACTUALIZAMOS LA PREVISUALIZACIÓN ---
-        BarraDeBusquedaYFiltros(
-            textoDeBusqueda = "Mi búsqueda",
-            criterioDeOrdenamiento = CriterioDeOrdenamiento.NINGUNO,
-            direccionDeOrdenamiento = DireccionDeOrdenamiento.DESCENDENTE,
-            enEvento = {}
-        )
     }
 }

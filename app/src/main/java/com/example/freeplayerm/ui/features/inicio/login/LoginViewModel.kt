@@ -69,9 +69,9 @@ class LoginViewModel @Inject constructor(
                         nombreUsuario = datosUsuario.nombreUsuario ?: "Usuario",
                         fotoUrl = datosUsuario.fotoPerfilUrl
                     ).onSuccess { usuario ->
-                        sessionRepository.guardarIdDeUsuario(usuario.id)
+                        sessionRepository.guardarIdDeUsuario(usuario.idUsuario)
                         // Desactivamos la carga al terminar
-                        _estadoUi.update { it.copy(cargandoConGoogle = false, usuarioIdExitoso = usuario.id) }
+                        _estadoUi.update { it.copy(cargandoConGoogle = false, usuarioIdExitoso = usuario.idUsuario) }
                     }.onFailure { error ->
                         _estadoUi.update { it.copy(cargandoConGoogle = false, error = error.message ?: "No se pudo guardar el usuario.") }
                     }
@@ -95,9 +95,9 @@ class LoginViewModel @Inject constructor(
                 identificador = estadoActual.correoOUsuario,
                 contrasena = estadoActual.contrasena
             ).onSuccess { usuario ->
-                sessionRepository.guardarIdDeUsuario(usuario.id)
+                sessionRepository.guardarIdDeUsuario(usuario.idUsuario)
                 // Desactivamos la carga al terminar
-                _estadoUi.update { it.copy(cargandoLocalmente = false, usuarioIdExitoso = usuario.id) }
+                _estadoUi.update { it.copy(cargandoLocalmente = false, usuarioIdExitoso = usuario.idUsuario) }
             }.onFailure { error ->
                 _estadoUi.update { it.copy(cargandoLocalmente = false, error = error.message) }
             }

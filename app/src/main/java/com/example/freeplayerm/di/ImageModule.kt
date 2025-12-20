@@ -8,6 +8,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Dispatchers
+import okhttp3.OkHttpClient
 import javax.inject.Singleton
 
 @Module
@@ -17,17 +18,26 @@ object ImageModule {
     @Provides
     @Singleton
     fun provideImageLoader(
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
+        @ImageClient okHttpClient: OkHttpClient
     ): ImageLoader {
         return ImageLoader.Builder(context)
-            // Habilita una transición suave cuando la imagen se carga.
             .crossfade(true)
-            // Optimiza el uso de memoria usando un formato de color más ligero.
             .allowRgb565(true)
-            // --- ✅ LA OPTIMIZACIÓN MÁS IMPORTANTE ---
-            // Le dice a Coil que haga todo el trabajo pesado (descargar, decodificar)
-            // en un hilo de fondo (Dispatchers.IO), manteniendo la UI fluida.
             .dispatcher(Dispatchers.IO)
+            .okHttpClient(okHttpClient)
+            .build()
+    }
+
+    // Proveedor de OkHttpClient específico para imágenes
+    @Provides
+    @Singleton
+    @ImageClient
+    fun provideImageOkHttpClient(): OkHttpClient {
+        return OkHttpClient.Builder()
+            .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
             .build()
     }
 }

@@ -11,6 +11,5 @@ data class SongResponseData(
 
 data class SongDetails(
     @Json(name = "id") val id: String,
-    @Json(name = "title") val title: String,
-    // ... puedes añadir más campos si los necesitas ...
+    @Json(name = "title") val title: String
 )

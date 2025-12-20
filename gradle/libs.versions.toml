@@ -43,6 +43,7 @@ mockk = "1.14.7"
 coroutinesTest = "1.10.2"
 uiText = "1.10.0"
 animation = "1.10.0"
+foundationLayout = "1.10.0"
 
 [libraries]
 # --- Core Android ---
@@ -114,6 +115,7 @@ mockk = { module = "io.mockk:mockk", version = "1.14.7" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutinesTest" }
 androidx-compose-ui-text = { group = "androidx.compose.ui", name = "ui-text", version.ref = "uiText" }
 androidx-compose-animation = { group = "androidx.compose.animation", name = "animation", version.ref = "animation" }
+androidx-compose-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayout" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

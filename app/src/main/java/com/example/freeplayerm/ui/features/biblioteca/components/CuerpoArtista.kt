@@ -33,70 +33,31 @@ import com.example.freeplayerm.ui.theme.AppColors
 
 @Composable
 fun CuerpoArtistas(
-    modifier: Modifier = Modifier,
     artistas: List<ArtistaEntity>,
     lazyGridState: LazyGridState,
-    onArtistaClick: (ArtistaEntity) -> Unit
+    onArtistaClick: (ArtistaEntity) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     if (artistas.isEmpty()) {
-        Box(
-            modifier = modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = "No se encontraron artistas.", color = Color.Gray)
+        Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Sin artistas", color = Color.Gray)
         }
     } else {
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 140.dp),
             state = lazyGridState,
-            modifier = modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            modifier = modifier.fillMaxSize()
         ) {
             items(artistas) { artista ->
-                ArtistaItem(
-                    artista = artista,
-                    onClick = { onArtistaClick(artista) }
-                )
+                ItemArtistaGalactico(artista = artista, onClick = { onArtistaClick(artista) })
             }
         }
     }
 }
 
-@Composable
-private fun ArtistaItem(
-    artista: ArtistaEntity,
-    onClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .width(140.dp)
-            .clickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // Usaremos una URL de avatar genérica por ahora
-        val urlFotoArtista = "https://ui-avatars.com/api/?name=${artista.nombre}&background=random&color=fff&size=256"
-
-        AsyncImage(
-            model = urlFotoArtista,
-            contentDescription = "Foto de ${artista.nombre}",
-            modifier = Modifier
-                .size(120.dp)
-                .clip(CircleShape)
-                .background(AppColors.GrisProfundo),// Los artistas suelen tener fotos circulares
-            contentScale = ContentScale.Crop
-        )
-
-        MarqueeTextConDesvanecido(
-            text = "  " + artista.nombre,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-
-        )
-    }
-}
 
 @Preview(showBackground = true)
 @Composable

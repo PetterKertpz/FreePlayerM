@@ -76,8 +76,8 @@ class RegistroViewModel @Inject constructor(
                 correo = estado.correo,
                 contrasena = estado.contrasena
             ).onSuccess { usuarioCreado ->
-                sessionRepository.guardarIdDeUsuario(usuarioCreado.id)
-                _estadoUi.update { it.copy(estaCargando = false, usuarioIdExitoso = usuarioCreado.id) }
+                sessionRepository.guardarIdDeUsuario(usuarioCreado.idUsuario)
+                _estadoUi.update { it.copy(estaCargando = false, usuarioIdExitoso = usuarioCreado.idUsuario) }
             }.onFailure { error ->
                 _estadoUi.update { it.copy(estaCargando = false, error = error.message ?: "Error al registrar") }
             }

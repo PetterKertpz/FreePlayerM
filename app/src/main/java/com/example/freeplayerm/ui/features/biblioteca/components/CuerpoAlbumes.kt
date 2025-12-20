@@ -1,195 +1,177 @@
-// en: app/src/main/java/com/example/freeplayerm/ui/features/biblioteca/components/CuerpoAlbumes.kt
 package com.example.freeplayerm.ui.features.biblioteca.components
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import android.content.res.Configuration
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
-import coil.compose.AsyncImage
-import com.example.freeplayerm.R
 import com.example.freeplayerm.data.local.entity.AlbumEntity
-import com.example.freeplayerm.ui.features.shared.MarqueeTextConDesvanecido
-import com.example.freeplayerm.ui.theme.AppColors
+import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 
 /**
- * Muestra una cuadrícula de álbumes.
- * @param albumes La lista de entidades de álbum a mostrar.
- * @param onAlbumClick Un callback que se invoca con el AlbumEntity cuando un item es presionado.
+ * ✅ OPTIMIZADO: Grid de álbumes con vinilos
+ *
+ * Mejoras:
+ * - Corrección del llamado a ItemAlbumVinilo
+ * - Keys estables para performance
+ * - ContentType para reciclaje optimizado
+ * - Previews completas (Light/Dark)
  */
 @Composable
 fun CuerpoAlbumes(
-    modifier: Modifier = Modifier,
     albumes: List<AlbumEntity>,
     lazyGridState: LazyGridState,
-    onAlbumClick: (AlbumEntity) -> Unit
+    onAlbumClick: (AlbumEntity) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     if (albumes.isEmpty()) {
         Box(
             modifier = modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            Text(text = "No se encontraron álbumes.", color = Color.Gray)
+            Text(
+                text = "Sin álbumes disponibles",
+                color = Color.Gray,
+                style = MaterialTheme.typography.bodyLarge
+            )
         }
     } else {
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 160.dp),
+            columns = GridCells.Adaptive(minSize = 190.dp),
             state = lazyGridState,
-            modifier = modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = modifier.fillMaxSize()
         ) {
-            items(albumes) { album ->
-                AlbumItem(
+            items(
+                items = albumes,
+                key = { it.idAlbum }, // ⚡ KEY ESTABLE para performance
+                contentType = { "AlbumItem" } // ⚡ RECICLAJE optimizado
+            ) { album ->
+                // ✅ CORRECCIÓN: Llamado correcto con parámetros
+                ItemAlbumVinilo(
                     album = album,
-                    onClick = { onAlbumClick(album) }
+                    alClick = onAlbumClick,
+                    modifier = Modifier.animateItem() // ⚡ Animaciones suaves
                 )
             }
         }
     }
 }
 
+// ==========================================
+// ✅ PREVIEWS COMPLETAS
+// ==========================================
+
+@Preview(name = "Light - Con álbumes", showBackground = true)
+@Preview(name = "Dark - Con álbumes", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun AlbumItem(
-    album: AlbumEntity,
-    onClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .width(200.dp)
-            .clickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Row {
-            Box(
-
-                modifier = Modifier
-                    .aspectRatio(1f)
-                    .fillMaxWidth()
-
-            ) {
-
-                //vinilo
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .padding(
-                            start = 60.dp,
-                        ) // hace que se vea sobresaliendo a la derecha
-                        .align(Alignment.CenterEnd)
-
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.vinilo_foreground), // tu PNG del vinilo sin fondo
-                        contentDescription = null,
-                        modifier = Modifier
-                            .zIndex(0f)
-                            .fillMaxSize()
-                            .padding(0.dp),
-                        contentScale = ContentScale.Fit,
-                        alpha = 1f
-                    )
-                    // Label central del vinilo (portada en círculo)
-                    AsyncImage(
-                        model = album.portadaPath,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(40.dp)
-                            .align(Alignment.Center)
-                            .clip(CircleShape)
-                            .background(AppColors.GrisMedio)
-                            .padding(0.dp),
-                        contentScale = ContentScale.Crop,
-                        alpha = 1f
-                    )
-                }
-                //Carton
-                AsyncImage(
-                    model = album.portadaPath,
-                    contentDescription = "Portada de ${album.titulo}",
-                    modifier = Modifier
-                        .shadow(8.dp,RoundedCornerShape(4.dp), clip = false)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(AppColors.GrisProfundo)
-                        .align(Alignment.CenterStart)
-                        .fillMaxSize(0.75f)
-                        .zIndex(1f),
-                    contentScale = ContentScale.Crop,
-                    alpha = 1f
-                )
-
-            }
-        }
-        Column (
-            horizontalAlignment = Alignment.Start,
-            verticalArrangement = Arrangement.spacedBy(0.dp)
-        ) {
-
-            // ℹ️ Información del álbum
-            MarqueeTextConDesvanecido(
-                text = "  " + album.titulo,
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
-                color = MaterialTheme.colorScheme.onSurface,
-
-
-            )
-            MarqueeTextConDesvanecido(
-                text = "  "+"Artista ${album.idArtista}", // reemplaza con el nombre real
-                fontSize = 15.sp,
-                color = MaterialTheme.colorScheme.onSurface,
-
-            )
-        }
-
-    }
-}
-
-
-
-@Preview(showBackground = true)
-@Composable
-fun PreviewCuerpoAlbumes() {
+private fun PreviewCuerpoAlbumesConDatos() {
     val listaDePrueba = listOf(
-        AlbumEntity(1, 1, "Viaje de Lujo", 2023, ""),
-        AlbumEntity(2, 2, "Noches de Verano", 2022, ""),
-        AlbumEntity(3, 3, "Ecos Urbanos", 2024, "")
+        AlbumEntity(
+            idAlbum = 1,
+            idArtista = 1,
+            titulo = "Viaje de Lujo",
+            anio = 2025
+        ),
+        AlbumEntity(
+            idAlbum = 2,
+            idArtista = 2,
+            titulo = "Noches de Verano",
+            anio = 2022
+        ),
+        AlbumEntity(
+            idAlbum = 3,
+            idArtista = 3,
+            titulo = "Ecos Urbanos",
+            anio = 2024
+        ),
+        AlbumEntity(
+            idAlbum = 4,
+            idArtista = 4,
+            titulo = "Sueños Digitales",
+            anio = 2023
+        ),
+        AlbumEntity(
+            idAlbum = 5,
+            idArtista = 5,
+            titulo = "Ritmos del Alma",
+            anio = 2022
+        ),
+        AlbumEntity(
+            idAlbum = 6,
+            idArtista = 6,
+            titulo = "Melodías Nocturnas",
+            anio = 2024
+        )
     )
-    MaterialTheme {
+
+    FreePlayerMTheme {
         CuerpoAlbumes(
-            albumes = listaDePrueba, onAlbumClick = {},
-            lazyGridState = LazyGridState()
+            albumes = listaDePrueba,
+            onAlbumClick = {},
+            lazyGridState = rememberLazyGridState()
+        )
+    }
+}
+
+@Preview(name = "Estado Vacío", showBackground = true)
+@Composable
+private fun PreviewCuerpoAlbumesVacio() {
+    FreePlayerMTheme {
+        CuerpoAlbumes(
+            albumes = emptyList(),
+            onAlbumClick = {},
+            lazyGridState = rememberLazyGridState()
+        )
+    }
+}
+
+@Preview(name = "Pocos álbumes", showBackground = true)
+@Composable
+private fun PreviewCuerpoAlbumesPocos() {
+    val listaDePrueba = listOf(
+        AlbumEntity(
+            idAlbum = 1,
+            idArtista = 1,
+            titulo = "Solo Album",
+            anio = 2024
+        )
+    )
+
+    FreePlayerMTheme {
+        CuerpoAlbumes(
+            albumes = listaDePrueba,
+            onAlbumClick = {},
+            lazyGridState = rememberLazyGridState()
+        )
+    }
+}
+
+@Preview(name = "Muchos álbumes (Performance)", showBackground = true)
+@Composable
+private fun PreviewCuerpoAlbumesMuchos() {
+    val listaDePrueba = (1..20).map { i ->
+        AlbumEntity(
+            idAlbum = i,
+            idArtista = (i % 5) + 1,
+            titulo = "Álbum #$i",
+            anio = 2020 + (i % 5)
+        )
+    }
+
+    FreePlayerMTheme {
+        CuerpoAlbumes(
+            albumes = listaDePrueba,
+            onAlbumClick = {},
+            lazyGridState = rememberLazyGridState()
         )
     }
 }

@@ -80,6 +80,7 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.compose.ui.text)
     implementation(libs.androidx.compose.animation)
+    implementation(libs.androidx.compose.foundation.layout)
     ksp(libs.hilt.compiler)
 
     // --- Firebase & Auth ---

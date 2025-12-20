@@ -36,73 +36,26 @@ import com.example.freeplayerm.ui.theme.AppColors
 
 @Composable
 fun CuerpoListas(
-    modifier: Modifier = Modifier,
     listas: List<ListaReproduccionEntity>,
     lazyListState: LazyListState,
-    onListaClick: (ListaReproduccionEntity) -> Unit
+    onListaClick: (ListaReproduccionEntity) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     if (listas.isEmpty()) {
-        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(text = "Aún no has creado ninguna lista.", color = Color.Gray)
+        Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Crea tu primera lista...", color = Color.Gray)
         }
     } else {
         LazyColumn(
-            modifier = modifier.fillMaxSize(),
-            contentPadding = PaddingValues(8.dp),
+            state = lazyListState,
+            contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            state = lazyListState
+            modifier = modifier.fillMaxSize()
         ) {
             items(listas) { lista ->
-                ListaItem(
-                    lista = lista,
-                    onClick = { onListaClick(lista) }
-                )
+                ItemListaGalactico(lista = lista, onClick = { onListaClick(lista) })
             }
         }
-    }
-}
-
-@Composable
-private fun ListaItem(
-    lista: ListaReproduccionEntity,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick)
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        AsyncImage(
-            model = lista.portadaUrl,
-            contentDescription = "Portada de ${lista.nombre}",
-            modifier = Modifier
-                .size(60.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(AppColors.GrisProfundo),
-            contentScale = ContentScale.Crop,
-            // Mostramos un icono de música por defecto si no hay portada
-
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            MarqueeTextConDesvanecido(
-                text = "  "+lista.nombre,
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
-                color = MaterialTheme.colorScheme.onSurface,
-
-            )
-            MarqueeTextConDesvanecido(
-                text = ("  " + lista.descripcion),
-                fontSize = 18.sp,
-                color = MaterialTheme.colorScheme.onSurface,
-
-            )
-        }
-
     }
 }
 

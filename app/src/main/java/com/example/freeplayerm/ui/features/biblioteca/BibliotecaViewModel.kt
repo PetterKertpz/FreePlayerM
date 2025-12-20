@@ -140,7 +140,7 @@ class BibliotecaViewModel @Inject constructor(
     val estadoUi = _estadoUi.asStateFlow()
     private val fuenteDeCancionesActiva =
         MutableStateFlow<Flow<List<CancionConArtista>>>(flowOf(emptyList()))
-    private val usuarioIdFlow = _estadoUi.map { it.usuarioActual?.id }.distinctUntilChanged().filterNotNull()
+    private val usuarioIdFlow = _estadoUi.map { it.usuarioActual?.idUsuario }.distinctUntilChanged().filterNotNull()
     // Mantenemos este Job para las cargas que no son de canciones (álbumes, artistas, etc.)
 
     init {
@@ -194,8 +194,8 @@ class BibliotecaViewModel @Inject constructor(
 
     private fun observarYFiltrarListas() {
         viewModelScope.launch {
-            _estadoUi.map { it.usuarioActual?.id }.distinctUntilChanged().flatMapLatest { usuarioId ->
-                if (usuarioId != null) cancionDao.obtenerListasPorUsuarioId(usuarioId) else flowOf(emptyList())
+            _estadoUi.map { it.usuarioActual?.idUsuario }.distinctUntilChanged().flatMapLatest { usuarioId ->
+                if (usuarioId != null) cancionDao.obtenerListasPorUsuario(usuarioId) else flowOf(emptyList())
             }.combine(_estadoUi.map { it.textoDeBusqueda }.distinctUntilChanged()) { listas, busqueda ->
                 if (busqueda.isBlank()) listas
                 else {
@@ -213,7 +213,7 @@ class BibliotecaViewModel @Inject constructor(
             is BibliotecaEvento.QuitarSeleccionDeFavoritos -> {
                 viewModelScope.launch {
                     val estado = _estadoUi.value
-                    val usuarioId = estado.usuarioActual?.id ?: return@launch
+                    val usuarioId = estado.usuarioActual?.idUsuario ?: return@launch
                     val cancionIds = estado.cancionesSeleccionadas.toList()
 
                     // Iteramos sobre cada canción seleccionada y la quitamos de favoritos
@@ -233,14 +233,14 @@ class BibliotecaViewModel @Inject constructor(
             is BibliotecaEvento.AnadirSeleccionAFavoritos -> {
                 viewModelScope.launch {
                     val estado = _estadoUi.value
-                    val usuarioId = estado.usuarioActual?.id ?: return@launch
+                    val usuarioId = estado.usuarioActual?.idUsuario ?: return@launch
                     val cancionIds = estado.cancionesSeleccionadas
 
                     // Iteramos sobre cada canción seleccionada y la añadimos a favoritos
                     cancionIds.forEach { cancionId ->
                         // Creamos la entidad Favorito y la insertamos
                         val nuevoFavorito = FavoritoEntity(idUsuario = usuarioId, idCancion = cancionId)
-                        cancionDao.anadirAFavoritos(nuevoFavorito)
+                        cancionDao.agregarAFavoritos(nuevoFavorito)
                     }
 
                     // Limpiamos y salimos del modo selección
@@ -297,7 +297,7 @@ class BibliotecaViewModel @Inject constructor(
                         portadaUrl = nuevaPortadaUrl // <-- Usamos la nueva URI
                     )
 
-                    cancionDao.actualizarLista(listaActualizada)
+                    cancionDao.actualizarListaReproduccion(listaActualizada)
 
                     // Actualizamos el estado y cerramos el diálogo
                     _estadoUi.update {
@@ -349,7 +349,7 @@ class BibliotecaViewModel @Inject constructor(
             is BibliotecaEvento.CrearListaYAnadirCancionesSeleccionadas -> {
                 viewModelScope.launch {
                     val estado = _estadoUi.value
-                    val usuarioId = estado.usuarioActual?.id ?: return@launch
+                    val usuarioId = estado.usuarioActual?.idUsuario ?: return@launch
                     val cancionIds = estado.cancionesSeleccionadas
                     val portadaUriString = evento.portadaUri?.let {
                         imageRepository.copyImageToInternalStorage(Uri.parse(it))?.toString()
@@ -431,7 +431,7 @@ class BibliotecaViewModel @Inject constructor(
                     val listaId = estado.listaActual?.idLista ?: return@launch
                     val cancionIds = estado.cancionesSeleccionadas.toList()
 
-                    cancionDao.quitarCancionesDeLista(listaId, cancionIds)
+                    cancionDao.quitarCancionesDeLista(listaId.toLong(), cancionIds.map { it.toLong() })
 
                     // Salimos del modo selección
                     _estadoUi.update { it.copy(esModoSeleccion = false, cancionesSeleccionadas = emptySet()) }
@@ -440,7 +440,7 @@ class BibliotecaViewModel @Inject constructor(
             is BibliotecaEvento.EliminarListaDeReproduccionActual -> {
                 viewModelScope.launch {
                     val listaId = _estadoUi.value.listaActual?.idLista ?: return@launch
-                    cancionDao.eliminarListaPorId(listaId)
+                    cancionDao.eliminarListaPorId(listaId.toLong())
                     // Volvemos a la pantalla de listas
                     cambiarCuerpo(TipoDeCuerpoBiblioteca.LISTAS)
                 }
@@ -475,7 +475,7 @@ class BibliotecaViewModel @Inject constructor(
             }
             is BibliotecaEvento.CrearNuevaListaYAnadirCancion -> {
                 viewModelScope.launch {
-                    val usuarioId = _estadoUi.value.usuarioActual?.id ?: return@launch
+                    val usuarioId = _estadoUi.value.usuarioActual?.idUsuario ?: return@launch
                     val cancionId = _estadoUi.value.cancionParaAnadirALista?.cancion?.idCancion ?: return@launch
                     val portadaUriString = evento.portadaUri?.let {
                         imageRepository.copyImageToInternalStorage(it.toUri())?.toString()
@@ -502,7 +502,7 @@ class BibliotecaViewModel @Inject constructor(
 
             is BibliotecaEvento.AlternarFavorito -> {
                 viewModelScope.launch {
-                    val usuarioId = _estadoUi.value.usuarioActual?.id ?: return@launch
+                    val usuarioId = _estadoUi.value.usuarioActual?.idUsuario ?: return@launch
                     val cancionId = evento.cancionConArtista.cancion.idCancion
 
                     if (evento.cancionConArtista.esFavorita) {
@@ -511,7 +511,7 @@ class BibliotecaViewModel @Inject constructor(
                     } else {
                         // Si no es favorita, la añadimos
                         val nuevoFavorito = FavoritoEntity(idUsuario = usuarioId, idCancion = cancionId)
-                        cancionDao.anadirAFavoritos(nuevoFavorito)
+                        cancionDao.agregarAFavoritos(nuevoFavorito)
                     }
                 }
             }
@@ -694,7 +694,7 @@ class BibliotecaViewModel @Inject constructor(
             TipoDeCuerpoBiblioteca.CANCIONES_DE_ALBUM -> {
                 album?.let {
                     _estadoUi.update { estado -> estado.copy(tituloDelCuerpo = it.titulo) }
-                    val usuarioId = _estadoUi.value.usuarioActual?.id
+                    val usuarioId = _estadoUi.value.usuarioActual?.idUsuario
 
                     // Verificamos que el ID no sea nulo antes de llamar a la función.
                     if (usuarioId != null) {
@@ -706,7 +706,7 @@ class BibliotecaViewModel @Inject constructor(
             TipoDeCuerpoBiblioteca.CANCIONES_DE_ARTISTA -> {
                 artista?.let {
                     _estadoUi.update { estado -> estado.copy(tituloDelCuerpo = it.nombre) }
-                    val usuarioId = _estadoUi.value.usuarioActual?.id
+                    val usuarioId = _estadoUi.value.usuarioActual?.idUsuario
 
                     // Verificamos que el ID no sea nulo antes de llamar a la función.
                     if (usuarioId != null) {
@@ -717,7 +717,7 @@ class BibliotecaViewModel @Inject constructor(
             TipoDeCuerpoBiblioteca.CANCIONES_DE_GENERO -> {
                 genero?.let {
                     _estadoUi.update { estado -> estado.copy(tituloDelCuerpo = it.nombre) }
-                    val usuarioId = _estadoUi.value.usuarioActual?.id
+                    val usuarioId = _estadoUi.value.usuarioActual?.idUsuario
 
                     // Verificamos que el ID no sea nulo antes de llamar a la función.
                     if (usuarioId != null) {
@@ -730,7 +730,7 @@ class BibliotecaViewModel @Inject constructor(
                     // Actualizamos el título y nos aseguramos de que la lista esté en el estado
                     _estadoUi.update { estado -> estado.copy(tituloDelCuerpo = it.nombre, listaActual = it) }
 
-                    val usuarioId = _estadoUi.value.usuarioActual?.id
+                    val usuarioId = _estadoUi.value.usuarioActual?.idUsuario
                     if (usuarioId != null) {
                         nuevaFuente =
                             cancionDao.obtenerCancionesDeListaConArtista(it.idLista, usuarioId)
@@ -739,9 +739,9 @@ class BibliotecaViewModel @Inject constructor(
             }
             TipoDeCuerpoBiblioteca.FAVORITOS -> {
                 _estadoUi.update { it.copy(tituloDelCuerpo = "Favoritos") }
-                val usuarioId = _estadoUi.value.usuarioActual?.id ?: -1
+                val usuarioId = _estadoUi.value.usuarioActual?.idUsuario ?: -1
                 if (usuarioId != -1) {
-                    nuevaFuente = cancionDao.obtenerCancionesFavoritasConArtista(usuarioId)
+                    nuevaFuente = cancionDao.obtenerFavoritas(usuarioId)
                 }
             }
         }
@@ -752,7 +752,7 @@ class BibliotecaViewModel @Inject constructor(
     }
 
     fun cargarDatosDeUsuario(usuarioId: Int) {
-        if (_estadoUi.value.usuarioActual?.id == usuarioId) return
+        if (_estadoUi.value.usuarioActual?.idUsuario == usuarioId) return
         viewModelScope.launch {
             if (usuarioId != -1) {
                 val usuario = usuarioRepository.obtenerUsuarioPorId(usuarioId)

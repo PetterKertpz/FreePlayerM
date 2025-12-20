@@ -35,84 +35,30 @@ import com.example.freeplayerm.ui.features.biblioteca.utils.GeneroVisuals
 
 @Composable
 fun CuerpoGeneros(
-    modifier: Modifier = Modifier,
     generos: List<GeneroEntity>,
     lazyGridState: LazyGridState,
-    onGeneroClick: (GeneroEntity) -> Unit
+    onGeneroClick: (GeneroEntity) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     if (generos.isEmpty()) {
-        Box(
-            modifier = modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = "No se encontraron géneros.", color = Color.Gray)
+        Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Sin géneros", color = Color.Gray)
         }
     } else {
         LazyVerticalGrid(
-            columns = GridCells.Fixed(2), // Una cuadrícula con 2 columnas
+            columns = GridCells.Fixed(2), // 2 columnas fijas se ven mejor para tarjetas de género
             state = lazyGridState,
-            modifier = modifier.fillMaxSize(),
-            contentPadding = PaddingValues(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = modifier.fillMaxSize()
         ) {
-            items(generos, key = { it.idGenero }) { genero ->
-                GeneroItem(
-                    genero = genero,
-                    onClick = { onGeneroClick(genero) }
-                )
+            items(generos) { genero ->
+                ItemGeneroGalactico(genero = genero, onClick = { onGeneroClick(genero) })
             }
         }
     }
 }
-
-@Composable
-private fun GeneroItem(
-    genero: GeneroEntity,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(1f) // Hace que la tarjeta sea un cuadrado perfecto
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.BottomStart // Alinea el texto abajo a la izquierda
-        ) {
-            // La imagen del género
-            AsyncImage(
-                model = GeneroVisuals.getImageForGenre(genero.nombre),
-                contentDescription = genero.nombre,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop // Asegura que la imagen llene la tarjeta
-            )
-            // Un gradiente oscuro para que el texto sea legible sobre cualquier imagen
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f)),
-                            startY = 300f // El gradiente empieza más abajo
-                        )
-                    )
-            )
-            // El nombre del género
-            MarqueeTextConDesvanecido(
-                text = "  "+genero.nombre,
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
-                color = Color.White,
-                modifier = Modifier.padding(12.dp)
-            )
-        }
-    }
-}
-
 
 @Preview(showBackground = true)
 @Composable
