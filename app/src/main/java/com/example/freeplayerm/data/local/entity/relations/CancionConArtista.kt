@@ -1,6 +1,7 @@
 // en: app/src/main/java/com/example/freeplayerm/data/local/entity/relations/CancionConArtista.kt
 package com.example.freeplayerm.data.local.entity.relations
 
+import androidx.room.DatabaseView
 import androidx.room.Embedded
 import com.example.freeplayerm.data.local.entity.CancionEntity
 
@@ -16,28 +17,31 @@ import com.example.freeplayerm.data.local.entity.CancionEntity
  *
  * @version 2.0 - Enhanced
  */
+@DatabaseView(
+    """
+    SELECT 
+        c.*,
+        a.nombre AS artistaNombre,
+        al.titulo AS albumNombre,
+        COALESCE(al.portada_path, c.portada_path) AS portadaPath,
+        al.anio AS fechaLanzamiento,
+        g.nombre AS generoNombre,
+        EXISTS(SELECT 1 FROM favoritos f WHERE f.id_cancion = c.id_cancion) AS esFavorita
+    FROM canciones c
+    LEFT JOIN artistas a ON c.id_artista = a.id_artista
+    LEFT JOIN albumes al ON c.id_album = al.id_album
+    LEFT JOIN generos g ON c.id_genero = g.id_genero
+    """
+)
 data class CancionConArtista(
     @Embedded
     val cancion: CancionEntity,
 
-    // ==================== INFORMACIÓN DEL ARTISTA ====================
-
-    val artistaNombre: String?,
-
-    // ==================== INFORMACIÓN DEL ÁLBUM ====================
-
-    val albumNombre: String?,
-
-    val portadaPath: String?,
-
-    val fechaLanzamiento: String?, // Puede ser año o fecha completa
-
-    // ==================== INFORMACIÓN DEL GÉNERO ====================
-
-    val generoNombre: String?,
-
-    // ==================== ESTADO ====================
-
+    val artistaNombre: String? = "Artista Desconocido",
+    val albumNombre: String? = "Álbum Desconocido",
+    val portadaPath: String? = null,
+    val fechaLanzamiento: String? = null,
+    val generoNombre: String? = "Sin Género",
     val esFavorita: Boolean = false
 ) {
     /**
@@ -155,7 +159,7 @@ data class CancionConArtista(
     /**
      * Obtiene la última vez que fue reproducida
      */
-    fun ultimaReproduccion(): Long? = cancion.ultimaReproduccion
+    fun ultimaReproduccion(): Int? = cancion.ultimaReproduccion
 
     /**
      * Verifica si fue agregada recientemente (últimos 7 días)

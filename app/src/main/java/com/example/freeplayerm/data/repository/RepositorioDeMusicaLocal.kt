@@ -102,7 +102,7 @@ class RepositorioDeMusicaLocal @Inject constructor(
                                     archivoPath = uriContenido,
                                     numeroPista = numeroPista,
                                     anio = if (anio > 0) anio else null,
-                                    fechaAgregado = System.currentTimeMillis()
+                                    fechaAgregado = System.currentTimeMillis().toInt()
                                 )
                                 cancionDao.insertarCancion(cancion)
                             }
@@ -258,23 +258,6 @@ class RepositorioDeMusicaLocal @Inject constructor(
         return resultado
     }
 
-    private fun limpiarNombreArtista(nombre: String): String {
-        var artista = nombre
-
-        val sufijosArtista = listOf(
-            Regex("""\s*-?\s*topic\s*$""", RegexOption.IGNORE_CASE),
-            Regex("""\s*-?\s*vevo\s*$""", RegexOption.IGNORE_CASE),
-            Regex("""\s*-?\s*official\s*$""", RegexOption.IGNORE_CASE),
-            Regex("""\s*-?\s*oficial\s*$""", RegexOption.IGNORE_CASE),
-            Regex("""\s*-?\s*channel\s*$""", RegexOption.IGNORE_CASE)
-        )
-
-        sufijosArtista.forEach { sufijo ->
-            artista = sufijo.replace(artista, "")
-        }
-
-        return artista.trim()
-    }
 
     private fun limpiarTituloCancion(titulo: String): String {
         var tituloLimpio = titulo
@@ -342,19 +325,6 @@ class RepositorioDeMusicaLocal @Inject constructor(
         }.joinToString(" ")
     }
 
-    private fun calcularSimilitud(texto1: String, texto2: String): Double {
-        if (texto1.equals(texto2, ignoreCase = true)) return 1.0
-
-        val palabras1 = texto1.lowercase().split(Regex("""\W+""")).toSet()
-        val palabras2 = texto2.lowercase().split(Regex("""\W+""")).toSet()
-
-        if (palabras1.isEmpty() || palabras2.isEmpty()) return 0.0
-
-        val interseccion = palabras1.intersect(palabras2).size
-        val union = palabras1.union(palabras2).size
-
-        return interseccion.toDouble() / union.toDouble()
-    }
 
     private suspend fun obtenerOCrearArtista(nombre: String): ArtistaEntity {
         val artistaExistente = cancionDao.obtenerArtistaPorNombre(nombre)
@@ -366,8 +336,8 @@ class RepositorioDeMusicaLocal @Inject constructor(
         return cancionDao.obtenerArtistaPorNombre(nombre)!!
     }
 
-    private suspend fun obtenerOCrearAlbum(titulo: String, artistaId: Int, anio: Int, albumIdMediaStore: Long): AlbumEntity {
-        val albumExistente = cancionDao.obtenerAlbumPorNombreYArtista(titulo, artistaId.toLong())
+    private suspend fun obtenerOCrearAlbum(titulo: String, artistaId: Int, anio: Int, albumIdMediaStore: Int): AlbumEntity {
+        val albumExistente = cancionDao.obtenerAlbumPorNombreYArtista(titulo, artistaId)
         if (albumExistente != null) {
             return albumExistente
         }
@@ -385,7 +355,7 @@ class RepositorioDeMusicaLocal @Inject constructor(
         )
 
         cancionDao.insertarAlbum(nuevoAlbum)
-        return cancionDao.obtenerAlbumPorNombreYArtista(titulo, artistaId.toLong())!!
+        return cancionDao.obtenerAlbumPorNombreYArtista(titulo, artistaId)!!
     }
 
     private suspend fun obtenerOCrearGenero(nombre: String): GeneroEntity {

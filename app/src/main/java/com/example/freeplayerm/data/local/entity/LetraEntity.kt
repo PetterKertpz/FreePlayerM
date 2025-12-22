@@ -54,14 +54,34 @@ data class LetraEntity(
     @ColumnInfo(name = "fecha_agregado")
     val fechaAgregado: Long = System.currentTimeMillis(), // Timestamp de cuándo se agregó
 
+    /**
+     * Idioma de la letra original (ISO 639-1)
+     * NOTA: CancionEntity.idioma indica el idioma de la canción (puede diferir)
+     * Ejemplos: "es", "en", "fr", "pt"
+     */
     @ColumnInfo(name = "idioma")
-    val idioma: String? = null, // Idioma de la letra (es, en, fr, etc.)
+    val idioma: String? = null,
 
+    /**
+     * Si hay traducciones disponibles
+     * DEPRECADO: Usar query a LetraTraduccionEntity.count()
+     */
+    @Deprecated("Calcular dinámicamente desde LetraTraduccionEntity")
     @ColumnInfo(name = "traduccion_disponible")
-    val traduccionDisponible: Boolean = false, // Si hay traducción disponible
+    val traduccionDisponible: Boolean = false,
 
+    /**
+     * Si tiene timestamps LRC (letra sincronizada)
+     * Formato: "[00:12.00] Texto de la línea"
+     */
     @ColumnInfo(name = "sincronizada")
-    val sincronizada: Boolean = false, // Si es letra sincronizada (LRC)
+    val sincronizada: Boolean = false,
+
+    /**
+     * Contenido LRC completo si sincronizada = true
+     */
+    @ColumnInfo(name = "lrc_content")
+    val lrcContent: String? = null,
 
     @ColumnInfo(name = "url_fuente")
     val urlFuente: String? = null, // URL de donde se obtuvo (si aplica)

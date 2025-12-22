@@ -76,10 +76,10 @@ data class AlbumEntity(
     val anio: Int?,
 
     @ColumnInfo(name = "fecha_lanzamiento")
-    val fechaLanzamiento: Long? = null, // Timestamp de fecha exacta de lanzamiento
+    val fechaLanzamiento: Int? = null, // Timestamp de fecha exacta de lanzamiento
 
     @ColumnInfo(name = "fecha_agregado")
-    val fechaAgregado: Long = System.currentTimeMillis(),
+    val fechaAgregado: Int = System.currentTimeMillis().toInt(),
 
     // ==================== CLASIFICACIÓN ====================
 
@@ -105,11 +105,22 @@ data class AlbumEntity(
 
     // ==================== ESTADÍSTICAS ====================
 
+    /**
+     * Total de canciones en el álbum
+     * NOTA: Se actualiza automáticamente con triggers de Room
+     * o mediante query: SELECT COUNT(*) FROM canciones WHERE id_album = ?
+     */
     @ColumnInfo(name = "total_canciones")
     val totalCanciones: Int = 0,
 
+    /**
+     * Duración total en segundos
+     * DEPRECADO: Calcular dinámicamente con:
+     * SELECT SUM(duracion_segundos) FROM canciones WHERE id_album = ?
+     */
+    @Deprecated("Calcular dinámicamente para evitar desincronización")
     @ColumnInfo(name = "duracion_total_segundos")
-    val duracionTotalSegundos: Long = 0,
+    val duracionTotalSegundos: Int = 0,
 
     @ColumnInfo(name = "total_reproducciones")
     val totalReproducciones: Int = 0,

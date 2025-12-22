@@ -8,9 +8,8 @@ import com.example.freeplayerm.data.local.AppDatabase
 import com.example.freeplayerm.data.local.dao.CancionDao
 import com.example.freeplayerm.data.local.dao.LetraDao
 import com.example.freeplayerm.data.local.dao.UsuarioDao
-import com.example.freeplayerm.data.remote.GeniusApiService
-import com.example.freeplayerm.data.remote.GeniusScraper
-import com.example.freeplayerm.data.remote.GeniusServiceOptimizado
+import com.example.freeplayerm.data.remote.genius.api.GeniusApiService
+import com.example.freeplayerm.data.remote.genius.scraper.GeniusScraper
 import com.example.freeplayerm.data.repository.SessionRepository
 import com.example.freeplayerm.data.repository.UsuarioRepository
 import com.example.freeplayerm.data.repository.UsuarioRepositoryImpl
@@ -32,12 +31,6 @@ object ModuloAplicacion {
         @NetworkClient okHttpClient: OkHttpClient // <--- ✅ AGREGA LA ETIQUETA AQUÍ
     ): GeniusScraper {
         return GeniusScraper(okHttpClient)
-    }
-
-    @Provides
-    @Singleton
-    fun provideGeniusServiceOptimizado(apiService: GeniusApiService): GeniusServiceOptimizado {
-        return GeniusServiceOptimizado(apiService)
     }
 
     @Provides

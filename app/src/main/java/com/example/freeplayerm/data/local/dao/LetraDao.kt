@@ -35,13 +35,13 @@ interface LetraDao {
      * Si ya existe para esa canción, la reemplaza
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarLetra(letra: LetraEntity): Long
+    suspend fun insertarLetra(letra: LetraEntity): Int
 
     /**
      * Inserta múltiples letras en una sola transacción
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarLetras(letras: List<LetraEntity>): List<Long>
+    suspend fun insertarLetras(letras: List<LetraEntity>): List<Int>
 
     /**
      * Actualiza una letra existente
@@ -156,7 +156,7 @@ interface LetraDao {
         LIMIT :limit
     """)
     suspend fun obtenerLetrasParaActualizar(
-        timestamp: Long = System.currentTimeMillis() - (30L * 24 * 60 * 60 * 1000), // 30 días
+        timestamp: Int = System.currentTimeMillis().toInt() - (30 * 24 * 60 * 60 * 1000), // 30 días
         limit: Int = 50
     ): List<LetraEntity>
 
@@ -171,7 +171,7 @@ interface LetraDao {
     suspend fun actualizarFuenteLetra(
         idCancion: Int,
         fuente: String,
-        timestamp: Long = System.currentTimeMillis()
+        timestamp: Int = System.currentTimeMillis().toInt()
     ): Int
 
     // ==================== LIMPIEZA Y MANTENIMIENTO ====================
@@ -207,7 +207,7 @@ interface LetraDao {
      * Actualiza o inserta una letra con validación
      */
     @Transaction
-    suspend fun upsertLetra(idCancion: Int, textoLetra: String, fuente: String = "manual"): Long {
+    suspend fun upsertLetra(idCancion: Int, textoLetra: String, fuente: String = "manual"): Int {
         val letraExistente = obtenerLetraPorIdCancionSuspending(idCancion)
 
         return if (letraExistente != null) {
@@ -216,7 +216,7 @@ interface LetraDao {
                 fuente = fuente,
                 fechaAgregado = System.currentTimeMillis()
             )
-            actualizarLetra(letraActualizada).toLong()
+            actualizarLetra(letraActualizada)
         } else {
             val nuevaLetra = LetraEntity(
                 idCancion = idCancion,

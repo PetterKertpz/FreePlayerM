@@ -37,6 +37,8 @@ data class ArtistaEntity(
 
     // ==================== INFORMACIÓN BÁSICA ====================
 
+
+
     @ColumnInfo(name = "nombre")
     val nombre: String,
 
@@ -63,7 +65,7 @@ data class ArtistaEntity(
     val biografia: String? = null,
 
     @ColumnInfo(name = "fecha_nacimiento")
-    val fechaNacimiento: Long? = null, // Timestamp
+    val fechaNacimiento: Int? = null, // Timestamp
 
     @ColumnInfo(name = "fecha_inicio_carrera")
     val fechaInicioCarrera: Int? = null, // Año
@@ -71,10 +73,13 @@ data class ArtistaEntity(
     // ==================== IMÁGENES ====================
 
     @ColumnInfo(name = "image_url")
-    val imageUrl: String? = null, // URL principal
+    val imageUrl: String? = null,
 
     @ColumnInfo(name = "image_path_local")
-    val imagePathLocal: String? = null, // Path local si la descargamos
+    val imagePathLocal: String? = null,
+
+    @ColumnInfo(name = "header_image_url")
+    val headerImageUrl: String? = null,// Path local si la descargamos
 
     @ColumnInfo(name = "thumbnail_url")
     val thumbnailUrl: String? = null, // Miniatura
@@ -95,15 +100,19 @@ data class ArtistaEntity(
     @ColumnInfo(name = "sitio_web")
     val sitioWeb: String? = null,
 
+    @Deprecated("Usar RedesSocialesArtistaEntity", ReplaceWith("RedesSocialesArtistaEntity"))
     @ColumnInfo(name = "instagram")
     val instagram: String? = null,
 
+    @Deprecated("Usar RedesSocialesArtistaEntity", ReplaceWith("RedesSocialesArtistaEntity"))
     @ColumnInfo(name = "twitter")
     val twitter: String? = null,
 
+    @Deprecated("Usar RedesSocialesArtistaEntity", ReplaceWith("RedesSocialesArtistaEntity"))
     @ColumnInfo(name = "facebook")
     val facebook: String? = null,
 
+    @Deprecated("Usar RedesSocialesArtistaEntity", ReplaceWith("RedesSocialesArtistaEntity"))
     @ColumnInfo(name = "youtube")
     val youtube: String? = null,
 
@@ -141,10 +150,10 @@ data class ArtistaEntity(
     // ==================== METADATA ====================
 
     @ColumnInfo(name = "fecha_agregado")
-    val fechaAgregado: Long = System.currentTimeMillis(),
+    val fechaAgregado: Int = System.currentTimeMillis().toInt(),
 
     @ColumnInfo(name = "ultima_actualizacion")
-    val ultimaActualizacion: Long = System.currentTimeMillis(),
+    val ultimaActualizacion: Int = System.currentTimeMillis().toInt(),
 
     @ColumnInfo(name = "fuente")
     val fuente: String = FUENTE_LOCAL // LOCAL, GENIUS, SPOTIFY, etc.

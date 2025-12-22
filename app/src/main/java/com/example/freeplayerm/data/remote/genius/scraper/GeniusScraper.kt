@@ -1,10 +1,11 @@
-// app/src/main/java/com/example/freeplayerm/data/remote/GeniusScraper.kt
-package com.example.freeplayerm.data.remote
+// app/src/main/java/com/example/freeplayerm/data/remote/genius/scraper/GeniusScraper.kt
+package com.example.freeplayerm.data.remote.genius.scraper
 
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
@@ -12,31 +13,61 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * 🕷️ GENIUS WEB SCRAPER
+ *
+ * Scraper especializado para extraer letras de canciones de Genius.com
+ * Nota: La API de Genius NO proporciona letras, solo metadata
+ *
+ * Características:
+ * - ✅ Extracción robusta de letras con múltiples selectores fallback
+ * - ✅ Limpieza automática de ads y elementos no deseados
+ * - ✅ User-Agent rotation para evitar rate limiting
+ * - ✅ Validación de páginas de canciones vs discografías
+ * - ✅ Extracción opcional de metadata complementaria
+ */
 @Singleton
 class GeniusScraper @Inject constructor(
     private val okHttpClient: OkHttpClient
 ) {
-
-    private val TAG = "GeniusScraper"
+    private val tag = "GeniusScraper"
 
     companion object {
+        // User agents para rotación
         private val USER_AGENTS = listOf(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         )
 
+        // Selectores CSS para letras (en orden de prioridad)
         private const val SELECTOR_LYRICS_CONTAINER = "div[data-lyrics-container=true]"
         private const val SELECTOR_LYRICS = "div.Lyrics__Container"
-        private const val SELECTOR_SONG_HEADER = "div[data-testid=song-header]"
-        private const val SELECTOR_COVER_ART = "div[data-testid=cover-art] img, div.cover_art img"
-        private const val SELECTOR_SONG_TITLE = "h1[data-testid=song-title]"
-        private const val SELECTOR_ARTIST_NAME = "a[data-testid=artist-name]"
-        private const val SELECTOR_ALBUM_INFO = "a[href*=/albums/], div.SongHeader__Album"
-        private const val SELECTOR_RELEASE_DATE = "span.ReleaseDate"
-        private const val SELECTOR_SONG_METADATA = "div.SongHeader__Metadata"
+        private const val SELECTOR_LYRICS_FALLBACK = "div[class*=Lyrics], div[class*=lyrics]"
+
+        // Selectores CSS para metadata
+        private const val SELECTOR_COVER_ART = "img.cover_art-image"
+        private const val SELECTOR_SONG_HEADER = "div.SongHeader__Container"
+        private const val SELECTOR_SONG_TITLE = "h1.SongHeader__Title"
+        private const val SELECTOR_ARTIST_NAME = "a.SongHeader__Artist"
+        private const val SELECTOR_ALBUM_INFO = "div.MetadataStats a[href*='/albums/']"
+        private const val SELECTOR_RELEASE_DATE = "span.MetadataStats__Value"
+
+        // Elementos a eliminar
+        private val ELEMENTS_TO_REMOVE = """
+            div[class*='Advertisement'],
+            div[class*='Ad'],
+            div[class*='LyricsPlaceholder'],
+            div[class*='LyricsHeader'],
+            .embed,
+            script,
+            style
+        """.trimIndent()
     }
 
+    /**
+     * Datos scrapeados de una página de canción
+     */
     data class ScrapedSongData(
         val lyrics: String? = null,
         val coverArtUrl: String? = null,
@@ -49,12 +80,18 @@ class GeniusScraper @Inject constructor(
         val writers: List<String> = emptyList()
     )
 
+    /**
+     * Extrae datos completos de una página de canción
+     *
+     * @param songUrl URL completa de la canción en Genius
+     * @return Datos scrapeados o null si falla
+     */
     suspend fun extractCompleteSongData(songUrl: String): ScrapedSongData? =
         withContext(Dispatchers.IO) {
-            Log.d(TAG, "🎯 Iniciando scraping completo para: $songUrl")
+            Log.d(tag, "🎯 Scraping: $songUrl")
 
             try {
-                val document = fetchDocument(songUrl) ?: return@withContext null
+                val document = fetchDocumentWithOkHttp(songUrl) ?: return@withContext null
 
                 return@withContext ScrapedSongData(
                     lyrics = extractLyricsImproved(document),
@@ -67,40 +104,43 @@ class GeniusScraper @Inject constructor(
                     producers = extractProducers(document),
                     writers = extractWriters(document)
                 )
-
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error en scraping completo: ${e.message}", e)
+                Log.e(tag, "❌ Error en scraping: ${e.message}", e)
                 null
             }
         }
 
+    /**
+     * Extrae solo las letras de una canción (optimizado)
+     */
+    suspend fun extractLyricsOnly(songUrl: String): String? =
+        withContext(Dispatchers.IO) {
+            try {
+                val document = fetchDocumentWithOkHttp(songUrl) ?: return@withContext null
+                extractLyricsImproved(document)
+            } catch (e: Exception) {
+                Log.e(tag, "❌ Error extrayendo letras: ${e.message}", e)
+                null
+            }
+        }
+
+    // ==================== EXTRACCIÓN DE LETRAS ====================
+
     private fun extractLyricsImproved(document: Document): String? {
-        Log.d(TAG, "📝 Extrayendo letras...")
+        Log.d(tag, "📝 Extrayendo letras...")
 
+        // Intentar selectores en orden de prioridad
         var lyricsContainer = document.selectFirst(SELECTOR_LYRICS_CONTAINER)
+            ?: document.selectFirst(SELECTOR_LYRICS)
+            ?: document.selectFirst(SELECTOR_LYRICS_FALLBACK)
 
         if (lyricsContainer == null) {
-            lyricsContainer = document.selectFirst(SELECTOR_LYRICS)
-        }
-
-        if (lyricsContainer == null) {
-            lyricsContainer = document.selectFirst("div[class*=Lyrics], div[class*=lyrics]")
-        }
-
-        if (lyricsContainer == null) {
-            Log.w(TAG, "No se encontró contenedor de letras")
+            Log.w(tag, "No se encontró contenedor de letras")
             return null
         }
 
-        lyricsContainer.select("""
-            div[class*='Advertisement'],
-            div[class*='Ad'],
-            div[class*='LyricsPlaceholder'],
-            div[class*='LyricsHeader'],
-            .embed,
-            script,
-            style
-        """.trimIndent()).remove()
+        // Limpiar elementos no deseados
+        lyricsContainer.select(ELEMENTS_TO_REMOVE).remove()
 
         return buildLyricsText(lyricsContainer)
     }
@@ -136,24 +176,27 @@ class GeniusScraper @Inject constructor(
 
     private fun cleanLyricsText(rawText: String): String {
         return rawText
-            .replace(Regex("\\[.*?\\]"), "")
-            .replace(Regex("\\s+"), " ")
-            .replace(Regex("\n{3,}"), "\n\n")
-            .replace(Regex("^\\s+"), "")
-            .replace(Regex("\\s+$"), "")
+            .replace(Regex("\\[.*?\\]"), "") // Eliminar anotaciones [Verse 1], etc.
+            .replace(Regex("\\s+"), " ") // Normalizar espacios
+            .replace(Regex("\n{3,}"), "\n\n") // Max 2 saltos de línea
             .trim()
     }
 
-    private fun extractCoverArtUrl(document: Document): String? {
-        Log.d(TAG, "🖼️ Extrayendo portada...")
+    // ==================== EXTRACCIÓN DE METADATA ====================
 
+    private fun extractCoverArtUrl(document: Document): String? {
+        Log.d(tag, "🖼️ Extrayendo portada...")
+
+        // Intentar selector directo
         var imgElement = document.selectFirst(SELECTOR_COVER_ART)
 
+        // Fallback: meta tag Open Graph
         if (imgElement == null) {
-            imgElement = document.selectFirst("meta[property='og:image']")
-            return imgElement?.attr("content")?.takeIf { it.isNotBlank() }
+            val metaOg = document.selectFirst("meta[property='og:image']")
+            return metaOg?.attr("content")?.takeIf { it.isNotBlank() }
         }
 
+        // Fallback: imagen en header
         if (imgElement == null) {
             val header = document.selectFirst(SELECTOR_SONG_HEADER)
             imgElement = header?.selectFirst("img")
@@ -174,7 +217,7 @@ class GeniusScraper @Inject constructor(
 
     private fun extractAlbumName(document: Document): String? {
         return document.selectFirst(SELECTOR_ALBUM_INFO)?.text()
-            ?: document.selectFirst("a[href*=/album/]")?.text()
+            ?: document.selectFirst("a[href*=/albums/]")?.text()
     }
 
     private fun extractReleaseDate(document: Document): String? {
@@ -216,41 +259,57 @@ class GeniusScraper @Inject constructor(
             .distinct()
     }
 
-    private suspend fun fetchDocument(url: String): Document? =
+    // ==================== FETCHING ====================
+
+    private suspend fun fetchDocumentWithOkHttp(url: String): Document? =
         withContext(Dispatchers.IO) {
             try {
                 val userAgent = USER_AGENTS.random()
-                Log.d(TAG, "🌐 Descargando página con User-Agent: ${userAgent.take(50)}...")
-
-                Jsoup.connect(url)
-                    .userAgent(userAgent)
-                    .timeout(15000)
-                    .followRedirects(true)
-                    .ignoreHttpErrors(true)
-                    .ignoreContentType(true)
+                val request = Request.Builder()
+                    .url(url)
+                    .header("User-Agent", userAgent)
                     .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
                     .header("Accept-Language", "en-US,en;q=0.5")
-                    .header("Accept-Encoding", "gzip, deflate")
                     .header("Connection", "keep-alive")
-                    .get()
-                    .takeIf { doc ->
-                        val title = doc.title()
-                        val isValid = !title.contains("discography", ignoreCase = true) &&
-                                !title.contains("album", ignoreCase = true) &&
-                                doc.select("div[data-lyrics-container=true], div.Lyrics__Container").isNotEmpty()
+                    .build()
 
-                        if (!isValid) {
-                            Log.w(TAG, "Página no válida o no es una canción: $title")
-                        }
-                        isValid
-                    }
+                val response = okHttpClient.newCall(request).execute()
 
+                if (!response.isSuccessful) {
+                    Log.w(tag, "Request failed: ${response.code}")
+                    return@withContext null
+                }
+
+                val html = response.body?.string() ?: return@withContext null
+                response.close()
+
+                val document = Jsoup.parse(html, url)
+
+                // Validar que es una página de canción
+                if (!isValidSongPage(document)) {
+                    Log.w(tag, "Página inválida: ${document.title()}")
+                    return@withContext null
+                }
+
+                document
             } catch (e: IOException) {
-                Log.e(TAG, "❌ Error de red al descargar página: ${e.message}")
+                Log.e(tag, "❌ Error de red: ${e.message}")
                 null
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error inesperado al descargar página: ${e.message}", e)
+                Log.e(tag, "❌ Error inesperado: ${e.message}", e)
                 null
             }
         }
+
+    /**
+     * Valida que la página sea de una canción y no discografía/álbum
+     */
+    private fun isValidSongPage(document: Document): Boolean {
+        val title = document.title()
+        val hasLyrics = document.select("$SELECTOR_LYRICS_CONTAINER, $SELECTOR_LYRICS").isNotEmpty()
+        val isDiscographyPage = title.contains("discography", ignoreCase = true) ||
+                title.contains("albums", ignoreCase = true)
+
+        return hasLyrics && !isDiscographyPage
+    }
 }

@@ -58,7 +58,7 @@ data class UsuarioEntity(
     val biografia: String? = null,
 
     @ColumnInfo(name = "fecha_nacimiento")
-    val fechaNacimiento: Long? = null, // Timestamp de fecha de nacimiento
+    val fechaNacimiento: Int? = null, // Timestamp de fecha de nacimiento
 
     // ==================== AUTENTICACIÓN ====================
 
@@ -74,10 +74,27 @@ data class UsuarioEntity(
     val activo: Boolean = true, // Si el usuario está activo (soft delete)
 
     @ColumnInfo(name = "ultima_sesion")
-    val ultimaSesion: Long? = null, // Timestamp de última sesión
+    val ultimaSesion: Int? = null, // Timestamp de última sesión
+
+    // ==================== TOKENS DE SESIÓN ====================
+
+    @ColumnInfo(name = "token_sesion")
+    val tokenSesion: String? = null,
+
+    @ColumnInfo(name = "refresh_token")
+    val refreshToken: String? = null,
+
+    @ColumnInfo(name = "token_expiracion")
+    val tokenExpiracion: Int? = null,
+
+    @ColumnInfo(name = "salt")
+    val salt: String? = null, // Salt adicional si se usa otro algoritmo
+
+    @ColumnInfo(name = "ultimo_cambio_contrasena")
+    val ultimoCambioContrasena: Int? = null,
 
     @ColumnInfo(name = "fecha_creacion")
-    val fechaCreacion: Long = System.currentTimeMillis(), // Timestamp de cuándo se creó
+    val fechaCreacion: Int = System.currentTimeMillis().toInt(), // Timestamp de cuándo se creó
 
     // ==================== PREFERENCIAS ====================
 
@@ -142,16 +159,6 @@ data class UsuarioEntity(
         }
     }
 
-    /**
-     * Calcula edad si tiene fecha de nacimiento
-     */
-    fun calcularEdad(): Int? {
-        return fechaNacimiento?.let {
-            val diff = System.currentTimeMillis() - it
-            (diff / (1000L * 60 * 60 * 24 * 365)).toInt()
-        }
-    }
-
     companion object {
         // Tipos de autenticación
         const val TIPO_LOCAL = "LOCAL"
@@ -166,23 +173,5 @@ data class UsuarioEntity(
         const val CALIDAD_ALTA = "HIGH"
         const val CALIDAD_LOSSLESS = "LOSSLESS"
 
-        /**
-         * Valida formato de correo electrónico
-         */
-        fun esCorreoValido(correo: String): Boolean {
-            return android.util.Patterns.EMAIL_ADDRESS.matcher(correo).matches()
-        }
-
-        /**
-         * Valida seguridad de contraseña
-         * Mínimo 8 caracteres, al menos una mayúscula, una minúscula y un número
-         */
-        fun esContraseniaSegura(contrasenia: String): Boolean {
-            if (contrasenia.length < 8) return false
-            val tieneMayuscula = contrasenia.any { it.isUpperCase() }
-            val tieneMinuscula = contrasenia.any { it.isLowerCase() }
-            val tieneNumero = contrasenia.any { it.isDigit() }
-            return tieneMayuscula && tieneMinuscula && tieneNumero
-        }
     }
 }

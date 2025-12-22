@@ -395,7 +395,7 @@ class MediaItemHelper @Inject constructor(
     /**
      * Extrae ID de canción desde MediaItem
      */
-    fun extraerIdCancion(mediaItem: MediaItem): Long? {
+    fun extraerIdCancion(mediaItem: MediaItem): Int? {
         return try {
             mediaItem.mediaId.toLongOrNull()
         } catch (e: Exception) {
@@ -471,7 +471,7 @@ class MediaItemHelper @Inject constructor(
      * Crea MediaItem de prueba para testing
      */
     fun crearMediaItemDePrueba(
-        id: Long = 1,
+        id: Int = 1,
         titulo: String = "Test Song",
         artista: String = "Test Artist"
     ): MediaItem {

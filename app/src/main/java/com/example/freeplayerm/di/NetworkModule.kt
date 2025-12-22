@@ -1,9 +1,15 @@
-// en: app/src/main/java/com/example/freeplayerm/di/NetworkModule.kt
+// app/src/main/java/com/example/freeplayerm/di/NetworkModule.kt
 package com.example.freeplayerm.di
 
 import android.content.Context
 import com.example.freeplayerm.BuildConfig
-import com.example.freeplayerm.data.remote.GeniusApiService
+import com.example.freeplayerm.data.remote.genius.api.GeniusApiService
+import com.example.freeplayerm.data.remote.genius.interceptor.RateLimitInterceptor
+import com.example.freeplayerm.data.remote.genius.interceptor.RateLimitPresets
+import com.example.freeplayerm.data.remote.genius.scraper.GeniusScraper
+import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.Module
@@ -19,45 +25,61 @@ import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import java.io.File
 import java.io.IOException
-import java.net.SocketTimeoutException
 import java.util.concurrent.TimeUnit
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
+/**
+ * 🌐 NETWORK MODULE
+ *
+ * Módulo de inyección de dependencias para configuración de red
+ * - Genius API con autenticación
+ * - Rate limiting automático
+ * - Retry con backoff
+ * - Scraper con OkHttpClient dedicado
+ */
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
     private const val BASE_URL = "https://api.genius.com/"
-    private const val RATE_LIMIT_TIMEOUT = 30L // segundos
     private const val CONNECT_TIMEOUT = 15L // segundos
     private const val READ_TIMEOUT = 30L // segundos
     private const val WRITE_TIMEOUT = 30L // segundos
     private const val CACHE_SIZE = 10L * 1024L * 1024L // 10MB Cache
 
-    // Qualifiers para diferenciar los interceptores
+    // ==================== QUALIFIERS ====================
+
     @Qualifier
     @Retention(AnnotationRetention.BINARY)
     annotation class AuthInterceptor
 
     @Qualifier
     @Retention(AnnotationRetention.BINARY)
-    annotation class RateLimitingInterceptor
+    annotation class RetryInterceptor
 
     @Qualifier
     @Retention(AnnotationRetention.BINARY)
-    annotation class RetryInterceptor
+    annotation class ApiClient
+
+    @Qualifier
+    @Retention(AnnotationRetention.BINARY)
+    annotation class ScraperClient
+
+    // ==================== INTERCEPTORS ====================
 
     @Provides
     @Singleton
     @AuthInterceptor
     fun provideAuthInterceptor(): Interceptor {
         return Interceptor { chain ->
-            // VERIFICACIÓN DE SEGURIDAD: Asegurar que tenemos el token configurado
+            // Verificación de seguridad: Asegurar que tenemos el token configurado
             val token = BuildConfig.GENIUS_CLIENT_ACCESS_TOKEN
             if (token.isBlank()) {
-                throw SecurityException("Genius API Client Access Token no está configurado. " +
-                        "Verifica que GENIUS_CLIENT_ACCESS_TOKEN esté en tu build.gradle o local.properties")
+                throw SecurityException(
+                    "Genius API Client Access Token no está configurado. " +
+                            "Verifica que GENIUS_CLIENT_ACCESS_TOKEN esté en tu build.gradle o local.properties"
+                )
             }
 
             val request = chain.request().newBuilder()
@@ -75,7 +97,7 @@ object NetworkModule {
     fun provideLoggingInterceptor(): HttpLoggingInterceptor {
         return HttpLoggingInterceptor().apply {
             level = if (BuildConfig.DEBUG) {
-                HttpLoggingInterceptor.Level.HEADERS
+                HttpLoggingInterceptor.Level.BODY
             } else {
                 HttpLoggingInterceptor.Level.NONE
             }
@@ -85,21 +107,14 @@ object NetworkModule {
         }
     }
 
+    /**
+     * Rate limiter para Genius API
+     * Preset: 10 requests por minuto con estrategia WAIT
+     */
     @Provides
     @Singleton
-    @RateLimitingInterceptor
-    fun provideRateLimitingInterceptor(): Interceptor {
-        return Interceptor { chain ->
-            try {
-                // Pequeño delay para evitar rate limiting agresivo
-                Thread.sleep(100)
-                chain.proceed(chain.request())
-            } catch (e: SocketTimeoutException) {
-                throw IOException("Timeout de Genius API - posible rate limiting o problemas de conexión", e)
-            } catch (e: Exception) {
-                throw IOException("Error de red al conectar con Genius API: ${e.message}", e)
-            }
-        }
+    fun provideRateLimitInterceptor(): RateLimitInterceptor {
+        return RateLimitPresets.geniusApi()
     }
 
     @Provides
@@ -116,7 +131,7 @@ object NetworkModule {
                 retryCount++
                 android.util.Log.w("NetworkModule", "Reintento $retryCount para: ${request.url}")
 
-                // Backoff exponencial simple
+                // Backoff exponencial
                 Thread.sleep((100 * retryCount).toLong())
 
                 response.close()
@@ -138,38 +153,93 @@ object NetworkModule {
         }
     }
 
+    // ==================== OKHTTP CLIENTS ====================
+
+    /**
+     * Cliente para Genius API
+     * Incluye: Auth, Rate Limiting, Retry, Logging
+     */
     @Provides
     @Singleton
-    @NetworkClient
-    fun provideOkHttpClient(
+    @ApiClient
+    fun provideApiOkHttpClient(
         @ApplicationContext context: Context,
         @AuthInterceptor authInterceptor: Interceptor,
-        @RateLimitingInterceptor rateLimitingInterceptor: Interceptor,
+        rateLimitInterceptor: RateLimitInterceptor,
         @RetryInterceptor retryInterceptor: Interceptor,
         loggingInterceptor: HttpLoggingInterceptor
     ): OkHttpClient {
         return OkHttpClient.Builder().apply {
-            // Interceptores en orden de ejecución
+            // Orden importante: Auth -> Rate Limit -> Retry -> Logging
             addInterceptor(authInterceptor)
-            addInterceptor(rateLimitingInterceptor)
+            addInterceptor(rateLimitInterceptor)
             addInterceptor(retryInterceptor)
             addInterceptor(loggingInterceptor)
 
-            // Timeouts robustos
             connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)
             readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)
             writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)
 
-            // Configuración de cache
-            cache(Cache(File(context.cacheDir, "genius_http_cache"), CACHE_SIZE))
+            cache(Cache(File(context.cacheDir, "genius_api_cache"), CACHE_SIZE))
 
-            // Configuraciones adicionales para robustez
             retryOnConnectionFailure(true)
             followRedirects(true)
             followSslRedirects(true)
-
         }.build()
     }
+
+    /**
+     * Cliente para Web Scraping
+     * Incluye: Rate Limiting más estricto, User-Agent rotation
+     */
+    @Provides
+    @Singleton
+    @ScraperClient
+    fun provideScraperOkHttpClient(
+        @ApplicationContext context: Context,
+        loggingInterceptor: HttpLoggingInterceptor
+    ): OkHttpClient {
+        // Rate limiting más conservador para scraping
+        val scraperRateLimit = RateLimitPresets.scraping()
+
+        return OkHttpClient.Builder().apply {
+            addInterceptor(scraperRateLimit)
+            addInterceptor(loggingInterceptor)
+
+            connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)
+            readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)
+            writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)
+
+            cache(Cache(File(context.cacheDir, "genius_scraper_cache"), CACHE_SIZE))
+
+            retryOnConnectionFailure(true)
+            followRedirects(true)
+            followSslRedirects(true)
+        }.build()
+    }
+
+    /**
+     * Cliente genérico para descargas de imágenes
+     * Sin rate limiting (las URLs son directas)
+     */
+    @Provides
+    @Singleton
+    fun provideGenericOkHttpClient(
+        @ApplicationContext context: Context
+    ): OkHttpClient {
+        return OkHttpClient.Builder().apply {
+            connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)
+            readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)
+            writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)
+
+            cache(Cache(File(context.cacheDir, "image_cache"), CACHE_SIZE))
+
+            retryOnConnectionFailure(true)
+            followRedirects(true)
+        }.build()
+    }
+
+    // ==================== MOSHI ====================
 
     @Provides
     @Singleton
@@ -179,10 +249,14 @@ object NetworkModule {
             .build()
     }
 
+    // ==================== RETROFIT ====================
+
     @Provides
     @Singleton
-    fun provideRetrofit(okHttpClient: OkHttpClient,
-        moshi: Moshi): Retrofit {
+    fun provideRetrofit(
+        @ApiClient okHttpClient: OkHttpClient,
+        moshi: Moshi
+    ): Retrofit {
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(okHttpClient)
@@ -195,4 +269,22 @@ object NetworkModule {
     fun provideGeniusApiService(retrofit: Retrofit): GeniusApiService {
         return retrofit.create(GeniusApiService::class.java)
     }
+
+    // ==================== SCRAPER ====================
+
+    @Provides
+    @Singleton
+    fun provideGeniusScraper(
+        @ScraperClient okHttpClient: OkHttpClient
+    ): GeniusScraper {
+        return GeniusScraper(okHttpClient)
+    }
+
+    //===================AUTH============================
+    @Provides
+    @Singleton
+    fun provideFirebaseAuth(): FirebaseAuth {
+        return Firebase.auth
+    }
+
 }

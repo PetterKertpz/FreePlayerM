@@ -18,7 +18,7 @@ import androidx.room.PrimaryKey
  * - Índices para búsquedas rápidas
  * - Campos de estadísticas (reproducciones, última reproducción)
  * - Soporte para múltiples orígenes (local/remoto)
- * - Integración con Genius API
+ * - Longegración con Genius API
  *
  * @version 2.0 - Enhanced
  */
@@ -59,7 +59,6 @@ data class CancionEntity(
     val idCancion: Int = 0,
 
     // ==================== RELACIONES ====================
-
     @ColumnInfo(name = "id_artista")
     val idArtista: Int?,
 
@@ -100,7 +99,54 @@ data class CancionEntity(
     val geniusId: String? = null,
 
     @ColumnInfo(name = "genius_url")
-    val geniusUrl: String? = null, // URL de la página de la canción en Genius
+    val geniusUrl: String? = null,
+
+    /**
+     * Título completo con artistas featured
+     * Mapea desde: SongDetailsEnhanced.titleWithFeatured
+     */
+    @ColumnInfo(name = "titulo_completo")
+    val tituloCompleto: String? = null,
+
+    /**
+     * Estado de la letra en Genius
+     * Valores: "complete", "incomplete", null
+     */
+    @ColumnInfo(name = "lyrics_state")
+    val lyricsState: String? = null,
+
+    /**
+     * Si la canción está "hot" en Genius
+     */
+    @ColumnInfo(name = "hot")
+    val hot: Boolean = false,
+
+    /**
+     * Pageviews en Genius (popularidad)
+     */
+    @ColumnInfo(name = "pageviews")
+    val pageviews: Int? = null,
+
+    /**
+     * Idioma de la letra
+     * Mapea desde: SongDetailsEnhanced.language
+     */
+    @ColumnInfo(name = "idioma")
+    val idioma: String? = null,
+
+    /**
+     * Ubicación de grabación
+     * Mapea desde: SongDetailsEnhanced.recordingLocation
+     */
+    @ColumnInfo(name = "ubicacion_grabacion")
+    val ubicacionGrabacion: String? = null,
+
+    /**
+     * IDs externos (Spotify, Apple Music, YouTube)
+     * Almacena JSON: {"spotify": "id", "youtube": "url", ...}
+     */
+    @ColumnInfo(name = "external_ids_json")
+    val externalIdsJson: String? = null, // URL de la página de la canción en Genius
 
     // ==================== ESTADÍSTICAS DE REPRODUCCIÓN ====================
 
@@ -108,10 +154,10 @@ data class CancionEntity(
     val vecesReproducida: Int = 0, // Contador de reproducciones
 
     @ColumnInfo(name = "ultima_reproduccion")
-    val ultimaReproduccion: Long? = null, // Timestamp de última reproducción
+    val ultimaReproduccion: Int? = null, // Timestamp de última reproducción
 
     @ColumnInfo(name = "fecha_agregado")
-    val fechaAgregado: Long = System.currentTimeMillis(), // Timestamp de cuándo se agregó
+    val fechaAgregado: Int = System.currentTimeMillis().toInt(), // Timestamp de cuándo se agregó
 
     // ==================== METADATOS ADICIONALES ====================
 
@@ -127,8 +173,6 @@ data class CancionEntity(
     @ColumnInfo(name = "portada_path")
     val portadaPath: String? = null, // Path de portada individual (si difiere del álbum)
 
-    @ColumnInfo(name = "es_favorita_local")
-    val esFavoritaLocal: Boolean = false // Flag local rápido para favoritos
 ) {
     /**
      * Duración formateada en MM:SS

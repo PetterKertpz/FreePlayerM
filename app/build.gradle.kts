@@ -100,6 +100,7 @@ dependencies {
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.jsoup)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.gson)
 
     // --- Room ---
     implementation(libs.androidx.room.runtime)

@@ -21,7 +21,7 @@ data class EstadisticasGenerales(
     @ColumnInfo(name = "total_artistas") val totalArtistas: Int,
     @ColumnInfo(name = "total_albumes") val totalAlbumes: Int,
     @ColumnInfo(name = "total_generos") val totalGeneros: Int,
-    @ColumnInfo(name = "duracion_total") val duracionTotal: Long
+    @ColumnInfo(name = "duracion_total") val duracionTotal: Int
 )
 
 /**
@@ -31,7 +31,7 @@ data class AlbumEstadistica(
     @ColumnInfo(name = "titulo") val titulo: String,
     @ColumnInfo(name = "artista_nombre") val artistaNombre: String,
     @ColumnInfo(name = "cantidad_canciones") val cantidadCanciones: Int,
-    @ColumnInfo(name = "duracion_total") val duracionTotal: Long
+    @ColumnInfo(name = "duracion_total") val duracionTotal: Int
 )
 
 /**
@@ -41,5 +41,5 @@ data class EstadisticaReproduccion(
     @ColumnInfo(name = "id_cancion") val idCancion: Int,
     @ColumnInfo(name = "titulo_cancion") val tituloCancion: String,
     @ColumnInfo(name = "reproducciones") val reproducciones: Int,
-    @ColumnInfo(name = "ultima_reproduccion") val ultimaReproduccion: Long?
+    @ColumnInfo(name = "ultima_reproduccion") val ultimaReproduccion: Int?
 )

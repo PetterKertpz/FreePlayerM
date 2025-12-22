@@ -51,6 +51,16 @@ class RegistroViewModel @Inject constructor(
             RegistroEvento.ConsumirError -> _estadoUi.update { it.copy(error = null) }
         }
     }
+    fun esContraseniaSegura(contrasenia: String): Boolean {
+        if (contrasenia.length < 8) return false
+        val tieneMayuscula = contrasenia.any { it.isUpperCase() }
+        val tieneMinuscula = contrasenia.any { it.isLowerCase() }
+        val tieneNumero = contrasenia.any { it.isDigit() }
+        return tieneMayuscula && tieneMinuscula && tieneNumero
+    }
+    fun esCorreoValido(correo: String): Boolean {
+        return android.util.Patterns.EMAIL_ADDRESS.matcher(correo).matches()
+    }
 
     private fun registrarseLocalmente() {
         val estado = _estadoUi.value

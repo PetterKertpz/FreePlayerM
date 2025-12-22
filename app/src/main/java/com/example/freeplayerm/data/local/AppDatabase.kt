@@ -4,48 +4,63 @@ package com.example.freeplayerm.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.example.freeplayerm.data.local.dao.CancionDao
-import com.example.freeplayerm.data.local.dao.LetraDao
-import com.example.freeplayerm.data.local.dao.UsuarioDao
+import com.example.freeplayerm.data.local.dao.*
 import com.example.freeplayerm.data.local.entity.*
 
 /**
- * 🗄️ APP DATABASE - ROOM DATABASE v6.0
+ * 🗄️ APP DATABASE - ROOM DATABASE v8.0
  *
  * Base de datos principal de la aplicación
  * Gestiona todas las entidades y DAOs del sistema
  *
  * Características:
- * - Versión 6 con esquema completo actualizado
+ * - Versión 8 con esquema completo actualizado
  * - TypeConverters para tipos complejos
- * - 9 entidades con relaciones optimizadas
- * - 3 DAOs principales con funcionalidad completa
+ * - 20 entidades con relaciones optimizadas
+ * - 10 DAOs principales con funcionalidad completa
  * - Soporte para migraciones (configurar en DatabaseModule)
  *
- * @version 6.0 - Production Ready
+ * @version 8.0 - Production Ready
  */
 @Database(
     entities = [
-        // Entidades base
+        // Entidades base principales
         UsuarioEntity::class,
         ArtistaEntity::class,
         AlbumEntity::class,
         GeneroEntity::class,
         CancionEntity::class,
 
-        // Entidades auxiliares
+        // Listas y organización
         ListaReproduccionEntity::class,
         DetalleListaReproduccionEntity::class,
+
+        // Favoritos y preferencias
         FavoritoEntity::class,
-        LetraEntity::class
+        LetraEntity::class,
+
+        // Nuevas entidades v7-v8
+        CancionArtistaEntity::class,
+        HistorialReproduccionEntity::class,
+        PreferenciasUsuarioEntity::class,
+        EstadoReproduccionEntity::class,
+        ColaReproduccionEntity::class,
+
+        // Características avanzadas
+        LetraTraduccionEntity::class,
+        GeniusAnnotationEntity::class,
+        RedesSocialesArtistaEntity::class,
+        CreditoAlbumEntity::class,
+        GeneroMoodEntity::class,
+        ListaColaboradorEntity::class,
     ],
-    version = 6, // ⚠️ IMPORTANTE: Versión actualizada por cambios de esquema
+    version = 8, // ⚠️ IMPORTANTE: Versión actualizada por cambios de esquema
     exportSchema = true // Cambiar a true para producción y guardar esquemas
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
-    // ==================== DAOs ====================
+    // ==================== DAOs PRINCIPALES ====================
 
     /**
      * DAO para operaciones de usuario
@@ -55,9 +70,27 @@ abstract class AppDatabase : RoomDatabase() {
 
     /**
      * DAO para operaciones de canciones
-     * Incluye artistas, álbumes, géneros, favoritos y listas
+     * Incluye CRUD completo y búsquedas avanzadas
      */
     abstract fun cancionDao(): CancionDao
+
+    /**
+     * DAO para operaciones de artistas
+     * Incluye gestión de biografías, imágenes y estadísticas
+     */
+    abstract fun artistaDao(): ArtistaDao
+
+    /**
+     * DAO para operaciones de álbumes
+     * Incluye gestión de portadas, tracks y metadatos
+     */
+    abstract fun albumDao(): AlbumDao
+
+    /**
+     * DAO para operaciones de géneros
+     * Incluye jerarquías y clasificaciones
+     */
+    abstract fun generoDao(): GeneroDao
 
     /**
      * DAO para operaciones de letras
@@ -65,43 +98,77 @@ abstract class AppDatabase : RoomDatabase() {
      */
     abstract fun letraDao(): LetraDao
 
+    // ==================== DAOs DE LISTAS Y FAVORITOS ====================
+
+    /**
+     * DAO para operaciones de playlists
+     * Incluye gestión de colaborativas y públicas
+     */
+    abstract fun listaReproduccionDao(): ListaReproduccionDao
+
+    /**
+     * DAO para operaciones de favoritos
+     * Incluye calificaciones y ordenamiento personalizado
+     */
+    abstract fun favoritoDao(): FavoritoDao
+
+    // ==================== DAOs DE REPRODUCCIÓN ====================
+
+    /**
+     * DAO para operaciones del historial de reproducción
+     * Incluye analytics y estadísticas de escucha
+     */
+    abstract fun historialReproduccionDao(): HistorialReproduccionDao
+
+    /**
+     * DAO para operaciones de la cola de reproducción
+     * Incluye reordenamiento y gestión de origen
+     */
+    abstract fun colaReproduccionDao(): ColaReproduccionDao
+
+    // ==================== CONFIGURACIÓN ====================
+
     companion object {
         const val DATABASE_NAME = "freeplayerm_database"
 
         /**
          * Notas de versión:
          *
-         * v6.0 - Actualización mayor
-         * - CancionEntity: Agregados campos veces_reproducida, ultima_reproduccion,
-         *   fecha_agregado, numero_pista, anio, url_streaming, calidad_audio, bitrate,
-         *   letra_disponible, portada_path, es_favorita_local
-         * - LetraEntity: Corregidos nombres de columnas (texto_letra en lugar de letra),
-         *   agregados campos fuente, fecha_agregado, idioma, traduccion_disponible,
-         *   sincronizada, url_fuente, verificada. Cambiado PrimaryKey a id_letra autoincrementable
-         * - UsuarioEntity: Corregidos nombres de columnas (idUsuario en lugar de id,
-         *   contrasenia en lugar de contrasenaHash), agregados campos activo, ultima_sesion,
-         *   fecha_creacion (Long timestamp), nombre_completo, biografia, fecha_nacimiento,
-         *   provider_id, tema_oscuro, notificaciones_habilitadas, reproduccion_automatica,
-         *   calidad_preferida, idioma_preferido, estadísticas
-         * - DetalleListaReproduccionEntity: Agregado campo orden, fecha_agregado,
-         *   agregada_por_usuario, numero_reproducciones_en_lista
-         * - ListaReproduccionEntity: Agregados campos es_publica, es_colaborativa,
-         *   color_tema, fecha_creacion, fecha_modificacion, estadísticas completas,
-         *   categoria, genero_principal, es_favorita, orden_visualizacion
-         * - ArtistaEntity: Agregados muchos campos (nombre_real, biografia, fechas,
-         *   múltiples imágenes, redes sociales, clasificación, estadísticas)
-         * - AlbumEntity: Agregados campos subtitulo, múltiples portadas, fecha_lanzamiento,
-         *   tipo, clasificación técnica, estadísticas, enlaces, calificación
-         * - GeneroEntity: Agregados campos nombre_normalizado, jerarquía, visualización,
-         *   estadísticas, clasificación
-         * - FavoritoEntity: Agregados campos fecha_agregado, orden,
-         *   veces_reproducida_desde_favoritos, calificacion, notas
-         * - EstadisticasModels: Agregado archivo con data classes para estadísticas
+         * v8.0 - Actualización mayor (Actual)
+         * - Agregados todos los DAOs faltantes
+         * - Sincronización completa de campos entre Entity y DAO
+         * - Optimización de índices y relaciones
+         * - Soporte completo para todas las entidades
          *
-         * v5.0 - Versión anterior (esquema base)
+         * v7.0 - Entidades avanzadas
+         * - CancionArtistaEntity: Relaciones múltiples artista-canción
+         * - HistorialReproduccionEntity: Tracking completo de reproducciones
+         * - PreferenciasUsuarioEntity: Configuración personalizada
+         * - EstadoReproduccionEntity: Estado del reproductor
+         * - ColaReproduccionEntity: Gestión de cola de reproducción
+         * - LetraTraduccionEntity: Traducciones de letras
+         * - GeniusAnnotationEntity: Anotaciones de Genius
+         * - RedesSocialesArtistaEntity: Enlaces a redes sociales
+         * - CreditoAlbumEntity: Créditos de álbumes
+         * - GeneroMoodEntity: Estados de ánimo por género
+         * - ListaColaboradorEntity: Colaboradores de playlists
+         *
+         * v6.0 - Actualización de campos
+         * - CancionEntity: Agregados campos de reproducción y metadata
+         * - LetraEntity: Corregidos nombres de columnas y agregados campos
+         * - UsuarioEntity: Corregidos nombres y agregados tokens
+         * - DetalleListaReproduccionEntity: Agregado ordenamiento
+         * - ListaReproduccionEntity: Agregados campos de colaboración
+         * - ArtistaEntity: Agregados biografía y redes sociales
+         * - AlbumEntity: Agregados metadatos completos
+         * - GeneroEntity: Agregada jerarquía y estadísticas
+         * - FavoritoEntity: Agregadas calificaciones y notas
+         *
+         * v5.0 - Versión base inicial
+         * - Esquema básico con entidades principales
          *
          * Migración recomendada:
-         * Para migrar de v5 a v6, implementar Migration en DatabaseModule
+         * Para migrar entre versiones, implementar Migration en DatabaseModule
          * o usar fallbackToDestructiveMigration() para desarrollo
          */
     }

@@ -52,10 +52,10 @@ interface CancionDao {
     // ==================== ARTISTAS ====================
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarArtista(artista: ArtistaEntity): Long
+    suspend fun insertarArtista(artista: ArtistaEntity): Int
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarArtistas(artistas: List<ArtistaEntity>): List<Long>
+    suspend fun insertarArtistas(artistas: List<ArtistaEntity>): List<Int>
 
     @Update
     suspend fun actualizarArtista(artista: ArtistaEntity): Int
@@ -64,13 +64,13 @@ interface CancionDao {
     suspend fun eliminarArtista(artista: ArtistaEntity): Int
 
     @Query("DELETE FROM artistas WHERE id_artista = :artistaId")
-    suspend fun eliminarArtistaPorId(artistaId: Long): Int
+    suspend fun eliminarArtistaPorId(artistaId: Int): Int
 
     @Query("SELECT * FROM artistas WHERE id_artista = :artistaId")
-    suspend fun obtenerArtistaPorId(artistaId: Long): ArtistaEntity?
+    suspend fun obtenerArtistaPorId(artistaId: Int): ArtistaEntity?
 
     @Query("SELECT * FROM artistas WHERE id_artista = :artistaId")
-    fun obtenerArtistaPorIdFlow(artistaId: Long): Flow<ArtistaEntity?>
+    fun obtenerArtistaPorIdFlow(artistaId: Int): Flow<ArtistaEntity?>
 
     @Query("SELECT * FROM artistas WHERE nombre = :nombre COLLATE NOCASE LIMIT 1")
     suspend fun obtenerArtistaPorNombre(nombre: String): ArtistaEntity?
@@ -87,7 +87,7 @@ interface CancionDao {
         ORDER BY nombre ASC
         LIMIT :limit
     """)
-    suspend fun buscarArtistas(query: String, limit: Int = 50): List<ArtistaEntity>
+    suspend fun buscarArtistas(query: String, limit: Int= 50): List<ArtistaEntity>
 
     @Query("SELECT COUNT(*) FROM artistas")
     suspend fun contarArtistas(): Int
@@ -104,10 +104,10 @@ interface CancionDao {
     // ==================== ÁLBUMES ====================
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarAlbum(album: AlbumEntity): Long
+    suspend fun insertarAlbum(album: AlbumEntity): Int
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarAlbumes(albumes: List<AlbumEntity>): List<Long>
+    suspend fun insertarAlbumes(albumes: List<AlbumEntity>): List<Int>
 
     @Update
     suspend fun actualizarAlbum(album: AlbumEntity): Int
@@ -116,13 +116,13 @@ interface CancionDao {
     suspend fun eliminarAlbum(album: AlbumEntity): Int
 
     @Query("DELETE FROM albumes WHERE id_album = :albumId")
-    suspend fun eliminarAlbumPorId(albumId: Long): Int
+    suspend fun eliminarAlbumPorId(albumId: Int): Int
 
     @Query("SELECT * FROM albumes WHERE id_album = :albumId")
-    suspend fun obtenerAlbumPorId(albumId: Long): AlbumEntity?
+    suspend fun obtenerAlbumPorId(albumId: Int): AlbumEntity?
 
     @Query("SELECT * FROM albumes WHERE id_album = :albumId")
-    fun obtenerAlbumPorIdFlow(albumId: Long): Flow<AlbumEntity?>
+    fun obtenerAlbumPorIdFlow(albumId: Int): Flow<AlbumEntity?>
 
     @Query("""
         SELECT * FROM albumes 
@@ -130,13 +130,13 @@ interface CancionDao {
         AND id_artista = :artistaId 
         LIMIT 1
     """)
-    suspend fun obtenerAlbumPorNombreYArtista(titulo: String, artistaId: Long): AlbumEntity?
+    suspend fun obtenerAlbumPorNombreYArtista(titulo: String, artistaId: Int): AlbumEntity?
 
     @Query("SELECT * FROM albumes ORDER BY anio DESC, titulo ASC")
     fun obtenerTodosLosAlbumes(): Flow<List<AlbumEntity>>
 
     @Query("SELECT * FROM albumes WHERE id_artista = :artistaId ORDER BY anio DESC")
-    fun obtenerAlbumesPorArtista(artistaId: Long): Flow<List<AlbumEntity>>
+    fun obtenerAlbumesPorArtista(artistaId: Int): Flow<List<AlbumEntity>>
 
     @Query("SELECT * FROM albumes ORDER BY anio DESC LIMIT :limit OFFSET :offset")
     suspend fun obtenerAlbumesPaginados(limit: Int, offset: Int): List<AlbumEntity>
@@ -147,7 +147,7 @@ interface CancionDao {
         ORDER BY anio DESC
         LIMIT :limit
     """)
-    suspend fun buscarAlbumes(query: String, limit: Int = 50): List<AlbumEntity>
+    suspend fun buscarAlbumes(query: String, limit: Int= 50): List<AlbumEntity>
 
     @Query("SELECT COUNT(*) FROM albumes")
     suspend fun contarAlbumes(): Int
@@ -164,10 +164,10 @@ interface CancionDao {
     // ==================== GÉNEROS ====================
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarGenero(genero: GeneroEntity): Long
+    suspend fun insertarGenero(genero: GeneroEntity): Int
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarGeneros(generos: List<GeneroEntity>): List<Long>
+    suspend fun insertarGeneros(generos: List<GeneroEntity>): List<Int>
 
     @Update
     suspend fun actualizarGenero(genero: GeneroEntity): Int
@@ -179,7 +179,7 @@ interface CancionDao {
     suspend fun obtenerGeneroPorNombre(nombre: String): GeneroEntity?
 
     @Query("SELECT * FROM generos WHERE id_genero = :generoId")
-    suspend fun obtenerGeneroPorId(generoId: Long): GeneroEntity?
+    suspend fun obtenerGeneroPorId(generoId: Int): GeneroEntity?
 
     @Query("SELECT * FROM generos ORDER BY nombre ASC")
     fun obtenerTodosLosGeneros(): Flow<List<GeneroEntity>>
@@ -199,10 +199,10 @@ interface CancionDao {
     // ==================== CANCIONES ====================
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarCancion(cancion: CancionEntity): Long
+    suspend fun insertarCancion(cancion: CancionEntity): Int
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarCanciones(canciones: List<CancionEntity>): List<Long>
+    suspend fun insertarCanciones(canciones: List<CancionEntity>): List<Int>
 
     @Update
     suspend fun actualizarCancion(cancion: CancionEntity): Int
@@ -211,16 +211,16 @@ interface CancionDao {
     suspend fun eliminarCancion(cancion: CancionEntity): Int
 
     @Query("DELETE FROM canciones WHERE id_cancion = :cancionId")
-    suspend fun eliminarCancionPorId(cancionId: Long): Int
+    suspend fun eliminarCancionPorId(cancionId: Int): Int
 
     @Query("DELETE FROM canciones WHERE id_cancion IN (:cancionIds)")
-    suspend fun eliminarCancionesPorIds(cancionIds: List<Long>): Int
+    suspend fun eliminarCancionesPorIds(cancionIds: List<Int>): Int
 
     @Query("SELECT * FROM canciones WHERE id_cancion = :cancionId")
-    suspend fun obtenerCancionPorId(cancionId: Long): CancionEntity?
+    suspend fun obtenerCancionPorId(cancionId: Int): CancionEntity?
 
     @Query("SELECT * FROM canciones WHERE id_cancion = :cancionId")
-    fun obtenerCancionPorIdFlow(cancionId: Long): Flow<CancionEntity?>
+    fun obtenerCancionPorIdFlow(cancionId: Int): Flow<CancionEntity?>
 
     @Query("SELECT * FROM canciones ORDER BY titulo ASC")
     fun obtenerTodasLasCanciones(): Flow<List<CancionEntity>>
@@ -247,7 +247,7 @@ interface CancionDao {
         ORDER BY c.titulo ASC
         LIMIT :limit
     """)
-    suspend fun buscarCanciones(query: String, limit: Int = 100): List<CancionEntity>
+    suspend fun buscarCanciones(query: String, limit: Int= 100): List<CancionEntity>
 
     /**
      * BÚSQUEDA CON TODOS LOS DETALLES
@@ -255,18 +255,18 @@ interface CancionDao {
      */
     @Transaction
     @Query("$QUERY_CANCION_CON_ARTISTA WHERE c.titulo LIKE '%' || :query || '%' ORDER BY c.titulo ASC LIMIT :limit")
-    suspend fun buscarCancionesConDetalles(query: String, usuarioId: Int, limit: Int = 100): List<CancionConArtista>
+    suspend fun buscarCancionesConDetalles(query: String, usuarioId: Int, limit: Int= 100): List<CancionConArtista>
 
     // ==================== QUERIES POR RELACIÓN ====================
 
     @Query("SELECT * FROM canciones WHERE id_artista = :artistaId ORDER BY titulo ASC")
-    fun obtenerCancionesPorArtista(artistaId: Long): Flow<List<CancionEntity>>
+    fun obtenerCancionesPorArtista(artistaId: Int): Flow<List<CancionEntity>>
 
     @Query("SELECT * FROM canciones WHERE id_album = :albumId ORDER BY numero_pista ASC")
-    fun obtenerCancionesPorAlbum(albumId: Long): Flow<List<CancionEntity>>
+    fun obtenerCancionesPorAlbum(albumId: Int): Flow<List<CancionEntity>>
 
     @Query("SELECT * FROM canciones WHERE id_genero = :generoId ORDER BY titulo ASC")
-    fun obtenerCancionesPorGenero(generoId: Long): Flow<List<CancionEntity>>
+    fun obtenerCancionesPorGenero(generoId: Int): Flow<List<CancionEntity>>
 
     /**
      * CANCIONES CON TODOS LOS DETALLES
@@ -278,15 +278,15 @@ interface CancionDao {
 
     @Transaction
     @Query("$QUERY_CANCION_CON_ARTISTA WHERE c.id_artista = :artistaId ORDER BY c.titulo ASC")
-    fun obtenerCancionesConArtistaPorArtista(artistaId: Long, usuarioId: Int): Flow<List<CancionConArtista>>
+    fun obtenerCancionesConArtistaPorArtista(artistaId: Int, usuarioId: Int): Flow<List<CancionConArtista>>
 
     @Transaction
     @Query("$QUERY_CANCION_CON_ARTISTA WHERE c.id_album = :albumId ORDER BY c.numero_pista ASC")
-    fun obtenerCancionesConArtistaPorAlbum(albumId: Long, usuarioId: Int): Flow<List<CancionConArtista>>
+    fun obtenerCancionesConArtistaPorAlbum(albumId: Int, usuarioId: Int): Flow<List<CancionConArtista>>
 
     @Transaction
     @Query("$QUERY_CANCION_CON_ARTISTA WHERE c.id_genero = :generoId ORDER BY c.titulo ASC")
-    fun obtenerCancionesConArtistaPorGenero(generoId: Long, usuarioId: Int): Flow<List<CancionConArtista>>
+    fun obtenerCancionesConArtistaPorGenero(generoId: Int, usuarioId: Int): Flow<List<CancionConArtista>>
 
     @Transaction
     @Query("$QUERY_CANCION_CON_ARTISTA WHERE f.id_usuario = :usuarioId ORDER BY c.titulo ASC")
@@ -296,11 +296,11 @@ interface CancionDao {
 
     @Transaction
     @Query("$QUERY_CANCION_CON_ARTISTA ORDER BY c.fecha_agregado DESC LIMIT :limit")
-    fun obtenerCancionesRecientes(usuarioId: Int, limit: Int = 20): Flow<List<CancionConArtista>>
+    fun obtenerCancionesRecientes(usuarioId: Int, limit: Int= 20): Flow<List<CancionConArtista>>
 
     @Transaction
     @Query("$QUERY_CANCION_CON_ARTISTA ORDER BY c.veces_reproducida DESC LIMIT :limit")
-    fun obtenerCancionesMasReproducidas(usuarioId: Int, limit: Int = 20): Flow<List<CancionConArtista>>
+    fun obtenerCancionesMasReproducidas(usuarioId: Int, limit: Int= 20): Flow<List<CancionConArtista>>
 
     @Transaction
     @Query("""
@@ -309,7 +309,7 @@ interface CancionDao {
         ORDER BY c.ultima_reproduccion DESC 
         LIMIT :limit
     """)
-    fun obtenerUltimasReproducidas(usuarioId: Int, limit: Int = 20): Flow<List<CancionConArtista>>
+    fun obtenerUltimasReproducidas(usuarioId: Int, limit: Int= 20): Flow<List<CancionConArtista>>
 
     /**
      * ACTUALIZAR ESTADÍSTICAS DE REPRODUCCIÓN
@@ -321,12 +321,12 @@ interface CancionDao {
             ultima_reproduccion = :timestamp
         WHERE id_cancion = :cancionId
     """)
-    suspend fun incrementarReproduccion(cancionId: Long, timestamp: Long = System.currentTimeMillis())
+    suspend fun incrementarReproduccion(cancionId: Int, timestamp: Int = System.currentTimeMillis().toInt())
 
     // ==================== FAVORITOS ====================
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun agregarAFavoritos(favorito: FavoritoEntity): Long
+    suspend fun agregarAFavoritos(favorito: FavoritoEntity): Int
 
     @Query("DELETE FROM favoritos WHERE id_usuario = :usuarioId AND id_cancion = :cancionId")
     suspend fun quitarDeFavoritos(usuarioId: Int, cancionId: Int): Int
@@ -364,7 +364,7 @@ interface CancionDao {
     // ==================== LISTAS DE REPRODUCCIÓN ====================
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarListaReproduccion(lista: ListaReproduccionEntity): Long
+    suspend fun insertarListaReproduccion(lista: ListaReproduccionEntity): Int
 
     @Update
     suspend fun actualizarListaReproduccion(lista: ListaReproduccionEntity): Int
@@ -373,10 +373,10 @@ interface CancionDao {
     suspend fun eliminarListaReproduccion(lista: ListaReproduccionEntity): Int
 
     @Query("DELETE FROM listas_reproduccion WHERE id_lista = :listaId")
-    suspend fun eliminarListaPorId(listaId: Long): Int
+    suspend fun eliminarListaPorId(listaId: Int): Int
 
     @Query("SELECT * FROM listas_reproduccion WHERE id_lista = :listaId")
-    suspend fun obtenerListaPorId(listaId: Long): ListaReproduccionEntity?
+    suspend fun obtenerListaPorId(listaId: Int): ListaReproduccionEntity?
 
     @Query("SELECT * FROM listas_reproduccion WHERE id_usuario = :usuarioId ORDER BY nombre ASC")
     fun obtenerListasPorUsuario(usuarioId: Int): Flow<List<ListaReproduccionEntity>>
@@ -395,25 +395,25 @@ interface CancionDao {
     // ==================== DETALLES DE LISTA ====================
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun agregarCancionALista(detalle: DetalleListaReproduccionEntity): Long
+    suspend fun agregarCancionALista(detalle: DetalleListaReproduccionEntity): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun agregarCancionesALista(detalles: List<DetalleListaReproduccionEntity>): List<Long>
+    suspend fun agregarCancionesALista(detalles: List<DetalleListaReproduccionEntity>): List<Int>
 
     @Query("""
         DELETE FROM detalle_lista_reproduccion 
         WHERE id_lista = :listaId AND id_cancion = :cancionId
     """)
-    suspend fun quitarCancionDeLista(listaId: Long, cancionId: Long): Int
+    suspend fun quitarCancionDeLista(listaId: Int, cancionId: Int): Int
 
     @Query("""
         DELETE FROM detalle_lista_reproduccion 
         WHERE id_lista = :listaId AND id_cancion IN (:cancionIds)
     """)
-    suspend fun quitarCancionesDeLista(listaId: Long, cancionIds: List<Long>): Int
+    suspend fun quitarCancionesDeLista(listaId: Int, cancionIds: List<Int>): Int
 
     @Query("DELETE FROM detalle_lista_reproduccion WHERE id_lista = :listaId")
-    suspend fun limpiarLista(listaId: Long): Int
+    suspend fun limpiarLista(listaId: Int): Int
 
     @Query("""
         SELECT EXISTS(
@@ -421,13 +421,13 @@ interface CancionDao {
             WHERE id_lista = :listaId AND id_cancion = :cancionId
         )
     """)
-    suspend fun cancionEstaEnLista(listaId: Long, cancionId: Long): Boolean
+    suspend fun cancionEstaEnLista(listaId: Int, cancionId: Int): Boolean
 
     @Query("""
         SELECT COUNT(*) FROM detalle_lista_reproduccion 
         WHERE id_lista = :listaId
     """)
-    suspend fun contarCancionesEnLista(listaId: Long): Int
+    suspend fun contarCancionesEnLista(listaId: Int): Int
 
     /**
      * OBTENER CANCIONES DE UNA LISTA CON DETALLES
@@ -446,16 +446,36 @@ interface CancionDao {
         WHERE dlr.id_lista = :listaId
         ORDER BY dlr.orden ASC
     """)
-    fun obtenerCancionesDeLista(listaId: Long, usuarioId: Int): Flow<List<CancionConArtista>>
+    fun obtenerCancionesDeLista(listaId: Int, usuarioId: Int): Flow<List<CancionConArtista>>
 
     @Transaction
     suspend fun moverCancionEnLista(
-        listaId: Long,
-        cancionId: Long,
+        listaId: Int,
+        cancionId: Int,
         nuevaPosicion: Int
     ) {
         // Implementar lógica de reordenamiento si se usa campo de orden
     }
+
+    @Transaction // Importante porque CancionConArtista usa @Embedded
+    @Query("""
+        SELECT 
+            C.*, 
+            A.nombre AS artistaNombre,
+            AL.titulo AS albumNombre,
+            AL.portada_path AS portadaPath,
+            AL.fecha_lanzamiento AS fechaLanzamiento,
+            G.nombre AS generoNombre,
+            CASE WHEN F.id_cancion IS NOT NULL THEN 1 ELSE 0 END AS esFavorita
+        FROM canciones C
+        LEFT JOIN artistas A ON C.id_artista = A.id_artista
+        LEFT JOIN albumes AL ON C.id_album = AL.id_album
+        LEFT JOIN generos G ON C.id_genero = G.id_genero
+        LEFT JOIN favoritos F ON C.id_cancion = F.id_cancion AND F.id_usuario = :usuarioId
+        WHERE C.letra_disponible = 0 
+        ORDER BY C.fecha_agregado DESC
+    """)
+    suspend fun obtenerCancionesSinLetra(usuarioId: Int): List<CancionConArtista>
 
     // ==================== ESTADÍSTICAS (CORREGIDO) ====================
 
@@ -471,7 +491,7 @@ interface CancionDao {
         ORDER BY cantidad DESC
         LIMIT :limit
     """)
-    suspend fun obtenerArtistasTopPorCanciones(limit: Int = 10): List<TopItemEstadistica>
+    suspend fun obtenerArtistasTopPorCanciones(limit: Int= 10): List<TopItemEstadistica>
 
     /**
      * TOP GÉNEROS POR CANTIDAD DE CANCIONES
@@ -485,7 +505,7 @@ interface CancionDao {
         ORDER BY cantidad DESC
         LIMIT :limit
     """)
-    suspend fun obtenerGenerosTopPorCanciones(limit: Int = 10): List<TopItemEstadistica>
+    suspend fun obtenerGenerosTopPorCanciones(limit: Int= 10): List<TopItemEstadistica>
 
     /**
      * ESTADÍSTICAS GENERALES DE LA BIBLIOTECA
@@ -521,7 +541,7 @@ interface CancionDao {
         ORDER BY cantidad_canciones DESC
         LIMIT :limit
     """)
-    suspend fun obtenerAlbumesTopPorCanciones(limit: Int = 10): List<AlbumEstadistica>
+    suspend fun obtenerAlbumesTopPorCanciones(limit: Int= 10): List<AlbumEstadistica>
 
     // ==================== OPERACIONES EN LOTE ====================
 
@@ -533,19 +553,19 @@ interface CancionDao {
     ) {
         val artistaId = insertarArtista(artista)
         if (artistaId > 0) {
-            insertarAlbumes(albumes.map { it.copy(idArtista = artistaId.toInt()) })
-            insertarCanciones(canciones.map { it.copy(idArtista = artistaId.toInt()) })
+            insertarAlbumes(albumes.map { it.copy(idArtista = artistaId) })
+            insertarCanciones(canciones.map { it.copy(idArtista = artistaId) })
         }
     }
 
     @Transaction
-    suspend fun eliminarArtistaCompleto(artistaId: Long) {
+    suspend fun eliminarArtistaCompleto(artistaId: Int) {
         // Room manejará las cascadas si están configuradas en las relaciones
         eliminarArtistaPorId(artistaId)
     }
 
     @Transaction
-    suspend fun duplicarLista(listaOriginalId: Long, nuevoNombre: String, usuarioId: Int): Long {
+    suspend fun duplicarLista(listaOriginalId: Int, nuevoNombre: String, usuarioId: Int): Int {
         val listaOriginal = obtenerListaPorId(listaOriginalId) ?: return -1
 
         val nuevaLista = listaOriginal.copy(
@@ -585,7 +605,7 @@ interface CancionDao {
     suspend fun limpiarGenerosHuerfanos(): Int
 
     @Transaction
-    suspend fun limpiarDatosHuerfanos(): Int {
+    suspend fun limpiarDatosHuerfanos(): Int{
         val artistasEliminados = limpiarArtistasHuerfanos()
         val albumesEliminados = limpiarAlbumesHuerfanos()
         val generosEliminados = limpiarGenerosHuerfanos()
@@ -617,7 +637,7 @@ interface CancionDao {
     suspend fun resetearEstadisticasReproduccion(): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarDetalleLista(detalle: DetalleListaReproduccionEntity): Long
+    suspend fun insertarDetalleLista(detalle: DetalleListaReproduccionEntity): Int
 
     @Query("""
     $QUERY_CANCION_CON_ARTISTA

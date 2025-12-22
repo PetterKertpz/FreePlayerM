@@ -72,10 +72,10 @@ data class ListaReproduccionEntity(
     // ==================== TIMESTAMPS ====================
 
     @ColumnInfo(name = "fecha_creacion")
-    val fechaCreacion: Long = System.currentTimeMillis(),
+    val fechaCreacion: Int = System.currentTimeMillis().toInt(),
 
     @ColumnInfo(name = "fecha_modificacion")
-    val fechaModificacion: Long = System.currentTimeMillis(),
+    val fechaModificacion: Int = System.currentTimeMillis().toInt(),
 
     // ==================== ESTADÍSTICAS ====================
 
@@ -83,13 +83,13 @@ data class ListaReproduccionEntity(
     val totalCanciones: Int = 0,
 
     @ColumnInfo(name = "duracion_total_segundos")
-    val duracionTotalSegundos: Long = 0,
+    val duracionTotalSegundos: Int = 0,
 
     @ColumnInfo(name = "veces_reproducida")
     val vecesReproducida: Int = 0,
 
     @ColumnInfo(name = "ultima_reproduccion")
-    val ultimaReproduccion: Long? = null,
+    val ultimaReproduccion: Int? = null,
 
     // ==================== METADATA ====================
 

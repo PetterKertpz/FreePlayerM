@@ -11,7 +11,7 @@ import java.util.Date
  * Permite a Room trabajar con tipos de datos que no soporta nativamente
  *
  * Tipos soportados:
- * - Date <-> Long (timestamp)
+ * - Date <-> Int (timestamp)
  * - List<String> <-> String (JSON o delimitado por comas)
  * - Boolean <-> Int (0 o 1)
  *
@@ -19,30 +19,30 @@ import java.util.Date
  */
 class Converters {
 
-    // ==================== DATE <-> LONG ====================
+    // ==================== DATE <-> Int ====================
 
     /**
-     * Convierte un Long (milisegundos desde la época) a un objeto Date
+     * Convierte un Int (milisegundos desde la época) a un objeto Date
      * Room usará esta función cuando lea datos de la base de datos
      *
      * @param value El valor numérico de la base de datos (timestamp)
      * @return Un objeto Date, o null si el valor de la base de datos es nulo
      */
     @TypeConverter
-    fun fromTimestamp(value: Long?): Date? {
+    fun fromTimestamp(value: Int?): Date? {
         return value?.let { Date(it) }
     }
 
     /**
-     * Convierte un objeto Date a un Long (milisegundos)
+     * Convierte un objeto Date a un Int (milisegundos)
      * Room usará esta función cuando escriba datos en la base de datos
      *
      * @param date El objeto Date de nuestra entidad
-     * @return Un Long que representa la fecha, o null si el objeto Date es nulo
+     * @return Un Int que representa la fecha, o null si el objeto Date es nulo
      */
     @TypeConverter
-    fun dateToTimestamp(date: Date?): Long? {
-        return date?.time
+    fun dateToTimestamp(date: Date?): Int? {
+        return date?.time?.toInt()
     }
 
     // ==================== LIST<STRING> <-> STRING ====================
@@ -72,7 +72,7 @@ class Converters {
         return list?.joinToString(",")
     }
 
-    // ==================== BOOLEAN <-> INT ====================
+    // ==================== BOOLEAN <-> Int ====================
     // SQLite no tiene tipo BOOLEAN nativo, usa INTEGER (0 o 1)
 
     /**
@@ -99,26 +99,83 @@ class Converters {
         return if (boolean == true) 1 else 0
     }
 
-    // ==================== ADICIONALES (OPCIONALES) ====================
-    // Puedes agregar más conversores según necesites
+    /**
+     * Convierte JSON String a Map<String, String>
+     * Útil para campos dinámicos como redes sociales
+     */
+    @TypeConverter
+    fun fromJsonToStringMap(value: String?): Map<String, String>? {
+        if (value.isNullOrBlank()) return null
+        return try {
+            val type = object : com.google.gson.reflect.TypeToken<Map<String, String>>() {}.type
+            com.google.gson.Gson().fromJson(value, type)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    @TypeConverter
+    fun fromStringMapToJson(map: Map<String, String>?): String? {
+        return if (map == null) null else com.google.gson.Gson().toJson(map)
+    }
 
     /**
-     * Convierte JSON String a Map
-     * Útil para almacenar metadatos dinámicos
-     * Requiere: import com.google.gson.Gson
-     * Requiere: import com.google.gson.reflect.TypeToken
+     * Convierte JSON String a List<Int>
+     * Útil para listas de IDs (colaboradores, etc.)
      */
-    /*
     @TypeConverter
-    fun fromStringToMap(value: String?): Map<String, Any>? {
-        if (value == null) return null
-        val type = object : TypeToken<Map<String, Any>>() {}.type
-        return Gson().fromJson(value, type)
+    fun fromJsonToIntList(value: String?): List<Int>? {
+        if (value.isNullOrBlank()) return null
+        return try {
+            val type = object : com.google.gson.reflect.TypeToken<List<Int>>() {}.type
+            com.google.gson.Gson().fromJson(value, type)
+        } catch (e: Exception) {
+            null
+        }
     }
 
     @TypeConverter
-    fun fromMapToString(map: Map<String, Any>?): String? {
-        return if (map == null) null else Gson().toJson(map)
+    fun fromIntListToJson(list: List<Int>?): String? {
+        return if (list == null) null else com.google.gson.Gson().toJson(list)
     }
-    */
+
+    /**
+     * Convierte JSON String a Map<String, Any>
+     * Para datos complejos como metadatos
+     */
+    @TypeConverter
+    fun fromJsonToAnyMap(value: String?): Map<String, Any>? {
+        if (value.isNullOrBlank()) return null
+        return try {
+            val type = object : com.google.gson.reflect.TypeToken<Map<String, Any>>() {}.type
+            com.google.gson.Gson().fromJson(value, type)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    @TypeConverter
+    fun fromAnyMapToJson(map: Map<String, Any>?): String? {
+        return if (map == null) null else com.google.gson.Gson().toJson(map)
+    }
+
+    /**
+     * Convierte JSON String a List<String>
+     * Alternativa a fromStringToList para casos específicos
+     */
+    @TypeConverter
+    fun fromJsonToStringList(value: String?): List<String>? {
+        if (value.isNullOrBlank()) return null
+        return try {
+            val type = object : com.google.gson.reflect.TypeToken<List<String>>() {}.type
+            com.google.gson.Gson().fromJson(value, type)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    @TypeConverter
+    fun fromStringListToJson(list: List<String>?): String? {
+        return if (list == null) null else com.google.gson.Gson().toJson(list)
+    }
 }

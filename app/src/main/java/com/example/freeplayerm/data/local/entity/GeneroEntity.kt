@@ -98,10 +98,10 @@ data class GeneroEntity(
     // ==================== METADATA ====================
 
     @ColumnInfo(name = "fecha_agregado")
-    val fechaAgregado: Long = System.currentTimeMillis(),
+    val fechaAgregado: Int = System.currentTimeMillis().toInt(),
 
     @ColumnInfo(name = "ultima_actualizacion")
-    val ultimaActualizacion: Long = System.currentTimeMillis(),
+    val ultimaActualizacion: Int = System.currentTimeMillis().toInt(),
 
     @ColumnInfo(name = "orden_visualizacion")
     val ordenVisualizacion: Int = 0 // Para ordenamiento personalizado
