@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.freeplayerm.core.auth.SignInResult
 import com.example.freeplayerm.data.repository.SessionRepository
-import com.example.freeplayerm.data.repository.UsuarioRepository
+import com.example.freeplayerm.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,7 +35,7 @@ sealed class LoginEvento {
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val repositorio: UsuarioRepository,
+    private val repositorio: UserRepository,
     private val sessionRepository: SessionRepository
 ) : ViewModel() {
 
@@ -54,30 +54,54 @@ class LoginViewModel @Inject constructor(
     }
 
     private fun procesarResultadoGoogle(resultadoSignIn: SignInResult) {
-        // Activamos solo la carga de Google
         _estadoUi.update { it.copy(cargandoConGoogle = true) }
         viewModelScope.launch {
             when (resultadoSignIn) {
                 is SignInResult.Success -> {
                     val datosUsuario = resultadoSignIn.data
                     if (datosUsuario.correo == null) {
+                        android.util.Log.e("LoginViewModel", "Correo de Google es null")
                         _estadoUi.update { it.copy(error = "No se pudo obtener el correo de Google.", cargandoConGoogle = false) }
                         return@launch
                     }
+
                     repositorio.buscarOCrearUsuarioGoogle(
                         correo = datosUsuario.correo,
                         nombreUsuario = datosUsuario.nombreUsuario ?: "Usuario",
                         fotoUrl = datosUsuario.fotoPerfilUrl
                     ).onSuccess { usuario ->
+                        if (usuario.tokenSesion == null) {
+                            android.util.Log.e("LoginViewModel", "Token de sesión es null después de buscarOCrearUsuarioGoogle para correo: ${datosUsuario.correo}")
+                            _estadoUi.update {
+                                it.copy(
+                                    cargandoConGoogle = false,
+                                    error = "Error al generar sesión. Intenta nuevamente."
+                                )
+                            }
+                            return@onSuccess
+                        }
                         sessionRepository.guardarIdDeUsuario(usuario.idUsuario)
-                        // Desactivamos la carga al terminar
+                        sessionRepository.guardarToken(usuario.tokenSesion)
                         _estadoUi.update { it.copy(cargandoConGoogle = false, usuarioIdExitoso = usuario.idUsuario) }
                     }.onFailure { error ->
-                        _estadoUi.update { it.copy(cargandoConGoogle = false, error = error.message ?: "No se pudo guardar el usuario.") }
+                        // ✅ CRÍTICO: Manejar el error del repositorio
+                        android.util.Log.e("LoginViewModel", "Error en buscarOCrearUsuarioGoogle: ${error.message}", error)
+                        _estadoUi.update {
+                            it.copy(
+                                cargandoConGoogle = false,
+                                error = "Error al iniciar sesión: ${error.message}"
+                            )
+                        }
                     }
                 }
-                is SignInResult.Error -> _estadoUi.update { it.copy(error = resultadoSignIn.message, cargandoConGoogle = false) }
-                is SignInResult.Cancelled -> _estadoUi.update { it.copy(cargandoConGoogle = false) }
+                is SignInResult.Error -> {
+                    android.util.Log.e("LoginViewModel", "SignInResult.Error: ${resultadoSignIn.message}")
+                    _estadoUi.update { it.copy(error = resultadoSignIn.message, cargandoConGoogle = false) }
+                }
+                is SignInResult.Cancelled -> {
+                    android.util.Log.d("LoginViewModel", "Login con Google cancelado por el usuario")
+                    _estadoUi.update { it.copy(cargandoConGoogle = false) }
+                }
             }
         }
     }

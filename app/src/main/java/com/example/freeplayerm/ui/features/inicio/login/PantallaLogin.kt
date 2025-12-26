@@ -17,14 +17,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.freeplayerm.core.auth.GoogleAuthUiClient
 import androidx.credentials.CredentialManager
-import com.example.freeplayerm.com.example.freeplayerm.ui.features.login.components.BotonGooglePulsante
-import com.example.freeplayerm.com.example.freeplayerm.ui.features.login.components.EncabezadoLogoAnimado
-import com.example.freeplayerm.com.example.freeplayerm.ui.features.login.components.TextoTituloFlotante
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.example.freeplayerm.com.example.freeplayerm.ui.features.inicio.components.BotonGooglePulsante
+import com.example.freeplayerm.com.example.freeplayerm.ui.features.inicio.components.EncabezadoLogoAnimado
+import com.example.freeplayerm.com.example.freeplayerm.ui.features.inicio.components.TextoTituloFlotante
 import com.example.freeplayerm.ui.features.inicio.components.BotonAnimado
 import com.example.freeplayerm.ui.features.inicio.components.CampoEntradaLogin
 import com.example.freeplayerm.ui.features.inicio.components.FondoGalaxiaAnimado

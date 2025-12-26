@@ -20,10 +20,10 @@ interface HistorialReproduccionDao {
     // ==================== INSERCIÓN ====================
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarHistorial(historial: HistorialReproduccionEntity): Int
+    suspend fun insertarHistorial(historial: HistorialReproduccionEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarHistoriales(historiales: List<HistorialReproduccionEntity>): List<Int>
+    suspend fun insertarHistoriales(historiales: List<HistorialReproduccionEntity>): List<Long>
 
     // ==================== ACTUALIZACIÓN ====================
 
@@ -381,13 +381,13 @@ interface HistorialReproduccionDao {
         duracionMs: Int,
         origen: String,
         idContexto: Int? = null
-    ): Int {
+    ): Long {  // Cambiar a Long
         val historial = HistorialReproduccionEntity(
             idUsuario = usuarioId,
             idCancion = cancionId,
-            fechaReproduccion = System.currentTimeMillis().toInt(),
+            fechaReproduccion = System.currentTimeMillis(),
             duracionReproducidaMs = duracionMs,
-            completo = duracionMs > 30000, // >30 segundos = completo
+            completo = duracionMs > 30000,
             origen = origen,
             idContexto = idContexto,
             duracionTotalCancionMs = duracionMs

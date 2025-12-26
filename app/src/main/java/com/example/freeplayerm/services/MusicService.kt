@@ -36,8 +36,7 @@ class MusicService : MediaSessionService() {
     @Inject
     lateinit var player: Player
 
-    @Inject
-    lateinit var mediaSession: MediaSession
+    private lateinit var mediaSession: MediaSession
 
     @Inject
     lateinit var cancionSyncService: CancionSyncService
@@ -52,8 +51,6 @@ class MusicService : MediaSessionService() {
         const val CHANNEL_ID = "media_playback_channel"
         private const val TAG = "MusicService"
     }
-
-    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var syncJob: Job? = null
 
     @OptIn(UnstableApi::class)
@@ -61,6 +58,9 @@ class MusicService : MediaSessionService() {
         super.onCreate()
         Log.d(TAG, "🎵 ========== INICIANDO MusicService ==========")
 
+        mediaSession = MediaSession.Builder(this, player)
+            .setId("FreePlayerSession")
+            .build()
         // 1. Crear el Provider
         notificationProvider = CustomNotificationProvider(this)
         setMediaNotificationProvider(notificationProvider!!)
@@ -247,10 +247,10 @@ class MusicService : MediaSessionService() {
 
     private fun iniciarSincronizacionCancion(mediaItem: MediaItem) {
         syncJob?.cancel()
-        syncJob = serviceScope.launch {
+        syncJob = CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
             try {
                 Log.d(TAG, "🔄 Iniciando sincronización: ${mediaItem.mediaMetadata.title}")
-                val cancionConArtista = mediaItemHelper.obtenerDatosCancionConResiliencia(mediaItem)
+                val cancionConArtista = mediaItemHelper.obtenerConResiliencia(mediaItem)
                 if (cancionConArtista != null) {
                     cancionSyncService.sincronizarCancionAlReproducir(cancionConArtista)
                 } else {
@@ -295,41 +295,32 @@ class MusicService : MediaSessionService() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
-        Log.d(TAG, "📱 App removida de recientes")
-        Log.d(TAG, "   ├─ IsPlaying: ${player.isPlaying}")
-        Log.d(TAG, "   ├─ PlayWhenReady: ${player.playWhenReady}")
-        Log.d(TAG, "   └─ MediaItemCount: ${player.mediaItemCount}")
 
-        // Solo detener si no está reproduciendo
-        if (!player.playWhenReady || player.mediaItemCount == 0) {
-            Log.d(TAG, "🛑 Deteniendo servicio (no hay reproducción activa)")
+        val shouldKeepRunning = player.isPlaying && player.mediaItemCount > 0
+
+        if (!shouldKeepRunning) {
+            player.stop()
             stopSelf()
-        } else {
-            Log.d(TAG, "⏸️ Servicio continúa (reproducción activa)")
         }
     }
 
     override fun onDestroy() {
-        Log.d(TAG, "💀 ========== DESTRUYENDO MusicService ==========")
+        Log.d(TAG, "MusicService onDestroy iniciado")
 
-        // Limpiar recursos
         syncJob?.cancel()
         cancionSyncService.limpiar()
-        Log.d(TAG, "✅ Sincronización cancelada")
 
-        // Liberar sesión
+        // 1. Detener reproducción primero
+        player.stop()
+        player.clearMediaItems()
+
+        // 2. Liberar MediaSession (internamente desvincula el player)
         mediaSession.release()
-        Log.d(TAG, "✅ MediaSession liberada")
 
-        // Liberar player si está idle
-        if (player.playbackState == Player.STATE_IDLE) {
-            player.release()
-            Log.d(TAG, "✅ Player liberado")
-        } else {
-            Log.d(TAG, "⚠️ Player NO liberado (aún en uso)")
-        }
+        // 3. Liberar Player AL FINAL
+        player.release()
 
         super.onDestroy()
-        Log.d(TAG, "👋 MusicService destruido completamente")
+        Log.d(TAG, "MusicService destruido")
     }
 }

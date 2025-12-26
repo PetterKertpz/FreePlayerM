@@ -61,10 +61,10 @@ data class EstadoReproduccionEntity(
     val idCancionActual: Int? = null,
 
     @ColumnInfo(name = "posicion_ms")
-    val posicionMs: Int = 0, // Posición actual en milisegundos
+    val posicionMs: Long = 0, // Posición actual en milisegundos
 
     @ColumnInfo(name = "duracion_cancion_ms")
-    val duracionCancionMs: Int = 0, // Duración total de la canción
+    val duracionCancionMs: Long = 0L, // Duración total de la canción
 
     // ==================== ESTADO DE REPRODUCCIÓN ====================
 
@@ -158,7 +158,7 @@ data class EstadoReproduccionEntity(
     // ==================== METADATA ====================
 
     @ColumnInfo(name = "ultima_actualizacion")
-    val ultimaActualizacion: Int = System.currentTimeMillis().toInt(),
+    val ultimaActualizacion: Long = System.currentTimeMillis(),
 
     @ColumnInfo(name = "version_estado")
     val versionEstado: Int = 1, // Para compatibilidad con versiones futuras
@@ -173,7 +173,7 @@ data class EstadoReproduccionEntity(
      * Calcula el porcentaje de progreso de la canción
      */
     fun calcularProgreso(): Float {
-        if (duracionCancionMs == 0) return 0f
+        if (duracionCancionMs == 0L) return 0f
         return (posicionMs.toFloat() / duracionCancionMs.toFloat()).coerceIn(0f, 1f)
     }
 
@@ -241,7 +241,7 @@ data class EstadoReproduccionEntity(
      */
     fun conCancionActualizada(
         idCancion: Int,
-        duracionMs: Int,
+        duracionMs: Long,
         estaReproduciendo: Boolean = true
     ): EstadoReproduccionEntity {
         return copy(
@@ -249,17 +249,17 @@ data class EstadoReproduccionEntity(
             duracionCancionMs = duracionMs,
             posicionMs = 0,
             estaReproduciendo = estaReproduciendo,
-            ultimaActualizacion = System.currentTimeMillis().toInt()
+            ultimaActualizacion = System.currentTimeMillis()
         )
     }
 
     /**
      * Crea una copia con la posición actualizada
      */
-    fun conPosicionActualizada(nuevaPosicionMs: Int): EstadoReproduccionEntity {
+    fun conPosicionActualizada(nuevaPosicionMs: Long): EstadoReproduccionEntity {
         return copy(
-            posicionMs = nuevaPosicionMs.coerceIn(0, duracionCancionMs),
-            ultimaActualizacion = System.currentTimeMillis().toInt()
+            posicionMs = nuevaPosicionMs.coerceIn(0L, duracionCancionMs),
+            ultimaActualizacion = System.currentTimeMillis()
         )
     }
 
@@ -297,7 +297,7 @@ data class EstadoReproduccionEntity(
         fun crearConCancion(
             idUsuario: Int,
             idCancion: Int,
-            duracionMs: Int,
+            duracionMs: Long,
             tipoContexto: String? = null,
             idContexto: Int? = null,
             nombreContexto: String? = null

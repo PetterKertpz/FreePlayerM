@@ -3,7 +3,7 @@ package com.example.freeplayerm.data.repository
 import com.example.freeplayerm.data.local.entity.UsuarioEntity
 import kotlinx.coroutines.flow.Flow
 
-interface UsuarioRepository {
+interface UserRepository {
 
     suspend fun insertarUsuario(usuario: UsuarioEntity)
     suspend fun obtenerUsuarioPorCorreo(correo: String): UsuarioEntity?

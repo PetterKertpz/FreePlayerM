@@ -10,6 +10,8 @@ import androidx.core.net.toUri
 import com.example.freeplayerm.data.local.entity.CancionEntity
 import com.example.freeplayerm.data.local.dao.CancionDao
 import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -51,21 +53,32 @@ class MediaItemHelper @Inject constructor(
      * @param artworkBitmap Opcional: bitmap de portada en memoria
      * @return MediaItem listo para ExoPlayer
      */
+    /**
+     * Crea un MediaItem desde CancionConArtista con todos los metadatos
+     * @throws IllegalArgumentException si archivoPath es null o vacío
+     */
     fun crearMediaItem(
         cancion: CancionConArtista,
         artworkBitmap: Bitmap? = null
     ): MediaItem {
-        Log.d(TAG, "🎵 Creando MediaItem: ${cancion.cancion.titulo}")
+        val archivoPath = cancion.cancion.archivoPath
+
+        // ✅ CORRECCIÓN: Validar ANTES de crear el MediaItem
+        require(!archivoPath.isNullOrBlank()) {
+            "No se puede crear MediaItem: archivoPath es null o vacío para '${cancion.cancion.titulo}'"
+        }
+
+        Log.d(TAG, "🎵 Creando MediaItem: ${cancion.cancion.titulo} -> $archivoPath")
 
         val metadata = construirMetadata(cancion, artworkBitmap)
 
         return MediaItem.Builder()
-            .setUri(cancion.cancion.archivoPath.orEmpty())
+            .setUri(archivoPath)
             .setMediaId(cancion.cancion.idCancion.toString())
             .setMediaMetadata(metadata)
             .build()
             .also {
-                Log.d(TAG, "✅ MediaItem creado: ID=${it.mediaId}")
+                Log.d(TAG, "✅ MediaItem creado: ID=${it.mediaId}, URI=${archivoPath}")
             }
     }
 
@@ -184,36 +197,15 @@ class MediaItemHelper @Inject constructor(
     suspend fun mediaItemACancionConArtista(
         mediaItem: MediaItem,
         usuarioId: Int = USUARIO_DEFAULT
-    ): CancionConArtista? {
-        Log.d(TAG, "🔄 Convirtiendo MediaItem: ${mediaItem.mediaId}")
+    ): CancionConArtista? = withContext(Dispatchers.IO) {
+        if (!esMediaItemValido(mediaItem)) return@withContext null
 
-        return try {
-            if (!esMediaItemValido(mediaItem)) {
-                Log.w(TAG, "❌ MediaItem no válido")
-                return null
-            }
+        val idCancion = mediaItem.mediaId.toLongOrNull()
+            ?: return@withContext crearDesdeMetadata(mediaItem, 0)
 
-            val idCancion = mediaItem.mediaId.toLongOrNull()
-            if (idCancion == null) {
-                Log.w(TAG, "❌ MediaId no es numérico: ${mediaItem.mediaId}")
-                return crearDesdeMetadata(mediaItem, 0)
-            }
-
-            // Intentar obtener de BD
-            val desdeBD = cancionDao.obtenerCancionConArtistaPorId(idCancion.toInt(), usuarioId)
-            if (desdeBD != null) {
-                Log.d(TAG, "✅ Encontrado en BD: ${desdeBD.cancion.titulo}")
-                return desdeBD
-            }
-
-            // Crear desde metadata si no está en BD
-            Log.d(TAG, "⚠️ No encontrado en BD, creando desde metadata")
-            crearDesdeMetadata(mediaItem, idCancion.toInt())
-
-        } catch (e: Exception) {
-            Log.e(TAG, "💥 Error en conversión", e)
-            null
-        }
+        // Intentar obtener de BD
+        cancionDao.obtenerCancionConArtistaPorId(idCancion.toInt(), usuarioId)
+            ?: crearDesdeMetadata(mediaItem, idCancion.toInt())
     }
 
     /**
@@ -276,33 +268,9 @@ class MediaItemHelper @Inject constructor(
     suspend fun obtenerConResiliencia(
         mediaItem: MediaItem,
         usuarioId: Int = USUARIO_DEFAULT
-    ): CancionConArtista? {
-        Log.d(TAG, "🛡️ Iniciando conversión resiliente...")
-
-        // Estrategia 1: Conversión normal
-        try {
-            val resultado = mediaItemACancionConArtista(mediaItem, usuarioId)
-            if (resultado != null) {
-                Log.d(TAG, "✅ Estrategia 1 exitosa")
-                return resultado
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Estrategia 1 falló", e)
-        }
-
-        // Estrategia 2: Datos mínimos
-        try {
-            val datosMinimos = extraerDatosBasicos(mediaItem)
-            if (datosMinimos != null) {
-                Log.d(TAG, "🆘 Usando datos mínimos")
-                return crearCancionMinima(mediaItem, datosMinimos)
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Estrategia 2 falló", e)
-        }
-
-        Log.w(TAG, "❌ Todas las estrategias fallaron")
-        return null
+    ): CancionConArtista? = withContext(Dispatchers.IO) {
+        mediaItemACancionConArtista(mediaItem, usuarioId)
+            ?: extraerDatosBasicos(mediaItem)?.let { crearCancionMinima(mediaItem, it) }
     }
 
     /**
@@ -397,7 +365,7 @@ class MediaItemHelper @Inject constructor(
      */
     fun extraerIdCancion(mediaItem: MediaItem): Int? {
         return try {
-            mediaItem.mediaId.toLongOrNull()
+            mediaItem.mediaId.toIntOrNull()
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error extrayendo ID", e)
             null
@@ -413,7 +381,7 @@ class MediaItemHelper @Inject constructor(
     ): Boolean {
         return try {
             val idCancion = extraerIdCancion(mediaItem) ?: return false
-            cancionDao.obtenerCancionConArtistaPorId(idCancion.toInt(), usuarioId) != null
+            cancionDao.obtenerCancionConArtistaPorId(idCancion, usuarioId) != null
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error verificando existencia", e)
             false

@@ -156,7 +156,7 @@ data class CreditoAlbumEntity(
     val notas: String? = null,
 
     @ColumnInfo(name = "fecha_creacion")
-    val fechaCreacion: Int = System.currentTimeMillis().toInt(),
+    val fechaCreacion: Long = System.currentTimeMillis(),
 
     @ColumnInfo(name = "activo")
     val activo: Boolean = true

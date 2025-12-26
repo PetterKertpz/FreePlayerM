@@ -1,4 +1,4 @@
-package com.example.freeplayerm.com.example.freeplayerm.ui.features.login.components
+package com.example.freeplayerm.com.example.freeplayerm.ui.features.inicio.components
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -101,7 +101,7 @@ fun EncabezadoLogoAnimado() {
     // Para un verdadero estilo cursivo, debes descargar una fuente (ej. "Dancing Script" o "Pacifico" de Google Fonts)
     // y ponerla en res/font. Por ahora, usaremos Serif + Italic para simularlo.
     val estiloFuente = FontFamily.Serif
-    val tamañoFuente = 52.sp
+    val tamanioFuente = 52.sp
 
     LaunchedEffect(Unit) {
         visible = true
@@ -137,7 +137,7 @@ fun EncabezadoLogoAnimado() {
                 // CAPA 1: El Borde (Stroke) - Se dibuja atrás y más grueso
                 Text(
                     text = "FreePlayer",
-                    fontSize = tamañoFuente,
+                    fontSize = tamanioFuente,
                     fontFamily = estiloFuente,
                     fontWeight = FontWeight.ExtraBold,
                     fontStyle = FontStyle.Italic, // Simula cursiva
@@ -155,7 +155,7 @@ fun EncabezadoLogoAnimado() {
                 // CAPA 2: El Relleno (Fill) - Se dibuja encima
                 Text(
                     text = "FreePlayer",
-                    fontSize = tamañoFuente,
+                    fontSize = tamanioFuente,
                     fontFamily = estiloFuente,
                     fontWeight = FontWeight.ExtraBold,
                     fontStyle = FontStyle.Italic, // Simula cursiva

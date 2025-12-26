@@ -182,7 +182,7 @@ data class GeniusAnnotationEntity(
      * Última vez que se sincronizó desde Genius
      */
     @ColumnInfo(name = "ultima_sincronizacion")
-    val ultimaSincronizacion: Int = System.currentTimeMillis().toInt(),
+    val ultimaSincronizacion: Long = System.currentTimeMillis(),
 
     // ==================== CONTROL LOCAL ====================
 

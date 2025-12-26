@@ -49,13 +49,15 @@ interface CancionDao {
         """
     }
 
+
+
     // ==================== ARTISTAS ====================
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarArtista(artista: ArtistaEntity): Int
+    suspend fun insertarArtista(artista: ArtistaEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarArtistas(artistas: List<ArtistaEntity>): List<Int>
+    suspend fun insertarArtistas(artistas: List<ArtistaEntity>): List<Long>
 
     @Update
     suspend fun actualizarArtista(artista: ArtistaEntity): Int
@@ -104,10 +106,10 @@ interface CancionDao {
     // ==================== ÁLBUMES ====================
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarAlbum(album: AlbumEntity): Int
+    suspend fun insertarAlbum(album: AlbumEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarAlbumes(albumes: List<AlbumEntity>): List<Int>
+    suspend fun insertarAlbumes(albumes: List<AlbumEntity>): List<Long>
 
     @Update
     suspend fun actualizarAlbum(album: AlbumEntity): Int
@@ -164,10 +166,10 @@ interface CancionDao {
     // ==================== GÉNEROS ====================
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarGenero(genero: GeneroEntity): Int
+    suspend fun insertarGenero(genero: GeneroEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarGeneros(generos: List<GeneroEntity>): List<Int>
+    suspend fun insertarGeneros(generos: List<GeneroEntity>): List<Long>
 
     @Update
     suspend fun actualizarGenero(genero: GeneroEntity): Int
@@ -199,10 +201,10 @@ interface CancionDao {
     // ==================== CANCIONES ====================
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarCancion(cancion: CancionEntity): Int
+    suspend fun insertarCancion(cancion: CancionEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarCanciones(canciones: List<CancionEntity>): List<Int>
+    suspend fun insertarCanciones(canciones: List<CancionEntity>): List<Long>
 
     @Update
     suspend fun actualizarCancion(cancion: CancionEntity): Int
@@ -326,7 +328,7 @@ interface CancionDao {
     // ==================== FAVORITOS ====================
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun agregarAFavoritos(favorito: FavoritoEntity): Int
+    suspend fun agregarAFavoritos(favorito: FavoritoEntity): Long
 
     @Query("DELETE FROM favoritos WHERE id_usuario = :usuarioId AND id_cancion = :cancionId")
     suspend fun quitarDeFavoritos(usuarioId: Int, cancionId: Int): Int
@@ -364,7 +366,7 @@ interface CancionDao {
     // ==================== LISTAS DE REPRODUCCIÓN ====================
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarListaReproduccion(lista: ListaReproduccionEntity): Int
+    suspend fun insertarListaReproduccion(lista: ListaReproduccionEntity): Long
 
     @Update
     suspend fun actualizarListaReproduccion(lista: ListaReproduccionEntity): Int
@@ -395,10 +397,10 @@ interface CancionDao {
     // ==================== DETALLES DE LISTA ====================
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun agregarCancionALista(detalle: DetalleListaReproduccionEntity): Int
+    suspend fun agregarCancionALista(detalle: DetalleListaReproduccionEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun agregarCancionesALista(detalles: List<DetalleListaReproduccionEntity>): List<Int>
+    suspend fun agregarCancionesALista(detalles: List<DetalleListaReproduccionEntity>): List<Long>
 
     @Query("""
         DELETE FROM detalle_lista_reproduccion 
@@ -553,8 +555,8 @@ interface CancionDao {
     ) {
         val artistaId = insertarArtista(artista)
         if (artistaId > 0) {
-            insertarAlbumes(albumes.map { it.copy(idArtista = artistaId) })
-            insertarCanciones(canciones.map { it.copy(idArtista = artistaId) })
+            insertarAlbumes(albumes.map { it.copy(idArtista = artistaId.toInt()) })
+            insertarCanciones(canciones.map { it.copy(idArtista = artistaId.toInt()) })
         }
     }
 
@@ -565,7 +567,7 @@ interface CancionDao {
     }
 
     @Transaction
-    suspend fun duplicarLista(listaOriginalId: Int, nuevoNombre: String, usuarioId: Int): Int {
+    suspend fun duplicarLista(listaOriginalId: Int, nuevoNombre: String, usuarioId: Int): Long {  // ✅ Cambiar a Long
         val listaOriginal = obtenerListaPorId(listaOriginalId) ?: return -1
 
         val nuevaLista = listaOriginal.copy(
@@ -578,7 +580,7 @@ interface CancionDao {
         // Copiar canciones (necesitarías obtener las canciones de la lista original)
         // Esta es una implementación simplificada
 
-        return nuevaListaId
+        return nuevaListaId  // ✅ Ya es Long
     }
 
     // ==================== MANTENIMIENTO ====================
@@ -612,6 +614,8 @@ interface CancionDao {
         return artistasEliminados + albumesEliminados + generosEliminados
     }
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun agregarMultiplesAFavoritos(favoritos: List<FavoritoEntity>)
     // ==================== VALIDACIÓN Y DIAGNÓSTICO ====================
 
     /**
@@ -637,7 +641,7 @@ interface CancionDao {
     suspend fun resetearEstadisticasReproduccion(): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarDetalleLista(detalle: DetalleListaReproduccionEntity): Int
+    suspend fun insertarDetalleLista(detalle: DetalleListaReproduccionEntity): Long
 
     @Query("""
     $QUERY_CANCION_CON_ARTISTA
@@ -705,19 +709,20 @@ interface CancionDao {
     @Query("""
     SELECT c.*, 
            a.nombre as artistaNombre,
-           alb.id_album as albumNombre,
+           alb.titulo as albumNombre,
            alb.portada_path as portadaPath,
-           alb.fecha_lanzamiento as fechaLanzamiento,
+           alb.anio as fechaLanzamiento,
            g.nombre as generoNombre,
            EXISTS(SELECT 1 FROM favoritos WHERE id_cancion = c.id_cancion) as esFavorita
     FROM canciones c
     LEFT JOIN artistas a ON c.id_artista = a.id_artista
-    LEFT JOIN albumes alb ON c.id_album = alb.id_Album
+    LEFT JOIN albumes alb ON c.id_album = alb.id_album
     LEFT JOIN generos g ON c.id_genero = g.id_genero
     WHERE c.id_cancion = :idCancion
-""")
+    """)
     fun obtenerCancionConArtista(idCancion: Int): Flow<CancionConArtista?>
 
-
+    @Query("SELECT * FROM canciones")
+    suspend fun obtenerTodasLasCancionesSnapshot(): List<CancionEntity>
 
 }

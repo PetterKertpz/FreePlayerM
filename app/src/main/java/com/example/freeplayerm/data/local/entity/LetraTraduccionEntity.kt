@@ -138,10 +138,10 @@ data class LetraTraduccionEntity(
     val notasTraductor: String? = null, // Notas sobre la traducción
 
     @ColumnInfo(name = "fecha_creacion")
-    val fechaCreacion: Int = System.currentTimeMillis().toInt(),
+    val fechaCreacion: Long = System.currentTimeMillis(),
 
     @ColumnInfo(name = "fecha_actualizacion")
-    val fechaActualizacion: Int = System.currentTimeMillis().toInt(),
+    val fechaActualizacion: Long = System.currentTimeMillis(),
 
     @ColumnInfo(name = "activa")
     val activa: Boolean = true // Para soft delete
@@ -241,7 +241,7 @@ data class LetraTraduccionEntity(
     fun actualizarContenido(nuevoTexto: String): LetraTraduccionEntity {
         return copy(
             textoTraducido = nuevoTexto,
-            fechaActualizacion = System.currentTimeMillis().toInt(),
+            fechaActualizacion = System.currentTimeMillis(),
             confiabilidad = calcularConfiabilidad(fuente, verificada, votos, reportesError)
         )
     }

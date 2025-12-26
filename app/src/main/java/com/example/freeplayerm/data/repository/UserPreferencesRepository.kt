@@ -28,7 +28,7 @@ class UserPreferencesRepository @Inject constructor(
     val userPreferences: Flow<UserSortPreferences> = context.dataStore.data
         .map { preferences ->
             val sortCriterion = CriterioDeOrdenamiento.valueOf(
-                preferences[Keys.SORT_CRITERION] ?: CriterioDeOrdenamiento.NINGUNO.name
+                preferences[Keys.SORT_CRITERION] ?: CriterioDeOrdenamiento.POR_TITULO.name
             )
             val sortDirection = DireccionDeOrdenamiento.valueOf(
                 preferences[Keys.SORT_DIRECTION] ?: DireccionDeOrdenamiento.ASCENDENTE.name

@@ -65,10 +65,10 @@ data class ArtistaEntity(
     val biografia: String? = null,
 
     @ColumnInfo(name = "fecha_nacimiento")
-    val fechaNacimiento: Int? = null, // Timestamp
+    val fechaNacimiento: Long? = null, // Timestamp
 
     @ColumnInfo(name = "fecha_inicio_carrera")
-    val fechaInicioCarrera: Int? = null, // Año
+    val fechaInicioCarrera: Long? = null, // Año
 
     // ==================== IMÁGENES ====================
 
@@ -150,10 +150,10 @@ data class ArtistaEntity(
     // ==================== METADATA ====================
 
     @ColumnInfo(name = "fecha_agregado")
-    val fechaAgregado: Int = System.currentTimeMillis().toInt(),
+    val fechaAgregado: Long = System.currentTimeMillis(),
 
     @ColumnInfo(name = "ultima_actualizacion")
-    val ultimaActualizacion: Int = System.currentTimeMillis().toInt(),
+    val ultimaActualizacion: Long = System.currentTimeMillis(),
 
     @ColumnInfo(name = "fuente")
     val fuente: String = FUENTE_LOCAL // LOCAL, GENIUS, SPOTIFY, etc.

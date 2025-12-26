@@ -20,10 +20,10 @@ interface FavoritoDao {
     // ==================== INSERCIÓN ====================
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarFavorito(favorito: FavoritoEntity): Int
+    suspend fun insertarFavorito(favorito: FavoritoEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarFavoritos(favoritos: List<FavoritoEntity>): List<Int>
+    suspend fun insertarFavoritos(favoritos: List<FavoritoEntity>): List<Long>
 
     // ==================== ACTUALIZACIÓN ====================
 

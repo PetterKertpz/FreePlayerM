@@ -6,6 +6,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -49,7 +50,22 @@ class SessionRepository @Inject constructor(
             preferences[ID_USUARIO_ACTIVO] = idDeUsuario
         }
     }
+    suspend fun guardarToken(token: String) {
+        context.dataStore.edit { preferences ->
+            preferences[stringPreferencesKey("session_token")] = token
+        }
+    }
 
+    val tokenActual: Flow<String?> = context.dataStore.data
+        .map { preferences ->
+            preferences[stringPreferencesKey("session_token")]
+        }
+
+    suspend fun validarYRenovarToken(): Boolean {
+        val token = tokenActual.first() ?: return false
+        // Validar con backend o Room
+        return true // Implementar lógica real
+    }
     /**
      * Cierra la sesión actual
      * Elimina el ID del usuario del almacenamiento

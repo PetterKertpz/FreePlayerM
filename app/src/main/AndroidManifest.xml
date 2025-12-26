@@ -13,9 +13,10 @@
         tools:ignore="ForegroundServicesPolicy" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
-        android:name=".FreePlayerApplication"
+        android:name=".FreePlayerMApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -26,6 +27,9 @@
         android:theme="@style/Theme.FreePlayerM"
         tools:targetApi="36">
 
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
         <!-- ============================================ -->
         <!-- ICONO DE NOTIFICACIÓN MEDIA3 -->
         <!-- Usa el ic_notification.xml que ya existe en drawable -->
@@ -37,7 +41,7 @@
 
         <!-- Activity Principal -->
         <activity
-            android:name=".MainActivity"
+            android:name="MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/Theme.FreePlayerM"
@@ -50,6 +54,28 @@
             </intent-filter>
 
         </activity>
+
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <!-- Deshabilitar inicialización automática de WorkManager -->
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
+        <!-- Boot Receiver -->
+        <receiver
+            android:name=".receiver.BootReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <!-- Servicio de Música -->
         <service

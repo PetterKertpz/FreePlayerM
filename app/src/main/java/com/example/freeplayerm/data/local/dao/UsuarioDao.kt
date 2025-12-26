@@ -35,14 +35,14 @@ interface UsuarioDao {
      * @return ID del usuario insertado, o -1 si falla
      */
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertarUsuario(usuario: UsuarioEntity): Int
+    suspend fun insertarUsuario(usuario: UsuarioEntity): Long
 
     /**
      * Inserta múltiples usuarios
      * Útil para importación de datos o testing
      */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarUsuarios(usuarios: List<UsuarioEntity>): List<Int>
+    suspend fun insertarUsuarios(usuarios: List<UsuarioEntity>): List<Long>
 
     /**
      * Actualiza los datos de un usuario existente
@@ -110,14 +110,8 @@ interface UsuarioDao {
      * Verifica las credenciales de un usuario
      * @return UsuarioEntity si las credenciales son correctas, null si no
      */
-    @Query("""
-        SELECT * FROM usuarios 
-        WHERE (correo = :identificador OR nombre_usuario = :identificador) 
-        AND contrasenia = :contrasenia 
-        COLLATE NOCASE 
-        LIMIT 1
-    """)
-    suspend fun autenticarUsuario(identificador: String, contrasenia: String): UsuarioEntity?
+    @Deprecated("SEGURIDAD: No comparar hashes en SQL. Usar obtenerUsuarioParaAutenticar()")
+    suspend fun autenticarUsuario(identificador: String, contrasenia: String): UsuarioEntity? = null
 
     /**
      * Verifica si existe un usuario con el correo especificado
@@ -143,11 +137,11 @@ interface UsuarioDao {
      * Actualiza la fecha de última sesión de un usuario
      */
     @Query("""
-        UPDATE usuarios 
-        SET ultima_sesion = :timestamp 
-        WHERE id_usuario = :id
+    UPDATE usuarios 
+    SET ultima_sesion = :timestamp 
+    WHERE id_usuario = :id
     """)
-    suspend fun actualizarUltimaSesion(id: Int, timestamp: Int = System.currentTimeMillis().toInt()): Int
+    suspend fun actualizarUltimaSesion(id: Int, timestamp: Long = System.currentTimeMillis()): Int
 
     /**
      * Obtiene usuarios activos recientemente
@@ -168,7 +162,7 @@ interface UsuarioDao {
      */
     @Query("""
         UPDATE usuarios 
-        SET contrasenia = :nuevaContrasenia 
+        SET contrasenia_hash = :nuevaContrasenia 
         WHERE id_usuario = :id
     """)
     suspend fun actualizarContrasenia(id: Int, nuevaContrasenia: String): Int
@@ -176,13 +170,15 @@ interface UsuarioDao {
     /**
      * Valida la contraseña actual de un usuario
      */
-    @Query("""
-        SELECT EXISTS(
-            SELECT 1 FROM usuarios 
-            WHERE id_usuario = :id AND contrasenia = :contrasenia
-        )
-    """)
-    suspend fun validarContrasenia(id: Int, contrasenia: String): Boolean
+    /**
+     * ⚠️ DEPRECADO: No comparar hashes en SQL.
+     * Usar UserRepository para verificar con BCrypt.
+     */
+    @Deprecated(
+        message = "BCrypt hashes no se pueden comparar en SQL. Usar UserRepository.",
+        level = DeprecationLevel.ERROR
+    )
+    suspend fun validarContrasenia(id: Int, contrasenia: String): Boolean = false
 
     // ==================== GESTIÓN DE PERFIL ====================
 
@@ -292,7 +288,7 @@ interface UsuarioDao {
      * Verifica que no existan duplicados antes de insertar
      */
     @Transaction
-    suspend fun registrarUsuario(usuario: UsuarioEntity): Int {
+    suspend fun registrarUsuario(usuario: UsuarioEntity): Long {  // Cambiar a Long
         // Verificar si el correo ya existe
         if (existeCorreo(usuario.correo)) {
             return -1 // Error: correo ya registrado
@@ -310,34 +306,37 @@ interface UsuarioDao {
     /**
      * Login con actualización de última sesión
      */
+    /**
+     * ⚠️ DEPRECADO: Usar UserRepository.login() en su lugar.
+     * La verificación BCrypt no puede hacerse en SQL/DAO.
+     */
+    @Deprecated(
+        message = "Usar UserRepository.login() que verifica BCrypt correctamente",
+        level = DeprecationLevel.WARNING
+    )
     @Transaction
     suspend fun loginUsuario(identificador: String, contrasenia: String): UsuarioEntity? {
-        val usuario = autenticarUsuario(identificador, contrasenia)
-
-        if (usuario != null && usuario.activo) {
-            actualizarUltimaSesion(usuario.idUsuario)
-        }
-
-        return usuario?.takeIf { it.activo }
+        // Esta función ya no debe usarse - la autenticación BCrypt
+        // debe hacerse en UserRepository, no en el DAO
+        return null
     }
 
     /**
      * Cambiar contraseña con validación
      */
+    /**
+     * ⚠️ DEPRECADO: Usar UserRepository.cambiarContrasenia() en su lugar.
+     */
+    @Deprecated(
+        message = "Usar UserRepository.cambiarContrasenia() que verifica BCrypt correctamente",
+        level = DeprecationLevel.WARNING
+    )
     @Transaction
     suspend fun cambiarContrasenia(
         id: Int,
         contraseniaActual: String,
         nuevaContrasenia: String
-    ): Boolean {
-        // Validar contraseña actual
-        if (!validarContrasenia(id, contraseniaActual)) {
-            return false
-        }
-
-        // Actualizar a nueva contraseña
-        return actualizarContrasenia(id, nuevaContrasenia) > 0
-    }
+    ): Boolean = false
 
     /**
      * Desactivar usuario (soft delete)
@@ -390,19 +389,19 @@ interface UsuarioDao {
      * Actualiza los tokens de sesión de un usuario
      */
     @Query("""
-        UPDATE usuarios 
-        SET token_sesion = :token,
-            refresh_token = :refreshToken,
-            token_expiracion = :expiracion,
-            ultima_sesion = :timestamp
-        WHERE id_usuario = :id
+    UPDATE usuarios 
+    SET token_sesion = :token,
+        refresh_token = :refreshToken,
+        token_expiracion = :expiracion,
+        ultima_sesion = :timestamp
+    WHERE id_usuario = :id
     """)
     suspend fun actualizarTokens(
         id: Int,
         token: String,
         refreshToken: String,
-        expiracion: Int,
-        timestamp: Int = System.currentTimeMillis().toInt().toInt()
+        expiracion: Long,
+        timestamp: Long = System.currentTimeMillis()
     ): Int
 
     /**
@@ -427,24 +426,24 @@ interface UsuarioDao {
      * Verifica si un token es válido
      */
     @Query("""
-        SELECT EXISTS(
-            SELECT 1 FROM usuarios 
-            WHERE token_sesion = :token 
-            AND token_expiracion > :ahora
-            AND activo = 1
+    SELECT EXISTS(
+        SELECT 1 FROM usuarios 
+        WHERE token_sesion = :token 
+        AND token_expiracion > :ahora
+        AND activo = 1
         )
     """)
-    suspend fun tokenEsValido(token: String, ahora: Int = System.currentTimeMillis().toInt()): Boolean
+    suspend fun tokenEsValido(token: String, ahora: Long = System.currentTimeMillis()): Boolean
 
     /**
      * Actualiza el timestamp de último cambio de contraseña
      */
     @Query("""
-        UPDATE usuarios 
-        SET ultimo_cambio_contrasena = :timestamp 
-        WHERE id_usuario = :id
+    UPDATE usuarios 
+    SET ultimo_cambio_contrasena = :timestamp 
+    WHERE id_usuario = :id
     """)
-    suspend fun actualizarUltimoCambioContrasena(id: Int, timestamp: Int = System.currentTimeMillis().toInt()): Int
+    suspend fun actualizarUltimoCambioContrasena(id: Int, timestamp: Long = System.currentTimeMillis()): Int
 
     /**
      * Obtiene usuario para autenticar (sin comparar hash en SQL)
@@ -476,23 +475,23 @@ interface UsuarioDao {
      * Obtiene usuarios con tokens expirados
      */
     @Query("""
-        SELECT * FROM usuarios 
-        WHERE token_expiracion < :ahora
-        AND token_expiracion IS NOT NULL
+    SELECT * FROM usuarios 
+    WHERE token_expiracion < :ahora
+    AND token_expiracion IS NOT NULL
     """)
-    suspend fun obtenerUsuariosConTokensExpirados(ahora: Int = System.currentTimeMillis().toInt()): List<UsuarioEntity>
+    suspend fun obtenerUsuariosConTokensExpirados(ahora: Long = System.currentTimeMillis()): List<UsuarioEntity>
 
     /**
      * Limpia tokens expirados de todos los usuarios
      */
     @Query("""
-        UPDATE usuarios 
-        SET token_sesion = NULL,
-            refresh_token = NULL,
-            token_expiracion = NULL
-        WHERE token_expiracion < :ahora
-        AND token_expiracion IS NOT NULL
+    UPDATE usuarios 
+    SET token_sesion = NULL,
+        refresh_token = NULL,
+        token_expiracion = NULL
+    WHERE token_expiracion < :ahora
+    AND token_expiracion IS NOT NULL
     """)
-    suspend fun limpiarTokensExpirados(ahora: Int = System.currentTimeMillis().toInt()): Int
+    suspend fun limpiarTokensExpirados(ahora: Long = System.currentTimeMillis()): Int
 
 }

@@ -159,7 +159,7 @@ data class CancionConArtista(
     /**
      * Obtiene la última vez que fue reproducida
      */
-    fun ultimaReproduccion(): Int? = cancion.ultimaReproduccion
+    fun ultimaReproduccion(): Long? = cancion.ultimaReproduccion
 
     /**
      * Verifica si fue agregada recientemente (últimos 7 días)

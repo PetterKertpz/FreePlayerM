@@ -197,12 +197,8 @@ class GeniusScraper @Inject constructor(
         }
 
         // Fallback: imagen en header
-        if (imgElement == null) {
-            val header = document.selectFirst(SELECTOR_SONG_HEADER)
-            imgElement = header?.selectFirst("img")
-        }
 
-        return imgElement?.attr("src")?.takeIf { it.isNotBlank() }
+        return imgElement.attr("src").takeIf { it.isNotBlank() }
     }
 
     private fun extractSongTitle(document: Document): String? {
@@ -280,7 +276,7 @@ class GeniusScraper @Inject constructor(
                     return@withContext null
                 }
 
-                val html = response.body?.string() ?: return@withContext null
+                val html = response.body.string()
                 response.close()
 
                 val document = Jsoup.parse(html, url)

@@ -133,16 +133,16 @@ data class RedesSocialesArtistaEntity(
      * Última vez que se verificó que el enlace funciona
      */
     @ColumnInfo(name = "fecha_verificacion")
-    val fechaVerificacion: Int = System.currentTimeMillis().toInt(),
+    val fechaVerificacion: Long = System.currentTimeMillis(),
 
     /**
      * Última actualización de estadísticas (seguidores, publicaciones)
      */
     @ColumnInfo(name = "fecha_actualizacion_stats")
-    val fechaActualizacionStats: Int? = null,
+    val fechaActualizacionStats: Long? = null,
 
     @ColumnInfo(name = "fecha_creacion")
-    val fechaCreacion: Int = System.currentTimeMillis().toInt(),
+    val fechaCreacion: Long = System.currentTimeMillis(),
 
     /**
      * Notas adicionales sobre esta red social
@@ -360,7 +360,7 @@ data class RedesSocialesArtistaEntity(
      */
     fun marcarComoVerificada(): RedesSocialesArtistaEntity {
         return copy(
-            fechaVerificacion = System.currentTimeMillis().toInt(),
+            fechaVerificacion = System.currentTimeMillis(),
             activa = true
         )
     }
@@ -375,7 +375,7 @@ data class RedesSocialesArtistaEntity(
         return copy(
             seguidores = nuevosSeguidores,
             publicaciones = nuevasPublicaciones,
-            fechaActualizacionStats = System.currentTimeMillis().toInt()
+            fechaActualizacionStats = System.currentTimeMillis()
         )
     }
 }

@@ -1,6 +1,7 @@
 // en: app/src/main/java/com/example/freeplayerm/data/local/entity/AlbumEntity.kt
 package com.example.freeplayerm.data.local.entity
 
+import android.annotation.SuppressLint
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -73,13 +74,13 @@ data class AlbumEntity(
     // ==================== FECHA Y LANZAMIENTO ====================
 
     @ColumnInfo(name = "anio")
-    val anio: Int?,
+    val anio: Long?,
 
     @ColumnInfo(name = "fecha_lanzamiento")
-    val fechaLanzamiento: Int? = null, // Timestamp de fecha exacta de lanzamiento
+    val fechaLanzamiento: Long? = null, // Timestamp de fecha exacta de lanzamiento
 
     @ColumnInfo(name = "fecha_agregado")
-    val fechaAgregado: Int = System.currentTimeMillis().toInt(),
+    val fechaAgregado: Long = System.currentTimeMillis(),
 
     // ==================== CLASIFICACIÓN ====================
 
@@ -120,7 +121,7 @@ data class AlbumEntity(
      */
     @Deprecated("Calcular dinámicamente para evitar desincronización")
     @ColumnInfo(name = "duracion_total_segundos")
-    val duracionTotalSegundos: Int = 0,
+    val duracionTotalSegundos: Long = 0,
 
     @ColumnInfo(name = "total_reproducciones")
     val totalReproducciones: Int = 0,
@@ -188,10 +189,11 @@ data class AlbumEntity(
     /**
      * Duración formateada
      */
-    fun duracionFormateada(): String {
-        val horas = duracionTotalSegundos / 3600
-        val minutos = (duracionTotalSegundos % 3600) / 60
-        val segundos = duracionTotalSegundos % 60
+    @SuppressLint("DefaultLocale")
+    fun duracionFormateada(totalSegundos: Long): String {
+        val horas = totalSegundos / 3600
+        val minutos = (totalSegundos % 3600) / 60
+        val segundos = totalSegundos % 60
 
         return if (horas > 0) {
             String.format("%dh %dm", horas, minutos)
@@ -199,6 +201,8 @@ data class AlbumEntity(
             String.format("%dm %ds", minutos, segundos)
         }
     }
+
+
 
     /**
      * Obtiene el título completo con subtítulo si existe

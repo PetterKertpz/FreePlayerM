@@ -20,6 +20,7 @@ import androidx.media3.session.MediaNotification
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaStyleNotificationHelper
 import com.example.freeplayerm.MainActivity
+
 import com.example.freeplayerm.R
 import com.google.common.collect.ImmutableList
 
@@ -186,11 +187,10 @@ class CustomNotificationProvider(
     }
 
     private fun getDefaultArtwork(): Bitmap {
-        return try {
-            BitmapFactory.decodeResource(context.resources, R.drawable.ic_notification)
-        } catch (_: Exception) {
-            createBitmap(1, 1)
-        }
+        return BitmapFactory.decodeResource(context.resources, R.drawable.ic_notification)
+            ?: createBitmap(64, 64).apply {
+                eraseColor(0xFF6200EE.toInt())
+            }
     }
 
     override fun handleCustomCommand(

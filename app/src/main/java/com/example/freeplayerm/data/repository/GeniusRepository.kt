@@ -339,8 +339,7 @@ class GeniusRepository @Inject constructor(
         return hits
             .mapNotNull { it.result }
             .filter { esResultadoValido(it, titulo, artista) }
-            .sortedByDescending { calcularSimilitudTotal(it, titulo, artista) }
-            .firstOrNull()
+            .maxByOrNull { calcularSimilitudTotal(it, titulo, artista) }
     }
 
     private fun esResultadoValido(
@@ -350,19 +349,12 @@ class GeniusRepository @Inject constructor(
     ): Boolean {
         if (resultado.title.isBlank()) return false
 
-        // Filtrar palabras clave no deseadas
-        val blacklist = listOf(
-            "discography", "album", "collection", "calendar", "review",
-            "translation", "traducción", "cover", "mix", "remix", "annotated",
-            "interview", "unreleased", "demo", "preview", "snippet"
-        )
-
-        if (blacklist.any { resultado.title.contains(it, ignoreCase = true) }) {
-            Log.d(tag, "   ❌ Resultado rechazado por palabra clave: '${resultado.title}'")
+        // ✅ Usar utilidad centralizada
+        if (!MusicTitleCleanerUtil.isMusicalContent(resultado.title, artista)) {
+            Log.d(tag, "   ❌ Resultado rechazado: contenido no musical")
             return false
         }
 
-        // Verificar similitud de título
         val similitudTitulo = StringSimilarityUtil.calculateSimilarity(
             resultado.title,
             titulo
@@ -474,7 +466,7 @@ class GeniusRepository @Inject constructor(
                             imageUrl = geniusArtist.imageUrl,
                             thumbnailUrl = geniusArtist.headerImageThumbnailUrl,
                             fuente = ArtistaEntity.FUENTE_GENIUS,
-                            ultimaActualizacion = (System.currentTimeMillis() / 1000).toInt()
+                            ultimaActualizacion = (System.currentTimeMillis() / 1000L)
                         )
 
                         artistaDao.actualizarArtista(artistaActualizado)

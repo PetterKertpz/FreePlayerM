@@ -3,6 +3,7 @@ package com.example.freeplayerm.ui.features.reproductor
 import android.content.ComponentName
 import android.content.Context
 import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
@@ -16,30 +17,26 @@ import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
 import com.example.freeplayerm.data.repository.GeniusRepository
 import com.example.freeplayerm.utils.MediaItemHelper
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
+import java.net.URLEncoder
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 
 /**
- * ⚡ REPRODUCTOR VIEW MODEL - OPTIMIZADO Y CORREGIDO v4.0
+ * ⚡ REPRODUCTOR VIEWMODEL - v3.0
  *
  * Mejoras implementadas:
- * ✅ Sincronización perfecta estado-player
- * ✅ Sin memory leaks (listeners desregistrados)
- * ✅ Sin race conditions (trabajos cancelados correctamente)
- * ✅ Caché de cola para evitar conversiones
- * ✅ Manejo robusto de errores
- * ✅ Estados transitorios manejados
- * ✅ Progreso optimizado con debounce
- * ✅ Scrubbing sin glitches
- * ✅ User ID dinámico preparado
+ * ✅ Soporte para 3 modos de panel (MINIMIZADO, NORMAL, EXPANDIDO)
+ * ✅ Estado unificado (letra, info, enlaces en ReproductorEstado)
+ * ✅ Detección de scroll para minimización automática
+ * ✅ Manejo de enlaces externos (Genius, YouTube, Google)
+ * ✅ Carga de datos expandidos bajo demanda
  *
- * @author Android Architecture Team
- * @version 4.0 - Production Ready
+ * @version 3.0 - Sistema de 3 Modos
  */
 @HiltViewModel
 class ReproductorViewModel @Inject constructor(
@@ -56,24 +53,16 @@ class ReproductorViewModel @Inject constructor(
         private const val PROGRESO_UPDATE_MS = 250L
         private const val PROGRESO_EMIT_THRESHOLD_MS = 1000L
         private const val TIMEOUT_DATOS_MS = 5000L
-        private const val USUARIO_DEFAULT = 1 // TODO: Inyectar SessionManager
+        private const val USUARIO_DEFAULT = 1
     }
 
-    // ==================== ESTADO UI ====================
+    // ==================== ESTADO UI UNIFICADO ====================
 
     private val _estadoUi = MutableStateFlow(ReproductorEstado())
     val estadoUi: StateFlow<ReproductorEstado> = _estadoUi.asStateFlow()
 
-    private val _estaExpandido = MutableStateFlow(false)
-    val estaExpandido: StateFlow<Boolean> = _estaExpandido.asStateFlow()
+    // ==================== EFECTOS (ONE-SHOT) ====================
 
-    private val _letra = MutableStateFlow<String?>(null)
-    val letra: StateFlow<String?> = _letra.asStateFlow()
-
-    private val _infoArtista = MutableStateFlow<String?>(null)
-    val infoArtista: StateFlow<String?> = _infoArtista.asStateFlow()
-
-    // Canal para efectos one-time (toasts, errores)
     private val _efectos = Channel<ReproductorEfecto>(Channel.BUFFERED)
     val efectos = _efectos.receiveAsFlow()
 
@@ -83,80 +72,56 @@ class ReproductorViewModel @Inject constructor(
     private lateinit var controllerFuture: ListenableFuture<MediaController>
     private var playerListener: Player.Listener? = null
 
-    private val player: Player?
-        get() = mediaController
+    private val player: Player? get() = mediaController
 
     // ==================== ESTADO INTERNO ====================
 
-    // Caché de canciones por MediaId para evitar conversiones repetidas
-    private val colaCanciones = mutableMapOf<String, CancionConArtista>()
-
-    // Jobs controlados
+    private val colaCanciones = ConcurrentHashMap<String, CancionConArtista>()
     private var actualizadorDeProgresoJob: Job? = null
     private var datosAdicionalesJob: Job? = null
-
-    // Control de progreso
     private var ultimoSegundoEmitido: Long = -1L
 
+    // ==================== INICIALIZACIÓN ====================
+
     init {
-        Log.d(TAG, "🎵 Inicializando ReproductorViewModel v4.0")
         conectarAlServicio()
         observarEstadoFavoritos()
     }
 
-    // ==================== CONEXIÓN AL SERVICIO ====================
-
     private fun conectarAlServicio() {
         try {
-            Log.d(TAG, "🔌 Conectando al MusicService...")
-
             val sessionToken = SessionToken(context, serviceComponentName)
             controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
 
             controllerFuture.addListener({
                 try {
                     mediaController = controllerFuture.get()
-                    Log.d(TAG, "✅ MediaController conectado")
-                    configurarListenersDelPlayer()
-                    sincronizarEstadoInicial()
-                } catch (e: Exception) {
-                    Log.e(TAG, "❌ Error obteniendo MediaController", e)
-                    viewModelScope.launch {
-                        _efectos.send(ReproductorEfecto.Error("Error conectando al reproductor"))
+                    viewModelScope.launch(Dispatchers.Main.immediate) {
+                        configurarListenersDelPlayer()
+                        sincronizarEstadoInicial()
                     }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error conectando al reproductor", e)
+                    enviarEfecto(ReproductorEfecto.Error("Error conectando al reproductor"))
                 }
-            }, MoreExecutors.directExecutor())
+            }, ContextCompat.getMainExecutor(context))
 
         } catch (e: Exception) {
-            Log.e(TAG, "💥 Error crítico conectando al servicio", e)
-            viewModelScope.launch {
-                _efectos.send(ReproductorEfecto.Error("Error crítico en reproductor"))
-            }
+            Log.e(TAG, "Error crítico en reproductor", e)
+            enviarEfecto(ReproductorEfecto.Error("Error crítico en reproductor"))
         }
     }
 
     private fun configurarListenersDelPlayer() {
-        // Remover listener anterior si existe (prevenir leaks)
         playerListener?.let { player?.removeListener(it) }
 
         playerListener = object : Player.Listener {
-
             override fun onIsPlayingChanged(isPlaying: Boolean) {
-                Log.d(TAG, "▶️ Estado reproducción: $isPlaying")
                 _estadoUi.update { it.copy(estaReproduciendo = isPlaying) }
-
-                if (isPlaying) {
-                    iniciarActualizadorDeProgreso()
-                } else {
-                    detenerActualizadorDeProgreso()
-                }
+                if (isPlaying) iniciarActualizadorDeProgreso() else detenerActualizadorDeProgreso()
             }
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                super.onMediaItemTransition(mediaItem, reason)
-                Log.d(TAG, "🎵 Transición de canción: ${mediaItem?.mediaMetadata?.title}")
-
-                // Manejar transición de forma asíncrona y segura
                 actualizarCancionActualDesdePlayer(mediaItem)
             }
 
@@ -168,44 +133,30 @@ class ReproductorViewModel @Inject constructor(
                     else -> ModoRepeticion.NO_REPETIR
                 }
                 _estadoUi.update { it.copy(modoRepeticion = nuevoModo) }
-                Log.d(TAG, "🔁 Modo repetición: $nuevoModo")
             }
 
             override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
-                val nuevoModo = if (shuffleModeEnabled) {
-                    ModoReproduccion.ALEATORIO
-                } else {
-                    ModoReproduccion.EN_ORDEN
-                }
+                val nuevoModo = if (shuffleModeEnabled) ModoReproduccion.ALEATORIO else ModoReproduccion.EN_ORDEN
                 _estadoUi.update { it.copy(modoReproduccion = nuevoModo) }
-                Log.d(TAG, "🔀 Modo reproducción: $nuevoModo")
             }
 
             override fun onPlayerErrorChanged(error: androidx.media3.common.PlaybackException?) {
-                super.onPlayerErrorChanged(error)
-                if (error != null) {
-                    Log.e(TAG, "❌ Error en player: ${error.message}", error)
-                    viewModelScope.launch {
-                        _efectos.send(
-                            ReproductorEfecto.Error("Error de reproducción: ${error.message}")
-                        )
-                    }
+                error?.let {
+                    Log.e(TAG, "Error del player: ${it.message}", it)
+                    enviarEfecto(ReproductorEfecto.Error("Error: ${it.message}"))
                 }
             }
         }
 
         player?.addListener(playerListener!!)
-        Log.d(TAG, "✅ Listeners configurados")
     }
 
     private fun sincronizarEstadoInicial() {
         player?.let { p ->
-            // Sincronizar estados iniciales
             _estadoUi.update {
                 it.copy(
                     estaReproduciendo = p.isPlaying,
-                    modoReproduccion = if (p.shuffleModeEnabled)
-                        ModoReproduccion.ALEATORIO else ModoReproduccion.EN_ORDEN,
+                    modoReproduccion = if (p.shuffleModeEnabled) ModoReproduccion.ALEATORIO else ModoReproduccion.EN_ORDEN,
                     modoRepeticion = when (p.repeatMode) {
                         Player.REPEAT_MODE_OFF -> ModoRepeticion.NO_REPETIR
                         Player.REPEAT_MODE_ALL -> ModoRepeticion.REPETIR_LISTA
@@ -214,11 +165,7 @@ class ReproductorViewModel @Inject constructor(
                     }
                 )
             }
-
-            // Si hay una canción actual, sincronizarla
-            p.currentMediaItem?.let { mediaItem ->
-                actualizarCancionActualDesdePlayer(mediaItem)
-            }
+            p.currentMediaItem?.let { actualizarCancionActualDesdePlayer(it) }
         }
     }
 
@@ -229,16 +176,16 @@ class ReproductorViewModel @Inject constructor(
             is ReproductorEvento.Reproduccion -> manejarEventoReproduccion(evento)
             is ReproductorEvento.Navegacion -> manejarEventoNavegacion(evento)
             is ReproductorEvento.Configuracion -> manejarEventoConfiguracion(evento)
+            is ReproductorEvento.Panel -> manejarEventoPanel(evento)
+            is ReproductorEvento.Enlaces -> manejarEventoEnlaces(evento)
         }
     }
 
+    // ==================== EVENTOS DE REPRODUCCIÓN ====================
+
     private fun manejarEventoReproduccion(evento: ReproductorEvento.Reproduccion) {
-        val p = player
-        if (p == null) {
-            Log.w(TAG, "⚠️ Player no disponible")
-            viewModelScope.launch {
-                _efectos.send(ReproductorEfecto.MostrarToast("Reproductor no disponible"))
-            }
+        val p = player ?: run {
+            enviarEfecto(ReproductorEfecto.MostrarToast("Reproductor no disponible"))
             return
         }
 
@@ -246,47 +193,29 @@ class ReproductorViewModel @Inject constructor(
             is ReproductorEvento.Reproduccion.EstablecerColaYReproducir -> {
                 establecerColaYReproducir(evento.cola, evento.cancionInicial)
             }
-            is ReproductorEvento.Reproduccion.ReproducirPausar -> {
-                togglePlayPause()
-            }
+            is ReproductorEvento.Reproduccion.ReproducirPausar -> togglePlayPause()
             is ReproductorEvento.Reproduccion.SiguienteCancion -> {
                 if (p.hasNextMediaItem() || p.repeatMode != Player.REPEAT_MODE_OFF) {
                     p.seekToNextMediaItem()
-                    Log.d(TAG, "⏭️ Siguiente canción")
                 } else {
-                    Log.w(TAG, "No hay siguiente canción")
-                    viewModelScope.launch {
-                        _efectos.send(ReproductorEfecto.MostrarToast("No hay más canciones"))
-                    }
+                    enviarEfecto(ReproductorEfecto.MostrarToast("No hay más canciones"))
                 }
             }
             is ReproductorEvento.Reproduccion.CancionAnterior -> {
-                if (p.currentPosition > 3000 && p.hasPreviousMediaItem()) {
-                    // Si llevamos más de 3s, ir a anterior
-                    p.seekToPreviousMediaItem()
-                    Log.d(TAG, "⏮️ Canción anterior")
-                } else if (p.currentPosition > 3000) {
-                    // Si no hay anterior pero llevamos >3s, reiniciar
-                    p.seekTo(0)
-                    Log.d(TAG, "🔄 Reiniciando canción")
-                } else if (p.hasPreviousMediaItem()) {
-                    // Ir a anterior directamente
-                    p.seekToPreviousMediaItem()
-                    Log.d(TAG, "⏮️ Canción anterior")
-                } else {
-                    Log.w(TAG, "No hay canción anterior")
+                when {
+                    p.currentPosition > 3000 -> p.seekTo(0)
+                    p.hasPreviousMediaItem() -> p.seekToPreviousMediaItem()
                 }
             }
-            is ReproductorEvento.Reproduccion.Detener -> {
-                detenerReproduccion()
-            }
+            is ReproductorEvento.Reproduccion.Detener -> detenerReproduccion()
         }
     }
+
+    // ==================== EVENTOS DE NAVEGACIÓN ====================
 
     private fun manejarEventoNavegacion(evento: ReproductorEvento.Navegacion) {
         when (evento) {
             is ReproductorEvento.Navegacion.OnScrub -> {
-                // Usuario está arrastrando - actualizar posición temporal
                 _estadoUi.update {
                     it.copy(
                         isScrubbing = true,
@@ -295,10 +224,8 @@ class ReproductorViewModel @Inject constructor(
                 }
             }
             is ReproductorEvento.Navegacion.OnScrubFinished -> {
-                // Usuario soltó el slider - aplicar seek
                 val posicion = evento.positionMs.coerceAtLeast(0)
                 player?.seekTo(posicion)
-
                 _estadoUi.update {
                     it.copy(
                         isScrubbing = false,
@@ -306,77 +233,128 @@ class ReproductorViewModel @Inject constructor(
                         progresoActualMs = posicion
                     )
                 }
-
-                // Reset el contador de segundos para forzar próxima actualización
                 ultimoSegundoEmitido = -1L
-
-                Log.d(TAG, "🎯 Seek aplicado: ${posicion}ms")
             }
         }
     }
+
+    // ==================== EVENTOS DE CONFIGURACIÓN ====================
 
     private fun manejarEventoConfiguracion(evento: ReproductorEvento.Configuracion) {
         when (evento) {
-            is ReproductorEvento.Configuracion.CambiarModoReproduccion -> {
-                toggleModoReproduccion()
+            is ReproductorEvento.Configuracion.CambiarModoReproduccion -> toggleModoReproduccion()
+            is ReproductorEvento.Configuracion.CambiarModoRepeticion -> toggleModoRepeticion()
+            is ReproductorEvento.Configuracion.AlternarFavorito -> toggleFavorito()
+        }
+    }
+
+    // ==================== EVENTOS DEL PANEL ====================
+
+    private fun manejarEventoPanel(evento: ReproductorEvento.Panel) {
+        when (evento) {
+            is ReproductorEvento.Panel.CambiarModo -> {
+                _estadoUi.update { it.copy(modoPanel = evento.nuevoModo) }
+                if (evento.nuevoModo == ModoPanelReproductor.EXPANDIDO) {
+                    cargarDatosExpandidosSiNecesario()
+                }
             }
-            is ReproductorEvento.Configuracion.CambiarModoRepeticion -> {
-                toggleModoRepeticion()
+            is ReproductorEvento.Panel.Expandir -> {
+                _estadoUi.update { it.copy(modoPanel = ModoPanelReproductor.EXPANDIDO) }
+                cargarDatosExpandidosSiNecesario()
             }
-            is ReproductorEvento.Configuracion.AlternarFavorito -> {
-                toggleFavorito()
+            is ReproductorEvento.Panel.Colapsar -> {
+                _estadoUi.update { it.copy(modoPanel = ModoPanelReproductor.NORMAL) }
+            }
+            is ReproductorEvento.Panel.NotificarScroll -> {
+                _estadoUi.update { it.copy(isScrollActivo = evento.scrollActivo) }
+            }
+            is ReproductorEvento.Panel.CambiarTab -> {
+                _estadoUi.update { it.copy(tabExpandidoActivo = evento.tab) }
             }
         }
     }
 
-    // ==================== CONTROL DE REPRODUCCIÓN ====================
+    // ==================== EVENTOS DE ENLACES ====================
 
-    private fun establecerColaYReproducir(
-        cola: List<CancionConArtista>,
-        cancionInicial: CancionConArtista
-    ) {
+    private fun manejarEventoEnlaces(evento: ReproductorEvento.Enlaces) {
+        val estado = _estadoUi.value
+        val url = when (evento) {
+            is ReproductorEvento.Enlaces.AbrirGenius -> estado.enlaceGenius
+            is ReproductorEvento.Enlaces.AbrirYoutube -> estado.enlaceYoutube
+            is ReproductorEvento.Enlaces.AbrirGoogle -> estado.enlaceGoogle
+        }
+
+        if (url.isNullOrBlank()) {
+            enviarEfecto(ReproductorEfecto.MostrarToast("Enlace no disponible"))
+        } else {
+            enviarEfecto(ReproductorEfecto.AbrirUrl(url))
+        }
+    }
+
+    // ==================== LÓGICA DE REPRODUCCIÓN ====================
+
+    private fun establecerColaYReproducir(cola: List<CancionConArtista>, cancionInicial: CancionConArtista) {
         val p = player ?: run {
-            Log.e(TAG, "❌ Player no disponible")
+            enviarEfecto(ReproductorEfecto.MostrarToast("Reproductor no disponible"))
             return
         }
 
-        try {
-            // Limpiar caché anterior
-            colaCanciones.clear()
+        viewModelScope.launch {
+            try {
+                colaCanciones.clear()
 
-            // Crear MediaItems y popular caché simultáneamente
-            val mediaItems = cola.map { cancion ->
-                val mediaItem = mediaItemHelper.crearMediaItem(cancion)
-                colaCanciones[mediaItem.mediaId] = cancion
-                mediaItem
-            }
+                val (cancionesValidas, cancionesInvalidas) = cola.partition { cancion ->
+                    !cancion.cancion.archivoPath.isNullOrBlank()
+                }
 
-            val indiceInicial = cola.indexOf(cancionInicial).coerceAtLeast(0)
+                if (cancionesInvalidas.isNotEmpty()) {
+                    Log.w(TAG, "⚠️ ${cancionesInvalidas.size} canciones sin archivo válido")
+                }
 
-            p.setMediaItems(mediaItems, indiceInicial, 0L)
-            p.prepare()
-            p.playWhenReady = true
+                if (cancionesValidas.isEmpty()) {
+                    enviarEfecto(ReproductorEfecto.Error("No hay canciones reproducibles"))
+                    return@launch
+                }
 
-            Log.d(TAG, "✅ Cola establecida: ${cola.size} canciones, inicio: $indiceInicial")
+                val mediaItems = cancionesValidas.mapNotNull { cancion ->
+                    try {
+                        mediaItemHelper.crearMediaItem(cancion).also {
+                            colaCanciones[it.mediaId] = cancion
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error creando MediaItem para '${cancion.cancion.titulo}'", e)
+                        null
+                    }
+                }
 
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Error estableciendo cola", e)
-            viewModelScope.launch {
-                _efectos.send(ReproductorEfecto.Error("Error al cargar canciones"))
+                if (mediaItems.isEmpty()) {
+                    enviarEfecto(ReproductorEfecto.Error("Error al procesar las canciones"))
+                    return@launch
+                }
+
+                val indiceInicial = mediaItems.indexOfFirst {
+                    it.mediaId == cancionInicial.cancion.idCancion.toString()
+                }.let { if (it >= 0) it else 0 }
+
+                withContext(Dispatchers.Main) {
+                    p.setMediaItems(mediaItems, indiceInicial, 0L)
+                    p.prepare()
+                    p.playWhenReady = true
+                }
+
+                if (cancionesInvalidas.isNotEmpty()) {
+                    enviarEfecto(ReproductorEfecto.MostrarToast("${cancionesInvalidas.size} canciones omitidas"))
+                }
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Error estableciendo cola", e)
+                enviarEfecto(ReproductorEfecto.Error("Error al cargar canciones"))
             }
         }
     }
 
     private fun togglePlayPause() {
-        player?.let { p ->
-            if (p.isPlaying) {
-                p.pause()
-                Log.d(TAG, "⏸️ Pausado")
-            } else {
-                p.play()
-                Log.d(TAG, "▶️ Reproduciendo")
-            }
-        }
+        player?.let { if (it.isPlaying) it.pause() else it.play() }
     }
 
     private fun detenerReproduccion() {
@@ -384,191 +362,208 @@ class ReproductorViewModel @Inject constructor(
             p.stop()
             p.clearMediaItems()
             colaCanciones.clear()
-
             _estadoUi.update { ReproductorEstado() }
-            _letra.value = null
-            _infoArtista.value = null
-
-            Log.d(TAG, "⏹️ Reproducción detenida")
         }
     }
 
     // ==================== ACTUALIZACIÓN DE CANCIÓN ====================
 
-    /**
-     * Actualiza la canción actual desde el MediaItem del player
-     * Maneja la transición de forma asíncrona y segura
-     */
     private fun actualizarCancionActualDesdePlayer(mediaItem: MediaItem?) {
         if (mediaItem == null) {
             limpiarEstadoCancion()
             return
         }
 
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                // Cancelar trabajos anteriores
-                datosAdicionalesJob?.cancel()
+        datosAdicionalesJob?.cancel()
 
-                // Intentar obtener de caché primero (rápido)
+        viewModelScope.launch {
+            try {
                 var cancion = colaCanciones[mediaItem.mediaId]
 
-                // Si no está en caché, convertir desde MediaItem (lento)
                 if (cancion == null) {
-                    Log.d(TAG, "⚠️ Canción no en caché, convirtiendo desde MediaItem")
-                    cancion = mediaItemHelper.mediaItemACancionConArtista(
-                        mediaItem,
-                        USUARIO_DEFAULT
-                    )
-
-                    // Agregar a caché para próximas veces
-                    if (cancion != null) {
-                        colaCanciones[mediaItem.mediaId] = cancion
+                    cancion = withContext(Dispatchers.IO) {
+                        mediaItemHelper.mediaItemACancionConArtista(mediaItem, USUARIO_DEFAULT)
                     }
+                    cancion?.let { colaCanciones[mediaItem.mediaId] = it }
                 }
 
                 if (cancion != null) {
-                    withContext(Dispatchers.Main) {
-                        _estadoUi.update { it.copy(cancionActual = cancion) }
+                    _estadoUi.update {
+                        it.copy(
+                            cancionActual = cancion,
+                            letra = null,
+                            infoArtista = null,
+                            enlaceGenius = null,
+                            enlaceYoutube = null,
+                            enlaceGoogle = null,
+                            cargandoLetra = false,
+                            cargandoInfo = false
+                        )
+                    }
 
-                        // Lanzar carga de datos adicionales en paralelo
-                        datosAdicionalesJob = launch {
-                            cargarDatosAdicionales(cancion)
-                        }
+                    // Construir enlaces inmediatamente
+                    construirEnlaces(cancion)
+
+                    // Si estamos en modo expandido, cargar datos adicionales
+                    if (_estadoUi.value.modoPanel == ModoPanelReproductor.EXPANDIDO) {
+                        cargarDatosExpandidos(cancion)
                     }
                 } else {
-                    withContext(Dispatchers.Main) {
-                        limpiarEstadoCancion()
-                    }
+                    limpiarEstadoCancion()
                 }
 
             } catch (e: CancellationException) {
-                // Job cancelado, ignorar
-                Log.d(TAG, "Job de actualización cancelado")
+                throw e
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error actualizando canción", e)
-                withContext(Dispatchers.Main) {
-                    limpiarEstadoCancion()
-                    _efectos.send(ReproductorEfecto.Error("Error al cargar canción"))
-                }
+                Log.e(TAG, "Error actualizando canción", e)
+                limpiarEstadoCancion()
+                enviarEfecto(ReproductorEfecto.Error("Error al cargar canción"))
             }
         }
     }
 
     private fun limpiarEstadoCancion() {
-        Log.d(TAG, "🧹 Limpiando estado de canción")
         _estadoUi.update {
             it.copy(
                 cancionActual = null,
                 progresoActualMs = 0L,
-                progresoTemporalMs = null
+                progresoTemporalMs = null,
+                letra = null,
+                infoArtista = null,
+                enlaceGenius = null,
+                enlaceYoutube = null,
+                enlaceGoogle = null
             )
         }
-        _letra.value = null
-        _infoArtista.value = null
     }
 
-    // ==================== CARGA DE DATOS ADICIONALES ====================
+    // ==================== CARGA DE DATOS EXPANDIDOS ====================
 
-    /**
-     * Carga letra e info de artista en paralelo con timeouts individuales
-     * Verifica que siga siendo la misma canción antes de actualizar
-     */
-    private suspend fun cargarDatosAdicionales(cancion: CancionConArtista) {
-        val idCancion = cancion.cancion.idCancion
-
-        // Estados iniciales
-        _letra.value = "Cargando letra..."
-        _infoArtista.value = "Cargando información..."
-
-        coroutineScope {
-            // Sincronizar con Genius (no bloquear)
-            launch(Dispatchers.IO) {
-                try {
-                    geniusRepository.sincronizarCancionAlReproducir(cancion.cancion)
-                } catch (e: Exception) {
-                    Log.e(TAG, "❌ Error sincronizando con Genius", e)
-                }
-            }
-
-            // Cargar letra con timeout
-            launch(Dispatchers.IO) {
-                try {
-                    withTimeout(TIMEOUT_DATOS_MS) {
-                        letraDao.obtenerLetraPorIdCancion(idCancion)
-                            .firstOrNull()
-                            ?.let { letraEntity ->
-                                // Verificar que seguimos en la misma canción
-                                if (_estadoUi.value.cancionActual?.cancion?.idCancion == idCancion) {
-                                    val textoLetra = letraEntity.textoLetra.trim()
-                                    _letra.value = textoLetra.ifBlank { "Letra no disponible" }
-                                }
-                            } ?: run {
-                            _letra.value = "Letra no disponible"
-                        }
-                    }
-                } catch (e: TimeoutCancellationException) {
-                    Log.w(TAG, "⏱️ Timeout cargando letra")
-                    _letra.value = "Letra no disponible"
-                } catch (e: CancellationException) {
-                    // Job cancelado, no hacer nada
-                } catch (e: Exception) {
-                    Log.e(TAG, "❌ Error cargando letra", e)
-                    _letra.value = "Error cargando letra"
-                }
-            }
-
-            // Cargar info artista con timeout
-            launch(Dispatchers.IO) {
-                val artistaId = cancion.cancion.idArtista?.toLong()
-                if (artistaId == null) {
-                    _infoArtista.value = "Información no disponible"
-                    return@launch
-                }
-
-                try {
-                    withTimeout(TIMEOUT_DATOS_MS) {
-                        cancionDao.obtenerArtistaPorIdFlow(artistaId)
-                            .firstOrNull()
-                            ?.let { artistaEntity ->
-                                // Verificar que seguimos en la misma canción
-                                if (_estadoUi.value.cancionActual?.cancion?.idCancion == idCancion) {
-                                    val descripcion = artistaEntity.descripcion?.trim()
-                                    _infoArtista.value = descripcion?.ifBlank {
-                                        "Información no disponible"
-                                    } ?: "Información no disponible"
-                                }
-                            } ?: run {
-                            _infoArtista.value = "Información no disponible"
-                        }
-                    }
-                } catch (e: TimeoutCancellationException) {
-                    Log.w(TAG, "⏱️ Timeout cargando info artista")
-                    _infoArtista.value = "Información no disponible"
-                } catch (e: CancellationException) {
-                    // Job cancelado, no hacer nada
-                } catch (e: Exception) {
-                    Log.e(TAG, "❌ Error cargando info artista", e)
-                    _infoArtista.value = "Error cargando información"
-                }
+    private fun cargarDatosExpandidosSiNecesario() {
+        _estadoUi.value.cancionActual?.let { cancion ->
+            if (_estadoUi.value.letra == null && !_estadoUi.value.cargandoLetra) {
+                cargarDatosExpandidos(cancion)
             }
         }
     }
 
-    // ==================== ACTUALIZACIÓN DE PROGRESO OPTIMIZADA ====================
+    private fun cargarDatosExpandidos(cancion: CancionConArtista) {
+        datosAdicionalesJob?.cancel()
 
-    /**
-     * Actualiza el progreso de forma eficiente:
-     * - Check frecuente (250ms) pero solo emite cuando cambia el segundo
-     * - Respeta el estado de scrubbing
-     * - Debounce automático para reducir recomposiciones
-     */
+        datosAdicionalesJob = viewModelScope.launch {
+            val idCancion = cancion.cancion.idCancion
+
+            _estadoUi.update { it.copy(cargandoLetra = true, cargandoInfo = true) }
+
+            coroutineScope {
+                // Sincronizar con Genius
+                launch(Dispatchers.IO) {
+                    runCatching { geniusRepository.sincronizarCancionAlReproducir(cancion.cancion) }
+                }
+
+                // Cargar letra
+                launch(Dispatchers.IO) { cargarLetra(idCancion) }
+
+                // Cargar info artista
+                launch(Dispatchers.IO) { cargarInfoArtista(cancion) }
+            }
+        }
+    }
+
+    private suspend fun cargarLetra(idCancion: Int) {
+        try {
+            withTimeout(TIMEOUT_DATOS_MS) {
+                letraDao.obtenerLetraPorIdCancion(idCancion).firstOrNull()?.let { letraEntity ->
+                    if (esCancionActual(idCancion)) {
+                        _estadoUi.update {
+                            it.copy(
+                                letra = letraEntity.textoLetra.trim().ifBlank { "Letra no disponible" },
+                                cargandoLetra = false
+                            )
+                        }
+                    }
+                } ?: run {
+                    _estadoUi.update { it.copy(letra = "Letra no disponible", cargandoLetra = false) }
+                }
+            }
+        } catch (e: TimeoutCancellationException) {
+            _estadoUi.update { it.copy(letra = "Letra no disponible", cargandoLetra = false) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "Error cargando letra", e)
+            _estadoUi.update { it.copy(letra = "Error cargando letra", cargandoLetra = false) }
+        }
+    }
+
+    private suspend fun cargarInfoArtista(cancion: CancionConArtista) {
+        val artistaId = cancion.cancion.idArtista?.toLong()
+        if (artistaId == null) {
+            _estadoUi.update { it.copy(infoArtista = "Información no disponible", cargandoInfo = false) }
+            return
+        }
+
+        try {
+            withTimeout(TIMEOUT_DATOS_MS) {
+                cancionDao.obtenerArtistaPorIdFlow(artistaId.toInt()).firstOrNull()?.let { artistaEntity ->
+                    if (esCancionActual(cancion.cancion.idCancion)) {
+                        val info = buildString {
+                            appendLine("🎤 ${artistaEntity.nombre}")
+                            artistaEntity.paisOrigen?.let { appendLine("📍 $it") }
+                            artistaEntity.descripcion?.trim()?.takeIf { it.isNotBlank() }?.let {
+                                appendLine()
+                                append(it)
+                            }
+                        }.trim().ifBlank { "Información no disponible" }
+
+                        _estadoUi.update { it.copy(infoArtista = info, cargandoInfo = false) }
+                    }
+                } ?: run {
+                    _estadoUi.update { it.copy(infoArtista = "Información no disponible", cargandoInfo = false) }
+                }
+            }
+        } catch (e: TimeoutCancellationException) {
+            _estadoUi.update { it.copy(infoArtista = "Información no disponible", cargandoInfo = false) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "Error cargando info artista", e)
+            _estadoUi.update { it.copy(infoArtista = "Error cargando información", cargandoInfo = false) }
+        }
+    }
+
+    private fun construirEnlaces(cancion: CancionConArtista) {
+        val titulo = cancion.cancion.titulo
+        val artista = cancion.artistaNombre ?: "Unknown"
+
+        try {
+            val query = URLEncoder.encode("$titulo $artista", "UTF-8")
+            val artistaQuery = URLEncoder.encode("$artista artist", "UTF-8")
+
+            _estadoUi.update {
+                it.copy(
+                    enlaceGenius = "https://genius.com/search?q=$query",
+                    enlaceYoutube = "https://www.youtube.com/results?search_query=$query",
+                    enlaceGoogle = "https://www.google.com/search?q=$artistaQuery"
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error construyendo enlaces", e)
+        }
+    }
+
+    private fun esCancionActual(idCancion: Int): Boolean {
+        return _estadoUi.value.cancionActual?.cancion?.idCancion == idCancion
+    }
+
+    // ==================== PROGRESO ====================
+
     private fun iniciarActualizadorDeProgreso() {
         detenerActualizadorDeProgreso()
         ultimoSegundoEmitido = -1L
 
         actualizadorDeProgresoJob = viewModelScope.launch {
-            while (true) {
+            while (isActive) {
                 actualizarProgreso()
                 delay(PROGRESO_UPDATE_MS)
             }
@@ -576,14 +571,12 @@ class ReproductorViewModel @Inject constructor(
     }
 
     private fun actualizarProgreso() {
-        // No actualizar si estamos scrubbing
         if (_estadoUi.value.isScrubbing) return
 
         player?.let { p ->
             val posicionActual = p.currentPosition
             val segundoActual = posicionActual / PROGRESO_EMIT_THRESHOLD_MS
 
-            // Solo emitir si cambió de segundo (reduce recomposiciones)
             if (segundoActual != ultimoSegundoEmitido) {
                 _estadoUi.update { it.copy(progresoActualMs = posicionActual) }
                 ultimoSegundoEmitido = segundoActual
@@ -596,7 +589,7 @@ class ReproductorViewModel @Inject constructor(
         actualizadorDeProgresoJob = null
     }
 
-    // ==================== MODOS DE REPRODUCCIÓN ====================
+    // ==================== MODO REPRODUCCIÓN/REPETICIÓN ====================
 
     private fun toggleModoReproduccion() {
         player?.let { p ->
@@ -604,18 +597,9 @@ class ReproductorViewModel @Inject constructor(
             p.shuffleModeEnabled = nuevoModo == ModoReproduccion.ALEATORIO
             _estadoUi.update { it.copy(modoReproduccion = nuevoModo) }
 
-            viewModelScope.launch {
-                _efectos.send(
-                    ReproductorEfecto.MostrarToast(
-                        if (nuevoModo == ModoReproduccion.ALEATORIO)
-                            "Modo aleatorio activado"
-                        else
-                            "Modo aleatorio desactivado"
-                    )
-                )
-            }
-
-            Log.d(TAG, "🔀 Modo reproducción: $nuevoModo")
+            val mensaje = if (nuevoModo == ModoReproduccion.ALEATORIO)
+                "Modo aleatorio activado" else "Modo aleatorio desactivado"
+            enviarEfecto(ReproductorEfecto.MostrarToast(mensaje))
         }
     }
 
@@ -631,16 +615,12 @@ class ReproductorViewModel @Inject constructor(
 
             _estadoUi.update { it.copy(modoRepeticion = nuevoModo) }
 
-            viewModelScope.launch {
-                val mensaje = when (nuevoModo) {
-                    ModoRepeticion.NO_REPETIR -> "Repetición desactivada"
-                    ModoRepeticion.REPETIR_LISTA -> "Repetir lista"
-                    ModoRepeticion.REPETIR_CANCION -> "Repetir canción"
-                }
-                _efectos.send(ReproductorEfecto.MostrarToast(mensaje))
+            val mensaje = when (nuevoModo) {
+                ModoRepeticion.NO_REPETIR -> "Repetición desactivada"
+                ModoRepeticion.REPETIR_LISTA -> "Repetir lista"
+                ModoRepeticion.REPETIR_CANCION -> "Repetir canción"
             }
-
-            Log.d(TAG, "🔁 Modo repetición: $nuevoModo")
+            enviarEfecto(ReproductorEfecto.MostrarToast(mensaje))
         }
     }
 
@@ -652,23 +632,16 @@ class ReproductorViewModel @Inject constructor(
                 .map { it.cancionActual?.cancion?.idCancion }
                 .distinctUntilChanged()
                 .collect { idCancion ->
-                    if (idCancion != null) {
-                        actualizarEstadoFavorito(idCancion.toLong())
-                    }
+                    idCancion?.let { actualizarEstadoFavorito(it.toLong()) }
                 }
         }
     }
 
     private suspend fun actualizarEstadoFavorito(idCancion: Long) {
-        try {
-            cancionDao.obtenerCancionConArtistaPorId(
-                idCancion = idCancion.toInt(),
-                usuarioId = USUARIO_DEFAULT
-            )?.let { cancionConArtista ->
-                _estadoUi.update { it.copy(esFavorita = cancionConArtista.esFavorita) }
+        runCatching {
+            cancionDao.obtenerCancionConArtistaPorId(idCancion.toInt(), USUARIO_DEFAULT)?.let { c ->
+                _estadoUi.update { it.copy(esFavorita = c.esFavorita) }
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Error observando favoritos", e)
         }
     }
 
@@ -678,38 +651,21 @@ class ReproductorViewModel @Inject constructor(
             val nuevoEstado = !_estadoUi.value.esFavorita
 
             try {
-                val cancionId = cancion.idCancion
-
                 if (nuevoEstado) {
-                    cancionDao.agregarAFavoritos(
-                        FavoritoEntity(
-                            idUsuario = USUARIO_DEFAULT,
-                            idCancion = cancionId
-                        )
-                    )
-                    _efectos.send(ReproductorEfecto.MostrarToast("Agregado a favoritos ❤️"))
+                    cancionDao.agregarAFavoritos(FavoritoEntity(USUARIO_DEFAULT, cancion.idCancion))
+                    enviarEfecto(ReproductorEfecto.MostrarToast("Agregado a favoritos ❤️"))
                 } else {
-                    cancionDao.quitarDeFavoritos(
-                        usuarioId = USUARIO_DEFAULT,
-                        cancionId = cancionId
-                    )
-                    _efectos.send(ReproductorEfecto.MostrarToast("Quitado de favoritos"))
+                    cancionDao.quitarDeFavoritos(USUARIO_DEFAULT, cancion.idCancion)
+                    enviarEfecto(ReproductorEfecto.MostrarToast("Quitado de favoritos"))
                 }
-
-                Log.d(TAG, "❤️ Favorito actualizado: $nuevoEstado para ${cancion.titulo}")
-
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error actualizando favorito", e)
-                _efectos.send(ReproductorEfecto.Error("Error al actualizar favorito"))
+                Log.e(TAG, "Error actualizando favorito", e)
+                enviarEfecto(ReproductorEfecto.Error("Error al actualizar favorito"))
             }
         }
     }
 
-    // ==================== MÉTODOS PÚBLICOS ====================
-
-    fun toggleExpandir() {
-        _estaExpandido.update { !it }
-    }
+    // ==================== UTILIDADES PÚBLICAS ====================
 
     fun reproducirCancion(cancion: CancionConArtista) {
         establecerColaYReproducir(listOf(cancion), cancion)
@@ -719,28 +675,24 @@ class ReproductorViewModel @Inject constructor(
 
     fun tieneCancionActual(): Boolean = _estadoUi.value.tieneCancion
 
-    // ==================== LIMPIEZA ====================
+    // ==================== HELPER PARA EFECTOS ====================
+
+    private fun enviarEfecto(efecto: ReproductorEfecto) {
+        viewModelScope.launch {
+            _efectos.send(efecto)
+        }
+    }
+
+    // ==================== CLEANUP ====================
 
     override fun onCleared() {
-        Log.d(TAG, "🧹 Limpiando ReproductorViewModel")
-
-        // Cancelar jobs
         datosAdicionalesJob?.cancel()
         actualizadorDeProgresoJob?.cancel()
 
-        // Remover listener para prevenir memory leaks
-        playerListener?.let { listener ->
-            player?.removeListener(listener)
-        }
+        playerListener?.let { player?.removeListener(it) }
         playerListener = null
 
-        // Liberar MediaController
-        try {
-            MediaController.releaseFuture(controllerFuture)
-            Log.d(TAG, "✅ MediaController liberado")
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Error liberando MediaController", e)
-        }
+        runCatching { MediaController.releaseFuture(controllerFuture) }
 
         mediaController = null
         colaCanciones.clear()
@@ -749,10 +701,10 @@ class ReproductorViewModel @Inject constructor(
     }
 }
 
-/**
- * Efectos one-time para la UI
- */
+// ==================== EFECTOS ====================
+
 sealed interface ReproductorEfecto {
     data class MostrarToast(val mensaje: String) : ReproductorEfecto
     data class Error(val mensaje: String) : ReproductorEfecto
+    data class AbrirUrl(val url: String) : ReproductorEfecto
 }

@@ -2,6 +2,8 @@
 package com.example.freeplayerm.core.security
 
 import at.favre.lib.crypto.bcrypt.BCrypt
+import java.security.SecureRandom
+import java.util.Base64
 import java.util.UUID
 
 /**
@@ -59,9 +61,16 @@ object SeguridadHelper {
      * @return Token único de sesión
      */
     fun generarTokenSesion(usuarioId: Int): String {
-        val timestamp = System.currentTimeMillis()
-        val uuid = UUID.randomUUID().toString().take(8) // Solo primeros 8 chars
-        return "session_${usuarioId}_${timestamp}_${uuid}"
+        val random = SecureRandom()
+        val bytes = ByteArray(48) // ✅ 384 bits de entropía
+        random.nextBytes(bytes)
+        val tokenBase = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
+
+        // ✅ Hash rápido del userId (no BCrypt) solo para ofuscación
+        val userSalt = (usuarioId * 31 + System.currentTimeMillis()).toString()
+            .hashCode().toString(16).padStart(8, '0')
+
+        return "session_${userSalt}_${tokenBase}"
     }
 
     /**
@@ -77,24 +86,6 @@ object SeguridadHelper {
         val timestamp = System.currentTimeMillis()
         val uuid = UUID.randomUUID().toString()
         return "refresh_${usuarioId}_${timestamp}_${uuid}"
-    }
-
-    /**
-     * Valida un token de sesión y extrae el ID del usuario
-     *
-     * @param token Token a validar
-     * @return ID del usuario si es válido, null si no
-     */
-    fun validarToken(token: String): Int? {
-        return try {
-            // Verificar formato: session_[id]_[timestamp]_[uuid]
-            val parts = token.split("_")
-            if (parts.size >= 2 && parts[0] == "session") {
-                parts[1].toIntOrNull()
-            } else null
-        } catch (e: Exception) {
-            null
-        }
     }
 
     /**
@@ -120,7 +111,7 @@ object SeguridadHelper {
      * @param tokenExpiracion Timestamp de expiración (milisegundos)
      * @return true si el token expiró
      */
-    fun tokenExpirado(tokenExpiracion: Int): Boolean {
+    fun tokenExpirado(tokenExpiracion: Long): Boolean {
         return System.currentTimeMillis() > tokenExpiracion
     }
 
@@ -130,9 +121,9 @@ object SeguridadHelper {
      * @param duracionHoras Duración en horas (default: 24)
      * @return Timestamp de expiración
      */
-    fun calcularExpiracion(duracionHoras: Int = 24): Int {
+    fun calcularExpiracion(duracionHoras: Int = 24): Long {
         val duracionMs = duracionHoras * 60 * 60 * 1000L
-        return System.currentTimeMillis().toInt() + duracionMs.toInt()
+        return System.currentTimeMillis() + duracionMs
     }
 
     // ==================== SALTS Y UUIDS ====================

@@ -3,7 +3,7 @@ package com.example.freeplayerm.ui.features.inicio.register
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.freeplayerm.data.repository.SessionRepository
-import com.example.freeplayerm.data.repository.UsuarioRepository
+import com.example.freeplayerm.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,7 +33,7 @@ sealed class RegistroEvento {
 
 @HiltViewModel
 class RegistroViewModel @Inject constructor(
-    private val repositorio: UsuarioRepository,
+    private val repositorio: UserRepository,
     private val sessionRepository: SessionRepository
 ) : ViewModel() {
 

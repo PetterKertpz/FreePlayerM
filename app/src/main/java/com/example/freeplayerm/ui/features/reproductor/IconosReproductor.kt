@@ -1,7 +1,7 @@
-// en: app/src/main/java/com/example/freeplayerm/ui/features/reproductor/IconosReproductor.kt
 package com.example.freeplayerm.ui.features.reproductor
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import compose.icons.FeatherIcons
@@ -12,15 +12,17 @@ import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.SortNumericDown
 
 /**
- * ⚡ ICONOS DEL REPRODUCTOR - CENTRALIZADO Y TIPADO
+ * ⚡ ICONOS DEL REPRODUCTOR - v3.0
  *
- * Ventajas:
- * - Centralización de todos los iconos
- * - Fácil mantenimiento y cambios
- * - Type-safe
- * - Reutilizable
+ * Centralización de todos los iconos:
+ * ✅ Controles básicos
+ * ✅ Modos de reproducción
+ * ✅ Favoritos
+ * ✅ Navegación del panel
+ * ✅ Tabs del modo expandido
+ * ✅ Enlaces externos
  *
- * @version 2.0 - Optimizado
+ * @version 3.0 - Sistema de 3 Modos
  */
 object IconosReproductor {
 
@@ -48,45 +50,58 @@ object IconosReproductor {
     val RepetirLista: ImageVector = Icons.Default.Repeat
     val RepetirCancion: ImageVector = Icons.Default.RepeatOne
 
-    // ==================== NAVEGACIÓN ====================
+    // ==================== NAVEGACIÓN DEL PANEL ====================
 
     val Expandir: ImageVector = Icons.Default.KeyboardArrowUp
     val Colapsar: ImageVector = Icons.Default.KeyboardArrowDown
+    val Cerrar: ImageVector = Icons.Default.Close
+
+    // ==================== TABS DEL MODO EXPANDIDO ====================
+
+    val TabLetra: ImageVector = Icons.AutoMirrored.Filled.Article
+    val TabInfo: ImageVector = Icons.Default.Info
+    val TabEnlaces: ImageVector = Icons.Default.Link
+
+    // ==================== ENLACES EXTERNOS ====================
+
+    val Genius: ImageVector = Icons.Default.Lyrics
+    val Youtube: ImageVector = Icons.Default.PlayCircle
+    val Google: ImageVector = Icons.Default.Search
+    val Web: ImageVector = Icons.Default.Language
+
+    // ==================== INFORMACIÓN ====================
+
+    val Album: ImageVector = Icons.Default.Album
+    val Artista: ImageVector = Icons.Default.Person
+    val Genero: ImageVector = Icons.Default.MusicNote
+    val Duracion: ImageVector = Icons.Default.Timer
+    val Calendario: ImageVector = Icons.Default.CalendarToday
 
     // ==================== FUNCIONES HELPER ====================
 
-    /**
-     * Obtiene el icono correcto para el modo de reproducción
-     */
-    fun obtenerIconoModoReproduccion(modo: ModoReproduccion): ImageVector {
-        return when (modo) {
-            ModoReproduccion.ALEATORIO -> Aleatorio
-            ModoReproduccion.EN_ORDEN -> EnOrden
-        }
+    fun obtenerIconoModoReproduccion(modo: ModoReproduccion): ImageVector = when (modo) {
+        ModoReproduccion.ALEATORIO -> Aleatorio
+        ModoReproduccion.EN_ORDEN -> EnOrden
     }
 
-    /**
-     * Obtiene el icono correcto para el modo de repetición
-     */
-    fun obtenerIconoModoRepeticion(modo: ModoRepeticion): ImageVector {
-        return when (modo) {
-            ModoRepeticion.NO_REPETIR -> NoRepetir
-            ModoRepeticion.REPETIR_LISTA -> RepetirLista
-            ModoRepeticion.REPETIR_CANCION -> RepetirCancion
-        }
+    fun obtenerIconoModoRepeticion(modo: ModoRepeticion): ImageVector = when (modo) {
+        ModoRepeticion.NO_REPETIR -> NoRepetir
+        ModoRepeticion.REPETIR_LISTA -> RepetirLista
+        ModoRepeticion.REPETIR_CANCION -> RepetirCancion
     }
 
-    /**
-     * Obtiene el icono correcto para play/pause
-     */
-    fun obtenerIconoPlayPause(estaReproduciendo: Boolean): ImageVector {
-        return if (estaReproduciendo) Pausa else Reproducir
+    fun obtenerIconoPlayPause(estaReproduciendo: Boolean): ImageVector =
+        if (estaReproduciendo) Pausa else Reproducir
+
+    fun obtenerIconoFavorito(esFavorita: Boolean): ImageVector =
+        if (esFavorita) Favorito else NoFavorito
+
+    fun obtenerIconoTab(tab: TabExpandido): ImageVector = when (tab) {
+        TabExpandido.LETRA -> TabLetra
+        TabExpandido.INFO -> TabInfo
+        TabExpandido.ENLACES -> TabEnlaces
     }
 
-    /**
-     * Obtiene el icono correcto para favorito
-     */
-    fun obtenerIconoFavorito(esFavorita: Boolean): ImageVector {
-        return if (esFavorita) Favorito else NoFavorito
-    }
+    fun obtenerIconoNavegacion(expandir: Boolean): ImageVector =
+        if (expandir) Expandir else Colapsar
 }

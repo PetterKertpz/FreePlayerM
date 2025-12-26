@@ -14,15 +14,7 @@
       },
       "oauth_client": [
         {
-          "client_id": "1055393121843-sd47ndjsuth265q6q4kh82c32jlpfrsg.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.example.freeplayerm",
-            "certificate_hash": "320929943d3f9a7ed271f133020183d81d83715c"
-          }
-        },
-        {
-          "client_id": "1055393121843-vf0nbfo4n40q0i8tu1veei1le5e3es5n.apps.googleusercontent.com",
+          "client_id": "1055393121843-p1ob2qacorbvq5kk5ojmgu73n3s0mjrv.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.example.freeplayerm",

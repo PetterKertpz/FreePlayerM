@@ -6,7 +6,6 @@ import com.example.freeplayerm.BuildConfig
 import com.example.freeplayerm.data.remote.genius.api.GeniusApiService
 import com.example.freeplayerm.data.remote.genius.interceptor.RateLimitInterceptor
 import com.example.freeplayerm.data.remote.genius.interceptor.RateLimitPresets
-import com.example.freeplayerm.data.remote.genius.scraper.GeniusScraper
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
@@ -26,7 +25,6 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
-import javax.inject.Qualifier
 import javax.inject.Singleton
 
 /**
@@ -48,23 +46,7 @@ object NetworkModule {
     private const val WRITE_TIMEOUT = 30L // segundos
     private const val CACHE_SIZE = 10L * 1024L * 1024L // 10MB Cache
 
-    // ==================== QUALIFIERS ====================
 
-    @Qualifier
-    @Retention(AnnotationRetention.BINARY)
-    annotation class AuthInterceptor
-
-    @Qualifier
-    @Retention(AnnotationRetention.BINARY)
-    annotation class RetryInterceptor
-
-    @Qualifier
-    @Retention(AnnotationRetention.BINARY)
-    annotation class ApiClient
-
-    @Qualifier
-    @Retention(AnnotationRetention.BINARY)
-    annotation class ScraperClient
 
     // ==================== INTERCEPTORS ====================
 
@@ -218,27 +200,6 @@ object NetworkModule {
         }.build()
     }
 
-    /**
-     * Cliente genérico para descargas de imágenes
-     * Sin rate limiting (las URLs son directas)
-     */
-    @Provides
-    @Singleton
-    fun provideGenericOkHttpClient(
-        @ApplicationContext context: Context
-    ): OkHttpClient {
-        return OkHttpClient.Builder().apply {
-            connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)
-            readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)
-            writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)
-
-            cache(Cache(File(context.cacheDir, "image_cache"), CACHE_SIZE))
-
-            retryOnConnectionFailure(true)
-            followRedirects(true)
-        }.build()
-    }
-
     // ==================== MOSHI ====================
 
     @Provides
@@ -268,16 +229,6 @@ object NetworkModule {
     @Singleton
     fun provideGeniusApiService(retrofit: Retrofit): GeniusApiService {
         return retrofit.create(GeniusApiService::class.java)
-    }
-
-    // ==================== SCRAPER ====================
-
-    @Provides
-    @Singleton
-    fun provideGeniusScraper(
-        @ScraperClient okHttpClient: OkHttpClient
-    ): GeniusScraper {
-        return GeniusScraper(okHttpClient)
     }
 
     //===================AUTH============================

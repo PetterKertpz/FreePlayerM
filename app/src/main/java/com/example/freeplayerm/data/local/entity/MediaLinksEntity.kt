@@ -91,10 +91,10 @@ data class MediaLinksEntity(
     val disponible: Boolean = true,
 
     @ColumnInfo(name = "fecha_verificacion")
-    val fechaVerificacion: Int = System.currentTimeMillis().toInt(),
+    val fechaVerificacion: Long = System.currentTimeMillis(),
 
     @ColumnInfo(name = "fecha_creacion")
-    val fechaCreacion: Int = System.currentTimeMillis().toInt()
+    val fechaCreacion: Long = System.currentTimeMillis()
 ) {
     companion object {
         const val TIPO_CANCION = "CANCION"

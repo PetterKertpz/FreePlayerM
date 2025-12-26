@@ -1,5 +1,6 @@
 package com.example.freeplayerm.ui.features.inicio.components
 
+import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Login
@@ -48,7 +50,7 @@ fun CampoEntradaLogin(
     esPassword: Boolean = false,
     esError: Boolean = false,
     cargando: Boolean = false, // <-- NUEVO PARÁMETRO
-    modifier: Modifier = Modifier
+    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
 
@@ -272,7 +274,7 @@ fun PreviewLoginFullExperience() {
             BotonAnimado(onClick = {}, modifier = Modifier.fillMaxWidth()) {
                 Text("INGRESAR AL SISTEMA")
                 Spacer(Modifier.width(8.dp))
-                Icon(Icons.Default.Login, contentDescription = null)
+                Icon(Icons.AutoMirrored.Filled.Login, contentDescription = null)
             }
         }
     }

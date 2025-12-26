@@ -2,6 +2,7 @@ package com.example.freeplayerm.services
 
 import android.util.Log
 import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -25,7 +26,10 @@ class CancionSyncService @Inject constructor(
     companion object {
         private const val TAG = "CancionSyncService"
     }
-    private val syncScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        Log.e(TAG, "Error en sincronización: ${throwable.message}", throwable)
+    }
+    private val syncScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
     private var currentSyncJob: Job? = null
 
     /**
@@ -72,6 +76,7 @@ class CancionSyncService @Inject constructor(
     fun limpiar() {
         Log.d(TAG, "🧹 Limpiando CancionSyncService")
         cancelarSincronizacion()
+        syncScope.coroutineContext[Job]?.cancel()
         // No necesitas cancelar syncScope si es Singleton,
         // pero puedes hacerlo si quieres liberar recursos
     }

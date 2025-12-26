@@ -48,9 +48,9 @@ fun ContenedorGlass(
 
 // Definición de transiciones suaves para el cambio de pestañas
 @Composable
-fun TransicionDeContenidoBiblioteca(
-    targetState: Any,
-    content: @Composable (Any) -> Unit
+fun <T>TransicionDeContenidoBiblioteca(
+    targetState: T,
+    content: @Composable (T) -> Unit
 ) {
     AnimatedContent(
         targetState = targetState,

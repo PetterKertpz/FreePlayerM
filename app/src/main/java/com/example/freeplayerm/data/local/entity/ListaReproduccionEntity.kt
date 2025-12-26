@@ -1,6 +1,7 @@
 // en: app/src/main/java/com/example/freeplayerm/data/local/entity/ListaReproduccionEntity.kt
 package com.example.freeplayerm.data.local.entity
 
+import android.annotation.SuppressLint
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -72,10 +73,10 @@ data class ListaReproduccionEntity(
     // ==================== TIMESTAMPS ====================
 
     @ColumnInfo(name = "fecha_creacion")
-    val fechaCreacion: Int = System.currentTimeMillis().toInt(),
+    val fechaCreacion: Long = System.currentTimeMillis(),
 
     @ColumnInfo(name = "fecha_modificacion")
-    val fechaModificacion: Int = System.currentTimeMillis().toInt(),
+    val fechaModificacion: Long = System.currentTimeMillis(),
 
     // ==================== ESTADÍSTICAS ====================
 
@@ -108,6 +109,7 @@ data class ListaReproduccionEntity(
     /**
      * Duración formateada en HH:MM:SS
      */
+    @SuppressLint("DefaultLocale")
     fun duracionFormateada(): String {
         val horas = duracionTotalSegundos / 3600
         val minutos = (duracionTotalSegundos % 3600) / 60

@@ -53,7 +53,7 @@ data class DetalleListaReproduccionEntity(
     val orden: Int = 0, // Posición en la lista (0, 1, 2, ...)
 
     @ColumnInfo(name = "fecha_agregado")
-    val fechaAgregado: Int = System.currentTimeMillis().toInt(), // Cuándo se agregó a la lista
+    val fechaAgregado: Long = System.currentTimeMillis(), // Cuándo se agregó a la lista
 
     @ColumnInfo(name = "agregada_por_usuario")
     val agregadaPorUsuario: Int? = null, // ID del usuario que la agregó (útil para listas colaborativas)

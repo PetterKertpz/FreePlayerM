@@ -3,21 +3,28 @@ package com.example.freeplayerm.ui.features.reproductor
 import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
 
 /**
- * ⚡ ESTADO DEL REPRODUCTOR - OPTIMIZADO v2.0
+ * ⚡ ESTADO DEL REPRODUCTOR - v3.0
+ *
+ * Sistema de 3 modos del panel:
+ * - MINIMIZADO (15%): Durante scroll activo
+ * - NORMAL (25-30%): Estado por defecto
+ * - EXPANDIDO (100%): Pantalla completa con tabs
  *
  * Mejoras implementadas:
- * ✅ Progreso temporal separado para scrubbing sin glitches
- * ✅ Propiedades computadas eficientes
- * ✅ Validaciones robustas
- * ✅ Sin estado muerto (anguloRotacionVinilo movido a UI)
+ * ✅ Sistema de 3 modos (MINIMIZADO, NORMAL, EXPANDIDO)
+ * ✅ Scroll-awareness para minimización automática
+ * ✅ Tabs para modo expandido (Letra, Info, Enlaces)
+ * ✅ Metadatos y enlaces externos integrados
+ * ✅ Estados de carga unificados
+ * ✅ Progreso temporal para scrubbing sin glitches
  *
- * @version 2.0 - Production Ready
+ * @version 3.0 - Sistema de 3 Modos
  */
 
 // ==================== ENUMS ====================
 
 /**
- * Modos de reproducción disponibles
+ * Modos de reproducción de cola
  */
 enum class ModoReproduccion {
     EN_ORDEN,
@@ -30,7 +37,7 @@ enum class ModoReproduccion {
 }
 
 /**
- * Modos de repetición disponibles
+ * Modos de repetición
  */
 enum class ModoRepeticion {
     NO_REPETIR,
@@ -44,40 +51,95 @@ enum class ModoRepeticion {
     }
 }
 
+/**
+ * Modos de visualización del panel reproductor
+ *
+ * - MINIMIZADO: 15% de pantalla, solo durante scroll activo
+ * - NORMAL: 25-30% de pantalla, estado por defecto mientras reproduce
+ * - EXPANDIDO: 100% de pantalla, con metadatos y tabs
+ */
+enum class ModoPanelReproductor {
+    MINIMIZADO,
+    NORMAL,
+    EXPANDIDO;
+
+    val fraccionPantalla: Float
+        get() = when (this) {
+            MINIMIZADO -> 0.15f
+            NORMAL -> 0.28f
+            EXPANDIDO -> 1f
+        }
+
+    val peekHeightDp: Int
+        get() = when (this) {
+            MINIMIZADO -> 72
+            NORMAL -> 140
+            EXPANDIDO -> Int.MAX_VALUE
+        }
+}
+
+/**
+ * Tabs disponibles en modo expandido
+ */
+enum class TabExpandido {
+    LETRA,
+    INFO,
+    ENLACES;
+
+    val titulo: String
+        get() = when (this) {
+            LETRA -> "Letra"
+            INFO -> "Info"
+            ENLACES -> "Enlaces"
+        }
+}
+
 // ==================== ESTADO UI ====================
 
 /**
  * Estado inmutable del reproductor
  * Contiene toda la información necesaria para renderizar la UI
- *
- * @property cancionActual Canción que se está reproduciendo actualmente
- * @property estaReproduciendo True si el audio está sonando
- * @property progresoActualMs Posición real de reproducción en milisegundos
- * @property progresoTemporalMs Posición temporal mientras el usuario arrastra el slider (null si no está arrastrando)
- * @property modoReproduccion Modo de reproducción (en orden o aleatorio)
- * @property modoRepeticion Modo de repetición (no repetir, lista o canción)
- * @property esFavorita True si la canción actual está en favoritos
- * @property isScrubbing True si el usuario está arrastrando el slider de progreso
  */
 data class ReproductorEstado(
+    // === Estado de reproducción ===
     val cancionActual: CancionConArtista? = null,
     val estaReproduciendo: Boolean = false,
     val progresoActualMs: Long = 0L,
-    val progresoTemporalMs: Long? = null, // Nuevo: progreso mientras se arrastra
+    val progresoTemporalMs: Long? = null,
     val modoReproduccion: ModoReproduccion = ModoReproduccion.EN_ORDEN,
     val modoRepeticion: ModoRepeticion = ModoRepeticion.NO_REPETIR,
     val esFavorita: Boolean = false,
-    val isScrubbing: Boolean = false
+    val isScrubbing: Boolean = false,
+
+    // === Estado del panel ===
+    val modoPanel: ModoPanelReproductor = ModoPanelReproductor.NORMAL,
+    val isScrollActivo: Boolean = false,
+    val tabExpandidoActivo: TabExpandido = TabExpandido.LETRA,
+
+    // === Metadatos expandidos ===
+    val letra: String? = null,
+    val infoArtista: String? = null,
+    val descripcionAlbum: String? = null,
+
+    // === Enlaces externos ===
+    val enlaceGenius: String? = null,
+    val enlaceYoutube: String? = null,
+    val enlaceGoogle: String? = null,
+
+    // === Estados de carga ===
+    val cargandoLetra: Boolean = false,
+    val cargandoInfo: Boolean = false
 ) {
+    // ==================== PROPIEDADES DE REPRODUCCIÓN ====================
+
     /**
-     * Progreso visible en la UI
-     * Usa progresoTemporalMs cuando está scrubbing, sino progresoActualMs
+     * Progreso visible en la UI (temporal durante scrubbing, real si no)
      */
     val progresoVisibleMs: Long
         get() = progresoTemporalMs ?: progresoActualMs
 
     /**
-     * Progreso en porcentaje [0.0, 1.0] para la UI
+     * Progreso en porcentaje [0.0, 1.0]
      */
     val progresoPorcentaje: Float
         get() {
@@ -94,28 +156,102 @@ data class ReproductorEstado(
         get() = (cancionActual?.cancion?.duracionSegundos?.toLong() ?: 0L) * 1000L
 
     /**
+     * Tiempo restante en milisegundos
+     */
+    val tiempoRestanteMs: Long
+        get() = (duracionTotalMs - progresoVisibleMs).coerceAtLeast(0L)
+
+    /**
      * Verifica si hay una canción cargada
      */
     val tieneCancion: Boolean
         get() = cancionActual != null
 
     /**
-     * Verifica si el reproductor está en un estado válido para reproducir
+     * Verifica si el reproductor puede reproducir
      */
     val puedeReproducir: Boolean
         get() = cancionActual != null && cancionActual.cancion.archivoPath != null
 
+    // ==================== PROPIEDADES DE DISPLAY ====================
+
     /**
-     * Información del artista o "Desconocido"
+     * Nombre del artista formateado
      */
     val artistaDisplay: String
         get() = cancionActual?.artistaNombre ?: "Artista Desconocido"
 
     /**
-     * Título de la canción o "Sin título"
+     * Título de la canción formateado
      */
     val tituloDisplay: String
         get() = cancionActual?.cancion?.titulo ?: "Sin título"
+
+    /**
+     * Información del álbum formateada (nombre • año)
+     */
+    val albumDisplay: String
+        get() = buildString {
+            cancionActual?.albumNombre?.let { append(it) }
+            cancionActual?.fechaLanzamiento?.let { fecha ->
+                if (isNotEmpty()) append(" • ")
+                append(fecha.take(4))
+            }
+        }.ifEmpty { "Álbum desconocido" }
+
+    /**
+     * Género de la canción
+     */
+    val generoDisplay: String
+        get() = cancionActual?.generoNombre ?: "Género desconocido"
+
+    // ==================== PROPIEDADES DEL PANEL ====================
+
+    /**
+     * Determina si el panel debe mostrarse minimizado por scroll
+     */
+    val debeMinimizarPorScroll: Boolean
+        get() = isScrollActivo && modoPanel == ModoPanelReproductor.NORMAL
+
+    /**
+     * Modo efectivo considerando scroll activo
+     */
+    val modoPanelEfectivo: ModoPanelReproductor
+        get() = when {
+            modoPanel == ModoPanelReproductor.EXPANDIDO -> ModoPanelReproductor.EXPANDIDO
+            debeMinimizarPorScroll -> ModoPanelReproductor.MINIMIZADO
+            else -> modoPanel
+        }
+
+    /**
+     * Altura en dp del panel según el modo efectivo
+     */
+    val alturaPanel: Int
+        get() = modoPanelEfectivo.peekHeightDp
+
+    /**
+     * Verifica si hay enlaces externos disponibles
+     */
+    val tieneEnlaces: Boolean
+        get() = !enlaceGenius.isNullOrBlank() ||
+                !enlaceYoutube.isNullOrBlank() ||
+                !enlaceGoogle.isNullOrBlank()
+
+    /**
+     * Verifica si está cargando algún dato
+     */
+    val estaCargando: Boolean
+        get() = cargandoLetra || cargandoInfo
+
+    // ==================== HELPERS ====================
+
+    fun esPosicionValida(posicionMs: Long): Boolean {
+        return posicionMs in 0..duracionTotalMs
+    }
+
+    fun actualizarProgreso(nuevoProgreso: Long): ReproductorEstado {
+        return copy(progresoActualMs = nuevoProgreso.coerceIn(0L, duracionTotalMs))
+    }
 }
 
 // ==================== EVENTOS ====================
@@ -128,70 +264,48 @@ sealed interface ReproductorEvento {
     // ==================== EVENTOS DE REPRODUCCIÓN ====================
 
     sealed interface Reproduccion : ReproductorEvento {
-        /**
-         * Establece una nueva cola de reproducción y comienza a reproducir
-         * @param cola Lista de canciones a reproducir
-         * @param cancionInicial Canción con la que comenzar
-         */
         data class EstablecerColaYReproducir(
             val cola: List<CancionConArtista>,
             val cancionInicial: CancionConArtista
         ) : Reproduccion
 
-        /**
-         * Alterna entre reproducir y pausar
-         */
         data object ReproducirPausar : Reproduccion
-
-        /**
-         * Salta a la siguiente canción
-         */
         data object SiguienteCancion : Reproduccion
-
-        /**
-         * Vuelve a la canción anterior o reinicia la actual
-         */
         data object CancionAnterior : Reproduccion
-
-        /**
-         * Detiene completamente la reproducción y limpia la cola
-         */
         data object Detener : Reproduccion
     }
 
     // ==================== EVENTOS DE NAVEGACIÓN TEMPORAL ====================
 
     sealed interface Navegacion : ReproductorEvento {
-        /**
-         * El usuario está arrastrando el slider de progreso
-         * @param positionMs Nueva posición en milisegundos
-         */
         data class OnScrub(val positionMs: Long) : Navegacion
-
-        /**
-         * El usuario soltó el slider de progreso
-         * @param positionMs Posición final donde aplicar el seek
-         */
         data class OnScrubFinished(val positionMs: Long) : Navegacion
     }
 
     // ==================== EVENTOS DE CONFIGURACIÓN ====================
 
     sealed interface Configuracion : ReproductorEvento {
-        /**
-         * Alterna entre reproducción en orden y aleatoria
-         */
         data object CambiarModoReproduccion : Configuracion
-
-        /**
-         * Cicla entre los modos de repetición
-         */
         data object CambiarModoRepeticion : Configuracion
-
-        /**
-         * Agrega o quita la canción actual de favoritos
-         */
         data object AlternarFavorito : Configuracion
+    }
+
+    // ==================== EVENTOS DEL PANEL ====================
+
+    sealed interface Panel : ReproductorEvento {
+        data class CambiarModo(val nuevoModo: ModoPanelReproductor) : Panel
+        data object Expandir : Panel
+        data object Colapsar : Panel
+        data class NotificarScroll(val scrollActivo: Boolean) : Panel
+        data class CambiarTab(val tab: TabExpandido) : Panel
+    }
+
+    // ==================== EVENTOS DE ENLACES EXTERNOS ====================
+
+    sealed interface Enlaces : ReproductorEvento {
+        data object AbrirGenius : Enlaces
+        data object AbrirYoutube : Enlaces
+        data object AbrirGoogle : Enlaces
     }
 }
 
@@ -207,7 +321,7 @@ fun Long.formatearTiempo(): String {
 }
 
 /**
- * Formatea milisegundos a formato extendido HH:MM:SS si es necesario
+ * Formatea milisegundos a formato HH:MM:SS si es necesario
  */
 fun Long.formatearTiempoExtendido(): String {
     val horas = this / 3600000
@@ -220,25 +334,3 @@ fun Long.formatearTiempoExtendido(): String {
         "%02d:%02d".format(minutos, segundos)
     }
 }
-
-/**
- * Extension para facilitar el copiado del estado con progreso validado
- */
-fun ReproductorEstado.actualizarProgreso(nuevoProgreso: Long): ReproductorEstado {
-    return copy(
-        progresoActualMs = nuevoProgreso.coerceIn(0L, duracionTotalMs)
-    )
-}
-
-/**
- * Extension para validar si una posición de seek es válida
- */
-fun ReproductorEstado.esPosicionValida(posicionMs: Long): Boolean {
-    return posicionMs in 0..duracionTotalMs
-}
-
-/**
- * Extension para obtener el tiempo restante
- */
-val ReproductorEstado.tiempoRestanteMs: Long
-    get() = (duracionTotalMs - progresoVisibleMs).coerceAtLeast(0L)

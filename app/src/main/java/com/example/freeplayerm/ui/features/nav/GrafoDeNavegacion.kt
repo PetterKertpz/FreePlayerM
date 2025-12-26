@@ -17,7 +17,6 @@ import com.example.freeplayerm.ui.features.reproductor.ReproductorViewModel
 
 
 // --- CAMBIO CLAVE AQUÍ ---
-@RequiresApi(Build.VERSION_CODES.R)
 @Composable
 fun GrafoDeNavegacion(
     navController: NavHostController,

@@ -125,7 +125,7 @@ data class HistorialOrdenPlaylistEntity(
     // ==================== METADATOS ====================
 
     @ColumnInfo(name = "timestamp")
-    val timestamp: Int = System.currentTimeMillis().toInt(),
+    val timestamp: Long = System.currentTimeMillis(),
 
     /**
      * Si esta operación es reversible (tiene suficiente información para deshacer)
@@ -382,7 +382,7 @@ data class HistorialOrdenPlaylistEntity(
                     posicionAnterior = posicionNueva,
                     posicionNueva = posicionAnterior,
                     descripcion = "Deshacer: ${obtenerDescripcionCompleta()}",
-                    timestamp = System.currentTimeMillis().toInt()
+                    timestamp = System.currentTimeMillis()
                 )
             }
             TipoOperacion.ADD -> {
@@ -393,7 +393,7 @@ data class HistorialOrdenPlaylistEntity(
                     posicionAnterior = posicionNueva,
                     posicionNueva = null,
                     descripcion = "Deshacer: ${obtenerDescripcionCompleta()}",
-                    timestamp = System.currentTimeMillis().toInt()
+                    timestamp = System.currentTimeMillis()
                 )
             }
             TipoOperacion.REMOVE -> {
@@ -404,7 +404,7 @@ data class HistorialOrdenPlaylistEntity(
                     posicionAnterior = null,
                     posicionNueva = posicionAnterior,
                     descripcion = "Deshacer: ${obtenerDescripcionCompleta()}",
-                    timestamp = System.currentTimeMillis().toInt()
+                    timestamp = System.currentTimeMillis()
                 )
             }
             else -> null // SHUFFLE y SORT no son reversibles

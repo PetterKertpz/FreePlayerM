@@ -50,7 +50,7 @@ data class FavoritoEntity(
     val idCancion: Int,
 
     @ColumnInfo(name = "fecha_agregado")
-    val fechaAgregado: Int = System.currentTimeMillis().toInt(), // Cuándo se marcó como favorito
+    val fechaAgregado: Long = System.currentTimeMillis(), // Cuándo se marcó como favorito
 
     @ColumnInfo(name = "orden")
     val orden: Int = 0, // Orden personalizado (si el usuario reordena favoritos)

@@ -78,9 +78,10 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.navigation.compose)
-    implementation(libs.androidx.compose.ui.text)
+    implementation(libs.androidx.ui.text)
     implementation(libs.androidx.compose.animation)
     implementation(libs.androidx.compose.foundation.layout)
+    implementation(libs.androidx.compose.foundation)
     ksp(libs.hilt.compiler)
 
     // --- Firebase & Auth ---
@@ -112,7 +113,12 @@ dependencies {
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.media3.ui)
 
+    // WorkManager
+    implementation(libs.androidx.work.runtime.ktx)
 
+    // Hilt + WorkManager (usa KSP, no KAPT)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
 
     // --- Utils ---
     implementation(libs.coil.compose)

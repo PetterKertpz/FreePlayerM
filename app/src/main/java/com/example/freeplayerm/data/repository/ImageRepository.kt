@@ -99,7 +99,7 @@ class ImageRepository @Inject constructor(
                 val extension = detectImageExtension(url, response.headers["Content-Type"])
                 val file = File(targetDir, "$filename.$extension")
 
-                response.body?.byteStream()?.use { inputStream ->
+                response.body.byteStream().use { inputStream ->
                     FileOutputStream(file).use { outputStream ->
                         inputStream.copyTo(outputStream)
                     }

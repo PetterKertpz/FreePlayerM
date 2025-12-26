@@ -14,13 +14,13 @@ interface ArtistaDao {
     // ==================== INSERCIÓN ====================
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarArtista(artista: ArtistaEntity): Int
+    suspend fun insertarArtista(artista: ArtistaEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarArtistas(artistas: List<ArtistaEntity>): List<Int>
+    suspend fun insertarArtistas(artistas: List<ArtistaEntity>): List<Long>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarArtistaSiNoExiste(artista: ArtistaEntity): Int
+    suspend fun insertarArtistaSiNoExiste(artista: ArtistaEntity): Long
 
     // ==================== ACTUALIZACIÓN ====================
 
@@ -342,11 +342,11 @@ interface ArtistaDao {
     suspend fun obtenerIdArtistaPorNombre(nombre: String): Int?
 
     @Transaction
-    suspend fun insertarOActualizarArtista(artista: ArtistaEntity): Int {
+    suspend fun insertarOActualizarArtista(artista: ArtistaEntity): Long {  // Cambiar a Long
         val existente = buscarArtistaPorNombreNormalizado(artista.nombreNormalizado)
         return if (existente != null) {
             actualizarArtista(artista.copy(idArtista = existente.idArtista))
-            existente.idArtista
+            existente.idArtista.toLong()  // Convertir a Long
         } else {
             insertarArtista(artista)
         }
@@ -363,7 +363,7 @@ interface ArtistaDao {
                 nombreNormalizado = nombreNormalizado
             )
             val id = insertarArtista(nuevoArtista)
-            nuevoArtista.copy(idArtista = id)
+            nuevoArtista.copy(idArtista = id.toInt())  // Convertir Long a Int
         }
     }
 }

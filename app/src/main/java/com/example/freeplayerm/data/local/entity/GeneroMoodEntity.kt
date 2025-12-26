@@ -178,7 +178,7 @@ data class GeneroMoodEntity(
     val confianza: Float = 1.0f,
 
     @ColumnInfo(name = "fecha_creacion")
-    val fechaCreacion: Int = System.currentTimeMillis().toInt(),
+    val fechaCreacion: Long = System.currentTimeMillis(),
 
     @ColumnInfo(name = "activo")
     val activo: Boolean = true

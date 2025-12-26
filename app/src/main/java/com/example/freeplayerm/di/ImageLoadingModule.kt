@@ -42,7 +42,7 @@ object ImageLoadingModule {
     @Singleton
     fun provideImageLoader(
         @ApplicationContext context: Context,
-        okHttpClient: OkHttpClient
+        @ImageClient okHttpClient: OkHttpClient
     ): ImageLoader {
         return ImageLoader.Builder(context)
             // ⚡ MEMORY CACHE - 25% de RAM
@@ -88,14 +88,12 @@ object ImageLoadingModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
+    @ImageClient  // ← Agregar qualifier
+    fun provideImageOkHttpClient(): OkHttpClient {
         return OkHttpClient.Builder()
-            // ⚡ Timeouts optimizados
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .writeTimeout(15, TimeUnit.SECONDS)
-
-            // ⚡ Connection pooling
             .connectionPool(
                 okhttp3.ConnectionPool(
                     maxIdleConnections = 10,
@@ -103,87 +101,7 @@ object ImageLoadingModule {
                     TimeUnit.MINUTES
                 )
             )
-
-            // ⚡ Retry on connection failure
             .retryOnConnectionFailure(true)
-
             .build()
     }
 }
-
-/**
- * ⚡ EXTENSIONS ÚTILES PARA OPTIMIZACIÓN
- */
-
-// Extension para crear requests optimizados
-fun Context.optimizedImageRequest(
-    data: Any?,
-    crossfadeDuration: Int = 300
-): coil.request.ImageRequest {
-    return coil.request.ImageRequest.Builder(this)
-        .data(data)
-        .crossfade(crossfadeDuration)
-        .memoryCacheKey(data.toString())
-        .diskCacheKey(data.toString())
-        .build()
-}
-
-// Extension para placeholders consistentes
-fun coil.request.ImageRequest.Builder.withPlaceholder(
-    context: Context,
-    @androidx.annotation.DrawableRes placeholderId: Int = R.drawable.ic_notification
-): coil.request.ImageRequest.Builder {
-    return this
-        .placeholder(placeholderId)
-        .error(placeholderId)
-        .fallback(placeholderId)
-}
-
-/**
- * 📊 MÉTRICAS DE MEJORA ESPERADAS
- *
- * Antes:
- * - Memoria: ~150MB en 100 imágenes
- * - Scroll FPS: ~45fps
- * - Cache Hit Rate: ~30%
- *
- * Después:
- * - Memoria: ~60MB en 100 imágenes (-60%)
- * - Scroll FPS: ~58fps (+29%)
- * - Cache Hit Rate: ~85% (+183%)
- *
- * 🎯 TESTING
- *
- * Para verificar las mejoras:
- * 1. Android Studio Profiler > Memory
- * 2. Layout Inspector > Composition Counts
- * 3. adb shell dumpsys gfxinfo [package] framestats
- */
-
-/**
- * 🚀 USO EN COMPOSABLES
- *
- * Ejemplo básico:
- * ```kotlin
- * AsyncImage(
- *     model = ImageRequest.Builder(LocalContext.current)
- *         .data(portadaPath)
- *         .crossfade(300)
- *         .memoryCacheKey(portadaPath)
- *         .build(),
- *     contentDescription = "Portada",
- *     modifier = Modifier.size(100.dp),
- *     placeholder = painterResource(R.drawable.placeholder),
- *     error = painterResource(R.drawable.error)
- * )
- * ```
- *
- * Con extensions:
- * ```kotlin
- * AsyncImage(
- *     model = LocalContext.current.optimizedImageRequest(portadaPath),
- *     contentDescription = "Portada",
- *     modifier = Modifier.size(100.dp)
- * )
- * ```
- */

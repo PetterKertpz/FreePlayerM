@@ -3,7 +3,7 @@ package com.example.freeplayerm.ui.features.inicio.recuperarcontrasena
 import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.freeplayerm.data.repository.UsuarioRepository
+import com.example.freeplayerm.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,7 +26,7 @@ sealed class RecuperarClaveEvento {
 
 @HiltViewModel
 class RecuperarClaveViewModel @Inject constructor(
-    private val repositorio: UsuarioRepository
+    private val repositorio: UserRepository
 ) : ViewModel() {
 
     private val _estadoUi = MutableStateFlow(RecuperarClaveEstado())

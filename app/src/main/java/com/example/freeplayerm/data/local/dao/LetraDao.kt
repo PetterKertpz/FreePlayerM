@@ -35,13 +35,13 @@ interface LetraDao {
      * Si ya existe para esa canción, la reemplaza
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarLetra(letra: LetraEntity): Int
+    suspend fun insertarLetra(letra: LetraEntity): Long
 
     /**
      * Inserta múltiples letras en una sola transacción
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarLetras(letras: List<LetraEntity>): List<Int>
+    suspend fun insertarLetras(letras: List<LetraEntity>): List<Long>
 
     /**
      * Actualiza una letra existente
@@ -207,7 +207,7 @@ interface LetraDao {
      * Actualiza o inserta una letra con validación
      */
     @Transaction
-    suspend fun upsertLetra(idCancion: Int, textoLetra: String, fuente: String = "manual"): Int {
+    suspend fun upsertLetra(idCancion: Int, textoLetra: String, fuente: String = "manual"): Long {  // ✅ Añadir tipo de retorno Long
         val letraExistente = obtenerLetraPorIdCancionSuspending(idCancion)
 
         return if (letraExistente != null) {
@@ -216,15 +216,14 @@ interface LetraDao {
                 fuente = fuente,
                 fechaAgregado = System.currentTimeMillis()
             )
-            actualizarLetra(letraActualizada)
+            actualizarLetra(letraActualizada).toLong()  // ✅ Convertir Int a Long
         } else {
             val nuevaLetra = LetraEntity(
                 idCancion = idCancion,
-                textoLetra = textoLetra,  // ✅ Este es el nombre correcto
+                textoLetra = textoLetra,
                 fuente = fuente
-                // ❌ NO incluir 'letra = TODO()' - ese parámetro no existe
             )
-            insertarLetra(nuevaLetra)
+            insertarLetra(nuevaLetra)  // ✅ Ya retorna Long
         }
     }
 

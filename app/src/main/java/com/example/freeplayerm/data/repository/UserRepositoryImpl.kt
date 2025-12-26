@@ -25,11 +25,11 @@ import javax.inject.Singleton
  * - ✅ Generación de avatares por defecto
  */
 @Singleton
-class UsuarioRepositoryImpl @Inject constructor(
+class UserRepositoryImpl @Inject constructor(
     private val usuarioDao: UsuarioDao,
     private val sessionRepository: SessionRepository,
     private val firebaseAuth: FirebaseAuth
-) : UsuarioRepository {
+) : UserRepository {
 
     // ==================== OPERACIONES CRUD BÁSICAS ====================
 
@@ -91,8 +91,8 @@ class UsuarioRepositoryImpl @Inject constructor(
             val nuevoUsuario = UsuarioEntity(
                 nombreUsuario = nombreUsuario,
                 correo = correo,
-                contrasenia = contrasenaHasheada,
-                fechaCreacion = System.currentTimeMillis().toInt(),
+                contraseniaHash = contrasenaHasheada,
+                fechaCreacion = System.currentTimeMillis(),
                 fotoPerfil = fotoUrlPredeterminada,
                 tipoAutenticacion = UsuarioEntity.TIPO_LOCAL,
                 activo = true
@@ -140,13 +140,17 @@ class UsuarioRepositoryImpl @Inject constructor(
             // Verificar contraseña
             val contrasenaEsValida = SeguridadHelper.verificarContrasena(
                 contrasenaPlana = contrasena,
-                contrasenaHasheada = usuario.contrasenia
+                contrasenaHasheada = usuario.contraseniaHash
             )
 
             if (contrasenaEsValida) {
-                // Actualizar timestamp de última sesión
-                usuarioDao.actualizarUltimaSesion(usuario.idUsuario)
-                Result.success(usuario)
+                // Generar tokens seguros
+                val token = SeguridadHelper.generarTokenSesion(usuario.idUsuario)
+                val refreshToken = SeguridadHelper.generarRefreshToken(usuario.idUsuario)
+                val expiracion = SeguridadHelper.calcularExpiracion(24)
+
+                usuarioDao.actualizarTokens(usuario.idUsuario, token, refreshToken, expiracion)
+                Result.success(usuario.copy(tokenSesion = token))
             } else {
                 Result.failure(Exception("Usuario o contraseña incorrectos."))
             }
@@ -161,13 +165,9 @@ class UsuarioRepositoryImpl @Inject constructor(
     override suspend fun enviarCorreoRecuperacion(correo: String): Result<Unit> {
         return try {
             // Validar que el usuario existe
-            val usuario = usuarioDao.obtenerUsuarioPorCorreo(correo)
-
-            if (usuario == null) {
-                return Result.failure(
-                    Exception("No existe una cuenta registrada con ese correo electrónico.")
-                )
-            }
+            val usuario = usuarioDao.obtenerUsuarioPorCorreo(correo) ?: return Result.failure(
+                Exception("No existe una cuenta registrada con ese correo electrónico.")
+            )
 
             // Validar que es una cuenta local (tiene contraseña)
             if (usuario.tipoAutenticacion != UsuarioEntity.TIPO_LOCAL) {
@@ -205,22 +205,41 @@ class UsuarioRepositoryImpl @Inject constructor(
                 val nuevoUsuario = UsuarioEntity(
                     nombreUsuario = nombreUsuario,
                     correo = correo,
-                    contrasenia = "", // Sin contraseña local
-                    fechaCreacion = System.currentTimeMillis().toInt(),
+                    contraseniaHash = "", // Sin contraseña local para OAuth
+                    fechaCreacion = System.currentTimeMillis(),
                     fotoPerfil = urlFinalParaGuardar,
                     tipoAutenticacion = UsuarioEntity.TIPO_GOOGLE,
+                    providerId = correo, // Guardar el correo como provider ID
                     activo = true
                 )
 
                 val nuevoId = usuarioDao.insertarUsuario(nuevoUsuario)
-                val usuarioCreado = usuarioDao.obtenerUsuarioPorId(nuevoId.toInt())!!
+                val usuarioCreado = usuarioDao.obtenerUsuarioPorId(nuevoId.toInt())
+                    ?: throw Exception("Usuario creado pero no se pudo recuperar de la BD")
 
-                // Actualizar timestamp de última sesión
+// Generar tokens de sesión
+                val token = SeguridadHelper.generarTokenSesion(usuarioCreado.idUsuario)
+                val refreshToken = SeguridadHelper.generarRefreshToken(usuarioCreado.idUsuario)
+                val expiracion = SeguridadHelper.calcularExpiracion(24)
+
+                android.util.Log.d("UserRepository", "Generando tokens para nuevo usuario Google ID=${usuarioCreado.idUsuario}, correo=$correo")
+
+                val filasActualizadas = usuarioDao.actualizarTokens(usuarioCreado.idUsuario, token, refreshToken, expiracion)
+                if (filasActualizadas == 0) {
+                    throw Exception("No se pudieron actualizar los tokens en la base de datos")
+                }
                 usuarioDao.actualizarUltimaSesion(usuarioCreado.idUsuario)
-                Result.success(usuarioCreado)
+
+                // ✅ Devolver usuario CON tokens actualizados
+                val usuarioConTokens = usuarioCreado.copy(
+                    tokenSesion = token,
+                    refreshToken = refreshToken,
+                    tokenExpiracion = expiracion
+                )
+                Result.success(usuarioConTokens)
 
             } else {
-                // Usuario existente: actualizar datos de Google
+                // Usuario existente: actualizar datos de Google Y tokens
                 val usuarioActualizado = usuarioExistente.copy(
                     nombreUsuario = nombreUsuario,
                     fotoPerfil = urlFinalParaGuardar,
@@ -228,8 +247,26 @@ class UsuarioRepositoryImpl @Inject constructor(
                 )
 
                 usuarioDao.actualizarUsuario(usuarioActualizado)
+
+                android.util.Log.d("UserRepository", "Actualizando usuario existente Google ID=${usuarioActualizado.idUsuario}, correo=$correo")
+
+                // ✅ Generar nuevos tokens para la sesión actual
+                val token = SeguridadHelper.generarTokenSesion(usuarioActualizado.idUsuario)
+                val refreshToken = SeguridadHelper.generarRefreshToken(usuarioActualizado.idUsuario)
+                val expiracion = SeguridadHelper.calcularExpiracion(24)
+
+                val filasActualizadas = usuarioDao.actualizarTokens(usuarioActualizado.idUsuario, token, refreshToken, expiracion)
+                if (filasActualizadas == 0) {
+                    throw Exception("No se pudieron actualizar los tokens para usuario existente")
+                }
                 usuarioDao.actualizarUltimaSesion(usuarioActualizado.idUsuario)
-                Result.success(usuarioActualizado)
+
+                // ✅ Devolver con tokens
+                Result.success(usuarioActualizado.copy(
+                    tokenSesion = token,
+                    refreshToken = refreshToken,
+                    tokenExpiracion = expiracion
+                ))
             }
 
         } catch (e: Exception) {

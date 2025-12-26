@@ -20,10 +20,10 @@ interface ColaReproduccionDao {
     // ==================== INSERCIÓN ====================
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarEnCola(item: ColaReproduccionEntity): Int
+    suspend fun insertarEnCola(item: ColaReproduccionEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarEnCola(items: List<ColaReproduccionEntity>): List<Int>
+    suspend fun insertarEnCola(items: List<ColaReproduccionEntity>): List<Long>
 
     // ==================== ACTUALIZACIÓN ====================
 
@@ -299,7 +299,7 @@ interface ColaReproduccionDao {
         usuarioId: Int,
         cancionId: Int,
         origen: String = "MANUAL"
-    ): Int {
+    ): Long {  // Cambiar a Long
         val ultimoOrden = obtenerUltimoOrden(usuarioId) ?: -1
         val item = ColaReproduccionEntity(
             idUsuario = usuarioId,
@@ -315,7 +315,7 @@ interface ColaReproduccionDao {
         usuarioId: Int,
         cancionIds: List<Int>,
         origen: String = "MANUAL"
-    ): List<Int> {
+    ): List<Long> {  // Cambiar a List<Long>
         var ordenActual = (obtenerUltimoOrden(usuarioId) ?: -1) + 1
         val items = cancionIds.map { cancionId ->
             ColaReproduccionEntity(
@@ -333,15 +333,13 @@ interface ColaReproduccionDao {
         usuarioId: Int,
         cancionId: Int,
         origen: String = "MANUAL"
-    ): Int {
+    ): Long {  // Cambiar a Long
         val items = obtenerColaCompletaSync(usuarioId)
 
-        // Incrementar orden de todos los items pendientes
         items.filter { !it.reproducido }.forEach { item ->
             actualizarOrden(item.idCola, item.orden + 1)
         }
 
-        // Agregar la nueva canción al principio de los pendientes
         val primerOrden = items.firstOrNull { !it.reproducido }?.orden ?: 0
         val item = ColaReproduccionEntity(
             idUsuario = usuarioId,

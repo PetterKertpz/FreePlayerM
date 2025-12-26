@@ -188,26 +188,22 @@ object DatabaseModule {
                     val nombreNormalizado = GeneroEntity.normalizar(nombre)
                     val color = GeneroEntity.obtenerColorSugerido(nombre) ?: "#666666"
                     val emoji = GeneroEntity.obtenerEmojiSugerido(nombre) ?: "🎵"
+                    val timestamp = System.currentTimeMillis()
 
-                    db.execSQL("""
-                        INSERT OR IGNORE INTO generos (
-                            nombre, 
-                            nombre_normalizado, 
-                            color, 
-                            emoji, 
-                            es_popular,
-                            fecha_agregado,
-                            ultima_actualizacion
-                        ) VALUES (
-                            '$nombre', 
-                            '$nombreNormalizado', 
-                            '$color', 
-                            '$emoji', 
-                            1,
-                            ${System.currentTimeMillis()},
-                            ${System.currentTimeMillis()}
-                        )
-                    """)
+                    db.execSQL(
+                        """
+                            INSERT OR IGNORE INTO generos (
+                                nombre, 
+                                nombre_normalizado, 
+                                color, 
+                                emoji, 
+                                es_popular,
+                                fecha_agregado,
+                                ultima_actualizacion
+                            ) VALUES (?, ?, ?, ?, 1, ?, ?)
+                        """,
+                        arrayOf<Any>(nombre, nombreNormalizado, color, emoji, timestamp, timestamp)
+                    )
                 }
             }
         }

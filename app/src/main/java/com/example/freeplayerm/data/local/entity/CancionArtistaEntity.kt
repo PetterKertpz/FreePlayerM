@@ -70,7 +70,7 @@ data class CancionArtistaEntity(
     // ==================== METADATA ====================
 
     @ColumnInfo(name = "fecha_agregado")
-    val fechaAgregado: Int = System.currentTimeMillis().toInt(),
+    val fechaAgregado: Long = System.currentTimeMillis(),
 
     @ColumnInfo(name = "verificado")
     val verificado: Boolean = false, // Si la colaboración está verificada
@@ -231,7 +231,7 @@ data class CancionArtistaEntity(
             }
 
             // Agregar artista principal
-            artistaPrincipal?.let { nombre ->
+            artistaPrincipal.let { nombre ->
                 mapaArtistas[nombre]?.let { id ->
                     resultado.add(crearPrincipal(idCancion, id))
                 }

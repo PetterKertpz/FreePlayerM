@@ -70,7 +70,7 @@ data class HistorialReproduccionEntity(
     // ==================== INFORMACIÓN DE REPRODUCCIÓN ====================
 
     @ColumnInfo(name = "fecha_reproduccion")
-    val fechaReproduccion: Int = System.currentTimeMillis().toInt(),
+    val fechaReproduccion: Long = System.currentTimeMillis(),
 
     @ColumnInfo(name = "duracion_reproducida_ms")
     val duracionReproducidaMs: Int, // Cuánto se escuchó realmente

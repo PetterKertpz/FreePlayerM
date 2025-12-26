@@ -21,7 +21,7 @@ pluginManagement {
 plugins {
     // Esta herramienta ayuda a descargar Java automáticamente si falta.
     // En 2025, la versión recomendada suele ser más alta, pero 0.8.0+ funciona.
-    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
 // ✅ 3. Gestión Centralizada de Dependencias (El estándar moderno)

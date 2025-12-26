@@ -43,8 +43,8 @@ data class UsuarioEntity(
     @ColumnInfo(name = "correo")
     val correo: String,
 
-    @ColumnInfo(name = "contrasenia")
-    val contrasenia: String, // Hash de la contraseña (usar BCrypt o similar)
+    @ColumnInfo(name = "contrasenia_hash")
+    val contraseniaHash: String, // Hash de la contraseña (usar BCrypt o similar)
 
     // ==================== PERFIL ====================
 
@@ -58,7 +58,7 @@ data class UsuarioEntity(
     val biografia: String? = null,
 
     @ColumnInfo(name = "fecha_nacimiento")
-    val fechaNacimiento: Int? = null, // Timestamp de fecha de nacimiento
+    val fechaNacimiento: Long? = null, // Timestamp de fecha de nacimiento
 
     // ==================== AUTENTICACIÓN ====================
 
@@ -74,7 +74,7 @@ data class UsuarioEntity(
     val activo: Boolean = true, // Si el usuario está activo (soft delete)
 
     @ColumnInfo(name = "ultima_sesion")
-    val ultimaSesion: Int? = null, // Timestamp de última sesión
+    val ultimaSesion: Long? = null, // Timestamp de última sesión
 
     // ==================== TOKENS DE SESIÓN ====================
 
@@ -85,16 +85,16 @@ data class UsuarioEntity(
     val refreshToken: String? = null,
 
     @ColumnInfo(name = "token_expiracion")
-    val tokenExpiracion: Int? = null,
+    val tokenExpiracion: Long? = null,
 
     @ColumnInfo(name = "salt")
     val salt: String? = null, // Salt adicional si se usa otro algoritmo
 
     @ColumnInfo(name = "ultimo_cambio_contrasena")
-    val ultimoCambioContrasena: Int? = null,
+    val ultimoCambioContrasena: Long? = null,
 
     @ColumnInfo(name = "fecha_creacion")
-    val fechaCreacion: Int = System.currentTimeMillis().toInt(), // Timestamp de cuándo se creó
+    val fechaCreacion: Long = System.currentTimeMillis(), // Timestamp de cuándo se creó
 
     // ==================== PREFERENCIAS ====================
 

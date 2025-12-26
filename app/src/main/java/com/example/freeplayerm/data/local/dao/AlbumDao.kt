@@ -14,14 +14,16 @@ interface AlbumDao {
     // ==================== INSERCIÓN ====================
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarAlbum(album: AlbumEntity): Int
+    suspend fun insertarAlbum(album: AlbumEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarAlbumes(albumes: List<AlbumEntity>): List<Int>
+    suspend fun insertarAlbumes(albumes: List<AlbumEntity>): List<Long>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarAlbumSiNoExiste(album: AlbumEntity): Int
+    suspend fun insertarAlbumSiNoExiste(album: AlbumEntity): Long
 
+    @Query("SELECT SUM(duracion_segundos) FROM canciones WHERE id_album = :idAlbum")
+    suspend fun calcularDuracionAlbum(idAlbum: Int): Long?
     // ==================== ACTUALIZACIÓN ====================
 
     @Update
@@ -311,18 +313,18 @@ interface AlbumDao {
     suspend fun obtenerIdAlbumPorTituloYArtista(titulo: String, artistaId: Int): Int?
 
     @Transaction
-    suspend fun insertarOActualizarAlbum(album: AlbumEntity): Int {
+    suspend fun insertarOActualizarAlbum(album: AlbumEntity): Long {
         val existente = buscarAlbumPorTituloYArtista(album.titulo, album.idArtista)
         return if (existente != null) {
             actualizarAlbum(album.copy(idAlbum = existente.idAlbum))
-            existente.idAlbum
+            existente.idAlbum.toLong()  // ✅ Convertir Int a Long
         } else {
-            insertarAlbum(album)
+            insertarAlbum(album)  // Ya retorna Long
         }
     }
 
     @Transaction
-    suspend fun obtenerOCrearAlbum(titulo: String, artistaId: Int, anio: Int?): AlbumEntity {
+    suspend fun obtenerOCrearAlbum(titulo: String, artistaId: Int, anio: Long?): AlbumEntity {
         val existente = buscarAlbumPorTituloYArtista(titulo, artistaId)
 
         return existente ?: run {
@@ -332,7 +334,7 @@ interface AlbumDao {
                 anio = anio
             )
             val id = insertarAlbum(nuevoAlbum)
-            nuevoAlbum.copy(idAlbum = id)
+            nuevoAlbum.copy(idAlbum = id.toInt())  // Convertir Long a Int
         }
     }
 }

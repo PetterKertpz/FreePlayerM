@@ -1,6 +1,7 @@
 // en: app/src/main/java/com/example/freeplayerm/data/local/entity/CancionEntity.kt
 package com.example.freeplayerm.data.local.entity
 
+import android.annotation.SuppressLint
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -154,11 +155,13 @@ data class CancionEntity(
     val vecesReproducida: Int = 0, // Contador de reproducciones
 
     @ColumnInfo(name = "ultima_reproduccion")
-    val ultimaReproduccion: Int? = null, // Timestamp de última reproducción
+    val ultimaReproduccion: Long? = null, // Timestamp de última reproducción
 
     @ColumnInfo(name = "fecha_agregado")
-    val fechaAgregado: Int = System.currentTimeMillis().toInt(), // Timestamp de cuándo se agregó
+    val fechaAgregado: Long = System.currentTimeMillis(), // Timestamp de cuándo se agregó
 
+    @ColumnInfo(name = "fecha_modificacion")
+    val fechaModificacion: Long? = null,
     // ==================== METADATOS ADICIONALES ====================
 
     @ColumnInfo(name = "calidad_audio")
@@ -177,6 +180,7 @@ data class CancionEntity(
     /**
      * Duración formateada en MM:SS
      */
+    @SuppressLint("DefaultLocale")
     fun duracionFormateada(): String {
         val minutos = duracionSegundos / 60
         val segundos = duracionSegundos % 60

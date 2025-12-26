@@ -14,13 +14,13 @@ interface GeneroDao {
     // ==================== INSERCIÓN ====================
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarGenero(genero: GeneroEntity): Int
+    suspend fun insertarGenero(genero: GeneroEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarGeneros(generos: List<GeneroEntity>): List<Int>
+    suspend fun insertarGeneros(generos: List<GeneroEntity>): List<Long>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertarGeneroSiNoExiste(genero: GeneroEntity): Int
+    suspend fun insertarGeneroSiNoExiste(genero: GeneroEntity): Long
 
     // ==================== ACTUALIZACIÓN ====================
 
@@ -347,11 +347,11 @@ interface GeneroDao {
     suspend fun esSubgeneroDe(hijoId: Int, padreId: Int): Boolean
 
     @Transaction
-    suspend fun insertarOActualizarGenero(genero: GeneroEntity): Int {
+    suspend fun insertarOActualizarGenero(genero: GeneroEntity): Long {  // Cambiar a Long
         val existente = buscarGeneroPorNombreNormalizado(genero.nombreNormalizado)
         return if (existente != null) {
             actualizarGenero(genero.copy(idGenero = existente.idGenero))
-            existente.idGenero
+            existente.idGenero.toLong()
         } else {
             insertarGenero(genero)
         }

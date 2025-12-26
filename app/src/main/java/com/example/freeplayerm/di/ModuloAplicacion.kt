@@ -2,22 +2,19 @@ package com.example.freeplayerm.di
 
 import android.content.Context
 import androidx.credentials.CredentialManager
-import androidx.room.Room
 import com.example.freeplayerm.core.auth.GoogleAuthUiClient
-import com.example.freeplayerm.data.local.AppDatabase
-import com.example.freeplayerm.data.local.dao.CancionDao
-import com.example.freeplayerm.data.local.dao.LetraDao
 import com.example.freeplayerm.data.local.dao.UsuarioDao
-import com.example.freeplayerm.data.remote.genius.api.GeniusApiService
 import com.example.freeplayerm.data.remote.genius.scraper.GeniusScraper
 import com.example.freeplayerm.data.repository.SessionRepository
-import com.example.freeplayerm.data.repository.UsuarioRepository
-import com.example.freeplayerm.data.repository.UsuarioRepositoryImpl
+import com.example.freeplayerm.data.repository.UserRepository
+import com.example.freeplayerm.data.repository.UserRepositoryImpl
+import com.google.firebase.auth.FirebaseAuth
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import jakarta.inject.Named
 import okhttp3.OkHttpClient
 import javax.inject.Singleton
 
@@ -28,7 +25,7 @@ object ModuloAplicacion {
     @Provides
     @Singleton
     fun provideGeniusScraper(
-        @NetworkClient okHttpClient: OkHttpClient // <--- ✅ AGREGA LA ETIQUETA AQUÍ
+        @ScraperClient okHttpClient: OkHttpClient  // ✅ Cambiado de @Named("genius") a @ScraperClient
     ): GeniusScraper {
         return GeniusScraper(okHttpClient)
     }
@@ -37,9 +34,10 @@ object ModuloAplicacion {
     @Singleton
     fun provideUsuarioRepository(
         usuarioDao: UsuarioDao,
-        sessionRepository: SessionRepository
-    ): UsuarioRepository {
-        return UsuarioRepositoryImpl(usuarioDao, sessionRepository)
+        sessionRepository: SessionRepository,
+        firebaseAuth: FirebaseAuth
+    ): UserRepository {
+        return UserRepositoryImpl(usuarioDao, sessionRepository, firebaseAuth)
     }
 
     @Provides

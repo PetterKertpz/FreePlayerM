@@ -78,7 +78,7 @@ data class ColaReproduccionEntity(
     val reproducido: Boolean = false, // Si ya se reprodujo
 
     @ColumnInfo(name = "fecha_reproducido")
-    val fechaReproducido: Int? = null,
+    val fechaReproducido: Long? = null,
 
     // ==================== ORIGEN ====================
 
@@ -94,7 +94,7 @@ data class ColaReproduccionEntity(
     // ==================== METADATA ====================
 
     @ColumnInfo(name = "fecha_agregado")
-    val fechaAgregado: Int = System.currentTimeMillis().toInt(),
+    val fechaAgregado: Long = System.currentTimeMillis(),
 
     @ColumnInfo(name = "score_sugerencia")
     val scoreSugerencia: Float? = null, // Si es sugerencia, qué tan buena es (0.0-1.0)
@@ -114,7 +114,7 @@ data class ColaReproduccionEntity(
     val transicionTipo: String = TRANSICION_NORMAL, // "NORMAL", "CROSSFADE", "GAPLESS", "INSTANT"
 
     @ColumnInfo(name = "transicion_duracion_ms")
-    val transicionDuracionMs: Int? = null, // Duración del crossfade si aplica
+    val transicionDuracionMs: Long? = null, // Duración del crossfade si aplica
 
     // ==================== SINCRONIZACIÓN ====================
 
@@ -161,12 +161,12 @@ data class ColaReproduccionEntity(
     /**
      * Calcula cuánto tiempo lleva en la cola
      */
-    fun tiempoEnColaMs(): Int = System.currentTimeMillis().toInt() - fechaAgregado
+    fun tiempoEnColaMs(): Long = System.currentTimeMillis() - fechaAgregado
 
     /**
      * Calcula cuánto tiempo lleva en la cola en minutos
      */
-    fun tiempoEnColaMinutos(): Int = tiempoEnColaMs() / (60 * 1000)
+    fun tiempoEnColaMinutos(): Long = tiempoEnColaMs() / (60L * 1000)
 
     /**
      * Verifica si es una buena sugerencia (score > 0.7)
@@ -179,7 +179,7 @@ data class ColaReproduccionEntity(
     fun marcarComoReproducida(): ColaReproduccionEntity {
         return copy(
             reproducido = true,
-            fechaReproducido = System.currentTimeMillis().toInt()
+            fechaReproducido = System.currentTimeMillis()
         )
     }
 
@@ -288,7 +288,7 @@ data class ColaReproduccionEntity(
             idUsuario: Int,
             idCancion: Int,
             orden: Int,
-            crossfadeDuracionMs: Int
+            crossfadeDuracionMs: Long
         ): ColaReproduccionEntity {
             return crearManual(idUsuario, idCancion, orden).copy(
                 transicionTipo = TRANSICION_CROSSFADE,

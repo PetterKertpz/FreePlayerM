@@ -58,7 +58,7 @@ data class SongCreditsEntity(
     val fuente: String = "GENIUS",
 
     @ColumnInfo(name = "fecha_creacion")
-    val fechaCreacion: Int = System.currentTimeMillis().toInt()
+    val fechaCreacion: Long = System.currentTimeMillis()
 ) {
     companion object {
         const val ROL_PRODUCER = "PRODUCER"

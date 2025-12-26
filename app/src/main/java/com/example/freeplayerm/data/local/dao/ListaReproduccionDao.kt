@@ -14,10 +14,10 @@ interface ListaReproduccionDao {
     // ==================== INSERCIÓN ====================
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarLista(lista: ListaReproduccionEntity): Int
+    suspend fun insertarLista(lista: ListaReproduccionEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarListas(listas: List<ListaReproduccionEntity>): List<Int>
+    suspend fun insertarListas(listas: List<ListaReproduccionEntity>): List<Long>
 
     // ==================== ACTUALIZACIÓN ====================
 
@@ -324,15 +324,15 @@ interface ListaReproduccionDao {
         listaId: Int,
         nuevoNombre: String,
         usuarioId: Int
-    ): Int {
+    ): Long {  // Cambiar a Long
         val original = obtenerListaPorId(listaId) ?: return -1
 
         val copia = original.copy(
             idLista = 0,
             nombre = nuevoNombre,
             idUsuario = usuarioId,
-            fechaCreacion = System.currentTimeMillis().toInt(),
-            fechaModificacion = System.currentTimeMillis().toInt(),
+            fechaCreacion = System.currentTimeMillis(),
+            fechaModificacion = System.currentTimeMillis(),
             vecesReproducida = 0,
             ultimaReproduccion = null
         )

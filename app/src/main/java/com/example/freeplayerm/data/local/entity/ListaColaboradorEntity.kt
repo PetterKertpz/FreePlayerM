@@ -141,7 +141,7 @@ data class ListaColaboradorEntity(
     val invitadoPor: Int? = null,
 
     @ColumnInfo(name = "fecha_invitacion")
-    val fechaInvitacion: Int = System.currentTimeMillis().toInt(),
+    val fechaInvitacion: Long = System.currentTimeMillis(),
 
     /**
      * Fecha en que aceptó la invitación (null si aún no acepta)

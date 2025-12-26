@@ -225,10 +225,10 @@ data class PreferenciasUsuarioEntity(
     // ==================== METADATA ====================
 
     @ColumnInfo(name = "fecha_creacion")
-    val fechaCreacion: Int = System.currentTimeMillis().toInt(),
+    val fechaCreacion: Long = System.currentTimeMillis(),
 
     @ColumnInfo(name = "ultima_actualizacion")
-    val ultimaActualizacion: Int = System.currentTimeMillis().toInt(),
+    val ultimaActualizacion: Long = System.currentTimeMillis(),
 
     @ColumnInfo(name = "version_preferencias")
     val versionPreferencias: Int = 1 // Para migraciones futuras

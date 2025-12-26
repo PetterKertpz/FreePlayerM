@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,8 +26,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -34,7 +33,6 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.freeplayerm.R
 import com.example.freeplayerm.data.local.entity.ListaReproduccionEntity
-import com.example.freeplayerm.ui.features.shared.MarqueeTextConDesvanecido
 import com.example.freeplayerm.ui.theme.AppColors
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 
@@ -96,14 +94,14 @@ fun EncabezadoFijoLista(
 
         // Título y descripción
         Column(modifier = Modifier.weight(1f)) {
-            MarqueeTextConDesvanecido(
+            Text(
                 text = lista.nombre,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
 
             if (!lista.descripcion.isNullOrBlank()) {
-                MarqueeTextConDesvanecido(
+                Text(
                     text = lista.descripcion,
                     style = MaterialTheme.typography.bodyLarge
                 )
