@@ -10,8 +10,7 @@ import com.example.freeplayerm.data.scanner.MusicScanWorker
 /**
  * 📱 BOOT RECEIVER - Escaneo al Arrancar el Dispositivo
  *
- * Recibe el broadcast de arranque completado y programa
- * un escaneo de música en segundo plano.
+ * Recibe el broadcast de arranque completado y programa un escaneo de música en segundo plano.
  *
  * Requiere permiso RECEIVE_BOOT_COMPLETED en AndroidManifest.xml
  */
@@ -31,7 +30,6 @@ class BootReceiver : BroadcastReceiver() {
 
                 // También asegurar que los escaneos periódicos estén activos
                 MusicScanWorker.programarEscaneosPeriodicos(context)
-
             } catch (e: Exception) {
                 Log.e(TAG, "Error programando escaneo post-arranque", e)
             }

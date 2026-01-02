@@ -26,23 +26,20 @@ import javax.inject.Inject
 /**
  * ✅ VERSIÓN FINAL - SIN DefaultActionFactory
  *
- * Esta versión crea una notificación básica inicialmente para cumplir
- * con startForeground(), y luego Media3 la actualiza automáticamente.
+ * Esta versión crea una notificación básica inicialmente para cumplir con startForeground(), y
+ * luego Media3 la actualiza automáticamente.
  */
 @UnstableApi
 @AndroidEntryPoint
 class MusicService : MediaSessionService() {
 
-    @Inject
-    lateinit var player: Player
+    @Inject lateinit var player: Player
 
     private lateinit var mediaSession: MediaSession
 
-    @Inject
-    lateinit var cancionSyncService: CancionSyncService
+    @Inject lateinit var songSyncService: SongSyncService
 
-    @Inject
-    lateinit var mediaItemHelper: MediaItemHelper
+    @Inject lateinit var mediaItemHelper: MediaItemHelper
 
     private var notificationProvider: CustomNotificationProvider? = null
 
@@ -51,6 +48,7 @@ class MusicService : MediaSessionService() {
         const val CHANNEL_ID = "media_playback_channel"
         private const val TAG = "MusicService"
     }
+
     private var syncJob: Job? = null
 
     @OptIn(UnstableApi::class)
@@ -58,9 +56,7 @@ class MusicService : MediaSessionService() {
         super.onCreate()
         Log.d(TAG, "🎵 ========== INICIANDO MusicService ==========")
 
-        mediaSession = MediaSession.Builder(this, player)
-            .setId("FreePlayerSession")
-            .build()
+        mediaSession = MediaSession.Builder(this, player).setId("FreePlayerSession").build()
         // 1. Crear el Provider
         notificationProvider = CustomNotificationProvider(this)
         setMediaNotificationProvider(notificationProvider!!)
@@ -72,14 +68,15 @@ class MusicService : MediaSessionService() {
 
         // 3. Configurar Session Activity (Click en notificación)
         try {
-            val sessionIntent = packageManager?.getLaunchIntentForPackage(packageName)?.let { intent ->
-                PendingIntent.getActivity(
-                    this,
-                    0,
-                    intent,
-                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-                )
-            }
+            val sessionIntent =
+                packageManager?.getLaunchIntentForPackage(packageName)?.let { intent ->
+                    PendingIntent.getActivity(
+                        this,
+                        0,
+                        intent,
+                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                    )
+                }
             if (sessionIntent != null) {
                 mediaSession.setSessionActivity(sessionIntent)
                 Log.d(TAG, "✅ SessionActivity configurada")
@@ -99,8 +96,8 @@ class MusicService : MediaSessionService() {
     /**
      * ✅ MÉTODO CORREGIDO - Sin usar DefaultActionFactory
      *
-     * Crea una notificación básica inicialmente, luego Media3 la actualiza
-     * automáticamente con el CustomNotificationProvider cuando sea necesario.
+     * Crea una notificación básica inicialmente, luego Media3 la actualiza automáticamente con el
+     * CustomNotificationProvider cuando sea necesario.
      */
     private fun iniciarComoForegroundService() {
         try {
@@ -114,7 +111,7 @@ class MusicService : MediaSessionService() {
                 startForeground(
                     NOTIFICATION_ID,
                     notificacionInicial,
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
                 )
                 Log.d(TAG, "✅ Foreground iniciado con FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK")
             } else {
@@ -124,7 +121,6 @@ class MusicService : MediaSessionService() {
 
             Log.d(TAG, "🔔 Servicio en Foreground con notificación ID: $NOTIFICATION_ID")
             Log.d(TAG, "📢 Media3 actualizará la notificación automáticamente cuando reproduzcas")
-
         } catch (e: Exception) {
             Log.e(TAG, "❌ ERROR CRÍTICO al iniciar foreground: ${e.message}", e)
             e.printStackTrace()
@@ -134,22 +130,23 @@ class MusicService : MediaSessionService() {
     /**
      * ✅ Crea una notificación básica para cumplir con startForeground()
      *
-     * Esta notificación es temporal - Media3 la reemplazará automáticamente
-     * con tu CustomNotificationProvider cuando empieces a reproducir.
+     * Esta notificación es temporal - Media3 la reemplazará automáticamente con tu
+     * CustomNotificationProvider cuando empieces a reproducir.
      */
     private fun crearNotificacionBasica(): Notification {
         // Intent para abrir la app al tocar la notificación
         val openAppIntent = packageManager?.getLaunchIntentForPackage(packageName)
-        val pendingIntent = if (openAppIntent != null) {
-            PendingIntent.getActivity(
-                this,
-                0,
-                openAppIntent,
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-            )
-        } else {
-            null
-        }
+        val pendingIntent =
+            if (openAppIntent != null) {
+                PendingIntent.getActivity(
+                    this,
+                    0,
+                    openAppIntent,
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                )
+            } else {
+                null
+            }
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
@@ -165,8 +162,8 @@ class MusicService : MediaSessionService() {
     /**
      * 🕵️ MÉTODO DE DIAGNÓSTICO (mantenido de tu código)
      *
-     * Este método es llamado por Media3 cuando actualiza la notificación.
-     * Si este log NO sale, Media3 no sabe que estás reproduciendo.
+     * Este método es llamado por Media3 cuando actualiza la notificación. Si este log NO sale,
+     * Media3 no sabe que estás reproduciendo.
      */
     override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
         Log.d(TAG, "🔥 onUpdateNotification LLAMADO")
@@ -185,81 +182,89 @@ class MusicService : MediaSessionService() {
     }
 
     private fun setupPlayerListeners() {
-        player.addListener(object : Player.Listener {
-            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                val reasonText = when (reason) {
-                    Player.MEDIA_ITEM_TRANSITION_REASON_AUTO -> "AUTO"
-                    Player.MEDIA_ITEM_TRANSITION_REASON_SEEK -> "SEEK"
-                    Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED -> "PLAYLIST_CHANGED"
-                    Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT -> "REPEAT"
-                    else -> "UNKNOWN($reason)"
-                }
+        player.addListener(
+            object : Player.Listener {
+                override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                    val reasonText =
+                        when (reason) {
+                            Player.MEDIA_ITEM_TRANSITION_REASON_AUTO -> "AUTO"
+                            Player.MEDIA_ITEM_TRANSITION_REASON_SEEK -> "SEEK"
+                            Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED ->
+                                "PLAYLIST_CHANGED"
+                            Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT -> "REPEAT"
+                            else -> "UNKNOWN($reason)"
+                        }
 
-                Log.d(TAG, "🎵 Transición de canción")
-                Log.d(TAG, "   ├─ Razón: $reasonText")
-                Log.d(TAG, "   └─ Canción: ${mediaItem?.mediaMetadata?.title}")
+                    Log.d(TAG, "🎵 Transición de canción")
+                    Log.d(TAG, "   ├─ Razón: $reasonText")
+                    Log.d(TAG, "   └─ Canción: ${mediaItem?.mediaMetadata?.title}")
 
-                mediaItem?.let {
-                    if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO ||
-                        reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK
-                    ) {
-                        iniciarSincronizacionCancion(it)
-                    }
-                }
-            }
-
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                val stateText = when (playbackState) {
-                    Player.STATE_IDLE -> "IDLE"
-                    Player.STATE_BUFFERING -> "BUFFERING"
-                    Player.STATE_READY -> "READY"
-                    Player.STATE_ENDED -> "ENDED"
-                    else -> "UNKNOWN($playbackState)"
-                }
-
-                Log.d(TAG, "🎬 Estado Playback cambió")
-                Log.d(TAG, "   ├─ Nuevo estado: $stateText")
-                Log.d(TAG, "   └─ IsPlaying: ${player.isPlaying}")
-
-                when (playbackState) {
-                    Player.STATE_ENDED, Player.STATE_IDLE -> {
-                        cancionSyncService.cancelarSincronizacion()
-                    }
-                    Player.STATE_READY -> {
-                        if (player.isPlaying) {
-                            player.currentMediaItem?.let { iniciarSincronizacionCancion(it) }
+                    mediaItem?.let {
+                        if (
+                            reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO ||
+                                reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK
+                        ) {
+                            iniciarSincronizacionCancion(it)
                         }
                     }
                 }
-            }
 
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                Log.d(TAG, "⏯️ IsPlaying cambió a: $isPlaying")
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    val stateText =
+                        when (playbackState) {
+                            Player.STATE_IDLE -> "IDLE"
+                            Player.STATE_BUFFERING -> "BUFFERING"
+                            Player.STATE_READY -> "READY"
+                            Player.STATE_ENDED -> "ENDED"
+                            else -> "UNKNOWN($playbackState)"
+                        }
 
-                if (!isPlaying) {
-                    cancionSyncService.cancelarSincronizacion()
-                } else {
-                    player.currentMediaItem?.let { iniciarSincronizacionCancion(it) }
+                    Log.d(TAG, "🎬 Estado Playback cambió")
+                    Log.d(TAG, "   ├─ Nuevo estado: $stateText")
+                    Log.d(TAG, "   └─ IsPlaying: ${player.isPlaying}")
+
+                    when (playbackState) {
+                        Player.STATE_ENDED,
+                        Player.STATE_IDLE -> {
+                            songSyncService.cancelarSincronizacion()
+                        }
+                        Player.STATE_READY -> {
+                            if (player.isPlaying) {
+                                player.currentMediaItem?.let { iniciarSincronizacionCancion(it) }
+                            }
+                        }
+                    }
+                }
+
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    Log.d(TAG, "⏯️ IsPlaying cambió a: $isPlaying")
+
+                    if (!isPlaying) {
+                        songSyncService.cancelarSincronizacion()
+                    } else {
+                        player.currentMediaItem?.let { iniciarSincronizacionCancion(it) }
+                    }
                 }
             }
-        })
+        )
     }
 
     private fun iniciarSincronizacionCancion(mediaItem: MediaItem) {
         syncJob?.cancel()
-        syncJob = CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
-            try {
-                Log.d(TAG, "🔄 Iniciando sincronización: ${mediaItem.mediaMetadata.title}")
-                val cancionConArtista = mediaItemHelper.obtenerConResiliencia(mediaItem)
-                if (cancionConArtista != null) {
-                    cancionSyncService.sincronizarCancionAlReproducir(cancionConArtista)
-                } else {
-                    Log.w(TAG, "⚠️ No se pudo obtener datos para sincronizar")
+        syncJob =
+            CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
+                try {
+                    Log.d(TAG, "🔄 Iniciando sincronización: ${mediaItem.mediaMetadata.title}")
+                    val cancionConArtista = mediaItemHelper.obtenerConResiliencia(mediaItem)
+                    if (cancionConArtista != null) {
+                        songSyncService.sincronizarCancionAlReproducir(cancionConArtista)
+                    } else {
+                        Log.w(TAG, "⚠️ No se pudo obtener datos para sincronizar")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "💥 Error en sincronización: ${e.message}", e)
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "💥 Error en sincronización: ${e.message}", e)
             }
-        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -285,7 +290,11 @@ class MusicService : MediaSessionService() {
         }
 
         // Asegurar que el player esté listo si es necesario
-        if (player.playWhenReady && player.mediaItemCount > 0 && player.playbackState == Player.STATE_IDLE) {
+        if (
+            player.playWhenReady &&
+                player.mediaItemCount > 0 &&
+                player.playbackState == Player.STATE_IDLE
+        ) {
             Log.d(TAG, "🔧 Preparando player automáticamente")
             player.prepare()
         }
@@ -308,7 +317,7 @@ class MusicService : MediaSessionService() {
         Log.d(TAG, "MusicService onDestroy iniciado")
 
         syncJob?.cancel()
-        cancionSyncService.limpiar()
+        songSyncService.limpiar()
 
         // 1. Detener reproducción primero
         player.stop()

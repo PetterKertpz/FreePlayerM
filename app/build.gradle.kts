@@ -82,6 +82,10 @@ dependencies {
     implementation(libs.androidx.compose.animation)
     implementation(libs.androidx.compose.foundation.layout)
     implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.animation)
+    implementation(libs.androidx.compose.animation.core)
+    debugImplementation(libs.androidx.compose.ui.tooling)
     ksp(libs.hilt.compiler)
 
     // --- Firebase & Auth ---

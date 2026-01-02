@@ -16,8 +16,8 @@ import javax.inject.Singleton
 /**
  * 🕷️ GENIUS WEB SCRAPER
  *
- * Scraper especializado para extraer letras de canciones de Genius.com
- * Nota: La API de Genius NO proporciona letras, solo metadata
+ * Scraper especializado para extraer letras de canciones de Genius.com Nota: La API de Genius NO
+ * proporciona letras, solo metadata
  *
  * Características:
  * - ✅ Extracción robusta de letras con múltiples selectores fallback
@@ -27,18 +27,17 @@ import javax.inject.Singleton
  * - ✅ Extracción opcional de metadata complementaria
  */
 @Singleton
-class GeniusScraper @Inject constructor(
-    private val okHttpClient: OkHttpClient
-) {
+class GeniusScraper @Inject constructor(private val okHttpClient: OkHttpClient) {
     private val tag = "GeniusScraper"
 
     companion object {
         // User agents para rotación
-        private val USER_AGENTS = listOf(
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        )
+        private val USER_AGENTS =
+            listOf(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            )
 
         // Selectores CSS para letras (en orden de prioridad)
         private const val SELECTOR_LYRICS_CONTAINER = "div[data-lyrics-container=true]"
@@ -54,7 +53,8 @@ class GeniusScraper @Inject constructor(
         private const val SELECTOR_RELEASE_DATE = "span.MetadataStats__Value"
 
         // Elementos a eliminar
-        private val ELEMENTS_TO_REMOVE = """
+        private val ELEMENTS_TO_REMOVE =
+            """
             div[class*='Advertisement'],
             div[class*='Ad'],
             div[class*='LyricsPlaceholder'],
@@ -62,12 +62,11 @@ class GeniusScraper @Inject constructor(
             .embed,
             script,
             style
-        """.trimIndent()
+            """
+                .trimIndent()
     }
 
-    /**
-     * Datos scrapeados de una página de canción
-     */
+    /** Datos scrapeados de una página de canción */
     data class ScrapedSongData(
         val lyrics: String? = null,
         val coverArtUrl: String? = null,
@@ -77,7 +76,7 @@ class GeniusScraper @Inject constructor(
         val releaseDate: String? = null,
         val featuredArtists: List<String> = emptyList(),
         val producers: List<String> = emptyList(),
-        val writers: List<String> = emptyList()
+        val writers: List<String> = emptyList(),
     )
 
     /**
@@ -102,7 +101,7 @@ class GeniusScraper @Inject constructor(
                     releaseDate = extractReleaseDate(document),
                     featuredArtists = extractFeaturedArtists(document),
                     producers = extractProducers(document),
-                    writers = extractWriters(document)
+                    writers = extractWriters(document),
                 )
             } catch (e: Exception) {
                 Log.e(tag, "❌ Error en scraping: ${e.message}", e)
@@ -110,9 +109,7 @@ class GeniusScraper @Inject constructor(
             }
         }
 
-    /**
-     * Extrae solo las letras de una canción (optimizado)
-     */
+    /** Extrae solo las letras de una canción (optimizado) */
     suspend fun extractLyricsOnly(songUrl: String): String? =
         withContext(Dispatchers.IO) {
             try {
@@ -130,9 +127,10 @@ class GeniusScraper @Inject constructor(
         Log.d(tag, "📝 Extrayendo letras...")
 
         // Intentar selectores en orden de prioridad
-        var lyricsContainer = document.selectFirst(SELECTOR_LYRICS_CONTAINER)
-            ?: document.selectFirst(SELECTOR_LYRICS)
-            ?: document.selectFirst(SELECTOR_LYRICS_FALLBACK)
+        var lyricsContainer =
+            document.selectFirst(SELECTOR_LYRICS_CONTAINER)
+                ?: document.selectFirst(SELECTOR_LYRICS)
+                ?: document.selectFirst(SELECTOR_LYRICS_FALLBACK)
 
         if (lyricsContainer == null) {
             Log.w(tag, "No se encontró contenedor de letras")
@@ -223,33 +221,43 @@ class GeniusScraper @Inject constructor(
 
     private fun extractFeaturedArtists(document: Document): List<String> {
         val featuredSection = document.select("div:contains(Featuring)")
-        return featuredSection.flatMap { it.select("a[href*=/artists/]") }
+        return featuredSection
+            .flatMap { it.select("a[href*=/artists/]") }
             .mapNotNull { it.text().trim() }
             .filter { it.isNotBlank() }
     }
 
     private fun extractProducers(document: Document): List<String> {
-        val producerSection = document.select("""
-            div:contains(Producer),
-            div:contains(Producers),
-            div:contains(Produced)
-        """.trimIndent())
+        val producerSection =
+            document.select(
+                """
+                div:contains(Producer),
+                div:contains(Producers),
+                div:contains(Produced)
+                """
+                    .trimIndent()
+            )
 
         return extractCreditsFromSection(producerSection)
     }
 
     private fun extractWriters(document: Document): List<String> {
-        val writerSection = document.select("""
-            div:contains(Writer),
-            div:contains(Writers),
-            div:contains(Written)
-        """.trimIndent())
+        val writerSection =
+            document.select(
+                """
+                div:contains(Writer),
+                div:contains(Writers),
+                div:contains(Written)
+                """
+                    .trimIndent()
+            )
 
         return extractCreditsFromSection(writerSection)
     }
 
     private fun extractCreditsFromSection(section: org.jsoup.select.Elements): List<String> {
-        return section.flatMap { it.select("a[href*=/artists/]") }
+        return section
+            .flatMap { it.select("a[href*=/artists/]") }
             .mapNotNull { it.text().trim() }
             .filter { it.isNotBlank() }
             .distinct()
@@ -261,13 +269,17 @@ class GeniusScraper @Inject constructor(
         withContext(Dispatchers.IO) {
             try {
                 val userAgent = USER_AGENTS.random()
-                val request = Request.Builder()
-                    .url(url)
-                    .header("User-Agent", userAgent)
-                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-                    .header("Accept-Language", "en-US,en;q=0.5")
-                    .header("Connection", "keep-alive")
-                    .build()
+                val request =
+                    Request.Builder()
+                        .url(url)
+                        .header("User-Agent", userAgent)
+                        .header(
+                            "Accept",
+                            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                        )
+                        .header("Accept-Language", "en-US,en;q=0.5")
+                        .header("Connection", "keep-alive")
+                        .build()
 
                 val response = okHttpClient.newCall(request).execute()
 
@@ -297,13 +309,12 @@ class GeniusScraper @Inject constructor(
             }
         }
 
-    /**
-     * Valida que la página sea de una canción y no discografía/álbum
-     */
+    /** Valida que la página sea de una canción y no discografía/álbum */
     private fun isValidSongPage(document: Document): Boolean {
         val title = document.title()
         val hasLyrics = document.select("$SELECTOR_LYRICS_CONTAINER, $SELECTOR_LYRICS").isNotEmpty()
-        val isDiscographyPage = title.contains("discography", ignoreCase = true) ||
+        val isDiscographyPage =
+            title.contains("discography", ignoreCase = true) ||
                 title.contains("albums", ignoreCase = true)
 
         return hasLyrics && !isDiscographyPage

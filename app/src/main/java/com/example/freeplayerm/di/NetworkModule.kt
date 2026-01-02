@@ -16,16 +16,16 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import java.io.File
+import java.io.IOException
+import java.util.concurrent.TimeUnit
+import javax.inject.Singleton
 import okhttp3.Cache
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
-import java.io.File
-import java.io.IOException
-import java.util.concurrent.TimeUnit
-import javax.inject.Singleton
 
 /**
  * 🌐 NETWORK MODULE
@@ -46,8 +46,6 @@ object NetworkModule {
     private const val WRITE_TIMEOUT = 30L // segundos
     private const val CACHE_SIZE = 10L * 1024L * 1024L // 10MB Cache
 
-
-
     // ==================== INTERCEPTORS ====================
 
     @Provides
@@ -60,15 +58,18 @@ object NetworkModule {
             if (token.isBlank()) {
                 throw SecurityException(
                     "Genius API Client Access Token no está configurado. " +
-                            "Verifica que GENIUS_CLIENT_ACCESS_TOKEN esté en tu build.gradle o local.properties"
+                        "Verifica que GENIUS_CLIENT_ACCESS_TOKEN esté en tu build.gradle o local.properties"
                 )
             }
 
-            val request = chain.request().newBuilder()
-                .addHeader("Authorization", "Bearer $token")
-                .addHeader("User-Agent", "FreePlayerM/1.0 (Android)")
-                .addHeader("Accept", "application/json")
-                .build()
+            val request =
+                chain
+                    .request()
+                    .newBuilder()
+                    .addHeader("Authorization", "Bearer $token")
+                    .addHeader("User-Agent", "FreePlayerM/1.0 (Android)")
+                    .addHeader("Accept", "application/json")
+                    .build()
 
             chain.proceed(request)
         }
@@ -78,21 +79,19 @@ object NetworkModule {
     @Singleton
     fun provideLoggingInterceptor(): HttpLoggingInterceptor {
         return HttpLoggingInterceptor().apply {
-            level = if (BuildConfig.DEBUG) {
-                HttpLoggingInterceptor.Level.BODY
-            } else {
-                HttpLoggingInterceptor.Level.NONE
-            }
+            level =
+                if (BuildConfig.DEBUG) {
+                    HttpLoggingInterceptor.Level.BODY
+                } else {
+                    HttpLoggingInterceptor.Level.NONE
+                }
 
             redactHeader("Authorization")
             redactHeader("Cookie")
         }
     }
 
-    /**
-     * Rate limiter para Genius API
-     * Preset: 10 requests por minuto con estrategia WAIT
-     */
+    /** Rate limiter para Genius API Preset: 10 requests por minuto con estrategia WAIT */
     @Provides
     @Singleton
     fun provideRateLimitInterceptor(): RateLimitInterceptor {
@@ -123,11 +122,15 @@ object NetworkModule {
             // Manejar códigos de error específicos de Genius
             if (!response.isSuccessful) {
                 when (response.code) {
-                    429 -> throw IOException("Rate limit excedido en Genius API - demasiadas solicitudes")
+                    429 ->
+                        throw IOException(
+                            "Rate limit excedido en Genius API - demasiadas solicitudes"
+                        )
                     401 -> throw SecurityException("Token de Genius API inválido o expirado")
                     403 -> throw SecurityException("Acceso denegado a Genius API")
                     404 -> throw IOException("Recurso no encontrado en Genius API")
-                    in 500..599 -> throw IOException("Error del servidor Genius API: ${response.code}")
+                    in 500..599 ->
+                        throw IOException("Error del servidor Genius API: ${response.code}")
                 }
             }
 
@@ -137,10 +140,7 @@ object NetworkModule {
 
     // ==================== OKHTTP CLIENTS ====================
 
-    /**
-     * Cliente para Genius API
-     * Incluye: Auth, Rate Limiting, Retry, Logging
-     */
+    /** Cliente para Genius API Incluye: Auth, Rate Limiting, Retry, Logging */
     @Provides
     @Singleton
     @ApiClient
@@ -149,55 +149,56 @@ object NetworkModule {
         @AuthInterceptor authInterceptor: Interceptor,
         rateLimitInterceptor: RateLimitInterceptor,
         @RetryInterceptor retryInterceptor: Interceptor,
-        loggingInterceptor: HttpLoggingInterceptor
+        loggingInterceptor: HttpLoggingInterceptor,
     ): OkHttpClient {
-        return OkHttpClient.Builder().apply {
-            // Orden importante: Auth -> Rate Limit -> Retry -> Logging
-            addInterceptor(authInterceptor)
-            addInterceptor(rateLimitInterceptor)
-            addInterceptor(retryInterceptor)
-            addInterceptor(loggingInterceptor)
+        return OkHttpClient.Builder()
+            .apply {
+                // Orden importante: Auth -> Rate Limit -> Retry -> Logging
+                addInterceptor(authInterceptor)
+                addInterceptor(rateLimitInterceptor)
+                addInterceptor(retryInterceptor)
+                addInterceptor(loggingInterceptor)
 
-            connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)
-            readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)
-            writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)
+                connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)
+                readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)
+                writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)
 
-            cache(Cache(File(context.cacheDir, "genius_api_cache"), CACHE_SIZE))
+                cache(Cache(File(context.cacheDir, "genius_api_cache"), CACHE_SIZE))
 
-            retryOnConnectionFailure(true)
-            followRedirects(true)
-            followSslRedirects(true)
-        }.build()
+                retryOnConnectionFailure(true)
+                followRedirects(true)
+                followSslRedirects(true)
+            }
+            .build()
     }
 
-    /**
-     * Cliente para Web Scraping
-     * Incluye: Rate Limiting más estricto, User-Agent rotation
-     */
+    /** Cliente para Web Scraping Incluye: Rate Limiting más estricto, User-Agent rotation */
     @Provides
     @Singleton
     @ScraperClient
     fun provideScraperOkHttpClient(
         @ApplicationContext context: Context,
-        loggingInterceptor: HttpLoggingInterceptor
+        loggingInterceptor: HttpLoggingInterceptor,
     ): OkHttpClient {
         // Rate limiting más conservador para scraping
         val scraperRateLimit = RateLimitPresets.scraping()
 
-        return OkHttpClient.Builder().apply {
-            addInterceptor(scraperRateLimit)
-            addInterceptor(loggingInterceptor)
+        return OkHttpClient.Builder()
+            .apply {
+                addInterceptor(scraperRateLimit)
+                addInterceptor(loggingInterceptor)
 
-            connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)
-            readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)
-            writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)
+                connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)
+                readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)
+                writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)
 
-            cache(Cache(File(context.cacheDir, "genius_scraper_cache"), CACHE_SIZE))
+                cache(Cache(File(context.cacheDir, "genius_scraper_cache"), CACHE_SIZE))
 
-            retryOnConnectionFailure(true)
-            followRedirects(true)
-            followSslRedirects(true)
-        }.build()
+                retryOnConnectionFailure(true)
+                followRedirects(true)
+                followSslRedirects(true)
+            }
+            .build()
     }
 
     // ==================== MOSHI ====================
@@ -205,19 +206,14 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideMoshi(): Moshi {
-        return Moshi.Builder()
-            .add(KotlinJsonAdapterFactory())
-            .build()
+        return Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
     }
 
     // ==================== RETROFIT ====================
 
     @Provides
     @Singleton
-    fun provideRetrofit(
-        @ApiClient okHttpClient: OkHttpClient,
-        moshi: Moshi
-    ): Retrofit {
+    fun provideRetrofit(@ApiClient okHttpClient: OkHttpClient, moshi: Moshi): Retrofit {
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(okHttpClient)
@@ -231,11 +227,10 @@ object NetworkModule {
         return retrofit.create(GeniusApiService::class.java)
     }
 
-    //===================AUTH============================
+    // ===================AUTH============================
     @Provides
     @Singleton
     fun provideFirebaseAuth(): FirebaseAuth {
         return Firebase.auth
     }
-
 }

@@ -9,11 +9,11 @@ import androidx.room.PrimaryKey
 /**
  * Entidad para almacenar anotaciones de Genius sobre fragmentos específicos de letras.
  *
- * Las anotaciones de Genius son explicaciones, contexto histórico, referencias culturales
- * y análisis literario de fragmentos específicos de canciones.
+ * Las anotaciones de Genius son explicaciones, contexto histórico, referencias culturales y
+ * análisis literario de fragmentos específicos de canciones.
  *
  * Relaciones:
- * - N:1 con LetraEntity (una letra puede tener múltiples anotaciones)
+ * - N:1 con LyricsEntity (una letra puede tener múltiples anotaciones)
  *
  * Casos de uso:
  * - Mostrar explicaciones al tocar una línea de la letra
@@ -37,175 +37,111 @@ import androidx.room.PrimaryKey
  */
 @Entity(
     tableName = "genius_annotations",
-    foreignKeys = [
-        ForeignKey(
-            entity = LetraEntity::class,
-            parentColumns = ["id_letra"],
-            childColumns = ["id_letra"],
-            onDelete = ForeignKey.CASCADE,
-            onUpdate = ForeignKey.CASCADE
-        )
-    ],
-    indices = [
-        Index(value = ["id_letra"]),
-        Index(value = ["genius_annotation_id"], unique = true),
-        Index(value = ["verificado"]),
-        Index(value = ["votos"])
-    ]
+    foreignKeys =
+        [
+            ForeignKey(
+                entity = LyricsEntity::class,
+                parentColumns = ["id_letra"],
+                childColumns = ["id_letra"],
+                onDelete = ForeignKey.CASCADE,
+                onUpdate = ForeignKey.CASCADE,
+            )
+        ],
+    indices =
+        [
+            Index(value = ["id_letra"]),
+            Index(value = ["genius_annotation_id"], unique = true),
+            Index(value = ["verificado"]),
+            Index(value = ["votos"]),
+        ],
 )
 data class GeniusAnnotationEntity(
-    @PrimaryKey(autoGenerate = true)
-    @ColumnInfo(name = "id_annotation")
-    val idAnnotation: Int = 0,
+    @PrimaryKey(autoGenerate = true) @ColumnInfo(name = "id_annotation") val idAnnotation: Int = 0,
 
     // ==================== RELACIÓN CON LETRA ====================
 
-    @ColumnInfo(name = "id_letra")
-    val idLetra: Int,
+    @ColumnInfo(name = "id_letra") val idLetra: Int,
 
     // ==================== IDS GENIUS ====================
 
-    /**
-     * ID único de la anotación en Genius
-     */
-    @ColumnInfo(name = "genius_annotation_id")
-    val geniusAnnotationId: String,
+    /** ID único de la anotación en Genius */
+    @ColumnInfo(name = "genius_annotation_id") val geniusAnnotationId: String,
 
     // ==================== FRAGMENTO ANOTADO ====================
 
     /**
-     * Fragmento exacto del texto al que se refiere
-     * Ejemplo: "I got my driver's license last week"
+     * Fragmento exacto del texto al que se refiere Ejemplo: "I got my driver's license last week"
      */
-    @ColumnInfo(name = "fragmento_texto")
-    val fragmentoTexto: String,
+    @ColumnInfo(name = "fragmento_texto") val fragmentoTexto: String,
 
-    /**
-     * Posición del primer carácter del fragmento en el texto completo
-     */
-    @ColumnInfo(name = "posicion_inicio")
-    val posicionInicio: Int,
+    /** Posición del primer carácter del fragmento en el texto completo */
+    @ColumnInfo(name = "posicion_inicio") val posicionInicio: Int,
 
-    /**
-     * Posición del último carácter del fragmento en el texto completo
-     */
-    @ColumnInfo(name = "posicion_fin")
-    val posicionFin: Int,
+    /** Posición del último carácter del fragmento en el texto completo */
+    @ColumnInfo(name = "posicion_fin") val posicionFin: Int,
 
-    /**
-     * Número de línea donde aparece (opcional, para navegación rápida)
-     */
-    @ColumnInfo(name = "numero_linea")
-    val numeroLinea: Int? = null,
+    /** Número de línea donde aparece (opcional, para navegación rápida) */
+    @ColumnInfo(name = "numero_linea") val numeroLinea: Int? = null,
 
     // ==================== CONTENIDO DE LA ANOTACIÓN ====================
 
-    /**
-     * Contenido completo de la anotación en HTML
-     * Genius devuelve anotaciones con formato HTML
-     */
-    @ColumnInfo(name = "contenido_annotation")
-    val contenidoAnnotation: String,
+    /** Contenido completo de la anotación en HTML Genius devuelve anotaciones con formato HTML */
+    @ColumnInfo(name = "contenido_annotation") val contenidoAnnotation: String,
 
-    /**
-     * Contenido en texto plano (sin HTML)
-     * Para búsquedas y preview
-     */
-    @ColumnInfo(name = "contenido_plano")
-    val contenidoPlano: String,
+    /** Contenido en texto plano (sin HTML) Para búsquedas y preview */
+    @ColumnInfo(name = "contenido_plano") val contenidoPlano: String,
 
     // ==================== METADATOS GENIUS ====================
 
-    /**
-     * Votos de la anotación en Genius (IQ points)
-     * Valores típicos: 0-500+
-     */
-    @ColumnInfo(name = "votos")
-    val votos: Int = 0,
+    /** Votos de la anotación en Genius (IQ points) Valores típicos: 0-500+ */
+    @ColumnInfo(name = "votos") val votos: Int = 0,
 
-    /**
-     * Si fue verificada/aprobada por editores de Genius
-     */
-    @ColumnInfo(name = "verificado")
-    val verificado: Boolean = false,
+    /** Si fue verificada/aprobada por editores de Genius */
+    @ColumnInfo(name = "verificado") val verificado: Boolean = false,
 
-    /**
-     * Estado de la anotación en Genius
-     * Valores: "accepted", "pending", "rejected"
-     */
-    @ColumnInfo(name = "estado")
-    val estado: String = "accepted",
+    /** Estado de la anotación en Genius Valores: "accepted", "pending", "rejected" */
+    @ColumnInfo(name = "estado") val estado: String = "accepted",
 
-    /**
-     * Lista de autores que contribuyeron (JSON)
-     * Formato: [{"id":123,"name":"User","iq":1500}]
-     */
-    @ColumnInfo(name = "autores_json")
-    val autoresJson: String? = null,
+    /** Lista de autores que contribuyeron (JSON) Formato: [{"id":123,"name":"User","iq":1500}] */
+    @ColumnInfo(name = "autores_json") val autoresJson: String? = null,
 
     // ==================== CATEGORIZACIÓN ====================
 
     /**
-     * Tipo de anotación
-     * Valores: "meaning", "reference", "wordplay", "context", "trivia", "other"
+     * Tipo de anotación Valores: "meaning", "reference", "wordplay", "context", "trivia", "other"
      */
-    @ColumnInfo(name = "tipo_annotation")
-    val tipoAnnotation: String = "meaning",
+    @ColumnInfo(name = "tipo_annotation") val tipoAnnotation: String = "meaning",
 
-    /**
-     * Tags de la anotación (JSON array)
-     * Ejemplo: ["cultural-reference", "historical-context"]
-     */
-    @ColumnInfo(name = "tags_json")
-    val tagsJson: String? = null,
+    /** Tags de la anotación (JSON array) Ejemplo: ["cultural-reference", "historical-context"] */
+    @ColumnInfo(name = "tags_json") val tagsJson: String? = null,
 
     // ==================== URLS Y REFERENCIAS ====================
 
-    @ColumnInfo(name = "url_annotation")
-    val urlAnnotation: String,
+    @ColumnInfo(name = "url_annotation") val urlAnnotation: String,
 
-    /**
-     * URLs de referencia citadas en la anotación (JSON array)
-     */
-    @ColumnInfo(name = "referencias_urls_json")
-    val referenciasUrlsJson: String? = null,
+    /** URLs de referencia citadas en la anotación (JSON array) */
+    @ColumnInfo(name = "referencias_urls_json") val referenciasUrlsJson: String? = null,
 
     // ==================== METADATOS TEMPORALES ====================
 
-    @ColumnInfo(name = "fecha_creacion")
-    val fechaCreacion: Int,
+    @ColumnInfo(name = "fecha_creacion") val fechaCreacion: Int,
+    @ColumnInfo(name = "fecha_actualizacion") val fechaActualizacion: Int,
 
-    @ColumnInfo(name = "fecha_actualizacion")
-    val fechaActualizacion: Int,
-
-    /**
-     * Última vez que se sincronizó desde Genius
-     */
+    /** Última vez que se sincronizó desde Genius */
     @ColumnInfo(name = "ultima_sincronizacion")
     val ultimaSincronizacion: Long = System.currentTimeMillis(),
 
     // ==================== CONTROL LOCAL ====================
 
-    /**
-     * Si el usuario marcó como favorita
-     */
-    @ColumnInfo(name = "es_favorita")
-    val esFavorita: Boolean = false,
+    /** Si el usuario marcó como favorita */
+    @ColumnInfo(name = "es_favorita") val esFavorita: Boolean = false,
 
-    /**
-     * Veces que el usuario vio esta anotación
-     */
-    @ColumnInfo(name = "veces_vista")
-    val vecesVista: Int = 0,
-
-    @ColumnInfo(name = "activa")
-    val activa: Boolean = true
-
+    /** Veces que el usuario vio esta anotación */
+    @ColumnInfo(name = "veces_vista") val vecesVista: Int = 0,
+    @ColumnInfo(name = "activa") val activa: Boolean = true,
 ) {
     companion object {
-        /**
-         * Tipos de anotación disponibles
-         */
+        /** Tipos de anotación disponibles */
         object TipoAnnotation {
             const val MEANING = "meaning" // Explicación del significado
             const val REFERENCE = "reference" // Referencias culturales/artísticas
@@ -215,30 +151,20 @@ data class GeniusAnnotationEntity(
             const val OTHER = "other" // Otros tipos
         }
 
-        /**
-         * Estados de anotación
-         */
+        /** Estados de anotación */
         object Estado {
             const val ACCEPTED = "accepted"
             const val PENDING = "pending"
             const val REJECTED = "rejected"
         }
 
-        /**
-         * Determina si una anotación es de alta calidad
-         */
-        fun esAltaCalidad(
-            votos: Int,
-            verificado: Boolean,
-            estado: String
-        ): Boolean {
+        /** Determina si una anotación es de alta calidad */
+        fun esAltaCalidad(votos: Int, verificado: Boolean, estado: String): Boolean {
             return (verificado && estado == Estado.ACCEPTED) ||
-                    (votos >= 100 && estado == Estado.ACCEPTED)
+                (votos >= 100 && estado == Estado.ACCEPTED)
         }
 
-        /**
-         * Extrae texto plano de HTML
-         */
+        /** Extrae texto plano de HTML */
         fun extraerTextoPlano(html: String): String {
             return html
                 .replace(Regex("<[^>]*>"), "") // Eliminar tags HTML
@@ -251,45 +177,33 @@ data class GeniusAnnotationEntity(
         }
     }
 
-    /**
-     * Indica si la anotación es de alta calidad
-     */
+    /** Indica si la anotación es de alta calidad */
     fun esAltaCalidad(): Boolean {
         return esAltaCalidad(votos, verificado, estado)
     }
 
-    /**
-     * Indica si debería mostrarse prominentemente
-     */
+    /** Indica si debería mostrarse prominentemente */
     fun esDestacada(): Boolean {
         return verificado && votos >= 50 && activa
     }
 
-    /**
-     * Indica si necesita actualización (más de 30 días sin sincronizar)
-     */
+    /** Indica si necesita actualización (más de 30 días sin sincronizar) */
     fun necesitaSincronizacion(): Boolean {
         val treintaDias = 30L * 24 * 60 * 60 * 1000
         return System.currentTimeMillis() - ultimaSincronizacion > treintaDias
     }
 
-    /**
-     * Copia marcando como vista
-     */
+    /** Copia marcando como vista */
     fun marcarComoVista(): GeniusAnnotationEntity {
         return copy(vecesVista = vecesVista + 1)
     }
 
-    /**
-     * Copia alternando favorito
-     */
+    /** Copia alternando favorito */
     fun toggleFavorita(): GeniusAnnotationEntity {
         return copy(esFavorita = !esFavorita)
     }
 
-    /**
-     * Obtiene preview corto del contenido (primeros 100 chars)
-     */
+    /** Obtiene preview corto del contenido (primeros 100 chars) */
     fun obtenerPreview(maxLength: Int = 100): String {
         return if (contenidoPlano.length <= maxLength) {
             contenidoPlano
@@ -298,9 +212,7 @@ data class GeniusAnnotationEntity(
         }
     }
 
-    /**
-     * Valida que las posiciones sean correctas
-     */
+    /** Valida que las posiciones sean correctas */
     fun posicionesValidas(): Boolean {
         return posicionInicio >= 0 && posicionFin > posicionInicio
     }

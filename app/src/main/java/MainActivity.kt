@@ -24,9 +24,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.example.freeplayerm.ui.AuthState
 import com.example.freeplayerm.ui.MainViewModel
-import com.example.freeplayerm.ui.features.nav.GrafoDeNavegacion
-import com.example.freeplayerm.ui.features.nav.Rutas
-import com.example.freeplayerm.ui.features.reproductor.ReproductorViewModel
+import com.example.freeplayerm.ui.features.nav.NavigationGraph
+import com.example.freeplayerm.ui.features.nav.Routes
+import com.example.freeplayerm.ui.features.player.ReproductorViewModel
 import com.example.freeplayerm.ui.features.splash.PantallaDeCarga
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -108,17 +108,17 @@ class MainActivity : ComponentActivity() {
                         }
 
                         is AuthState.Autenticado -> {
-                            GrafoDeNavegacion(
+                            NavigationGraph(
                                 navController = navController,
-                                rutaDeInicio = Rutas.Biblioteca.crearRuta(state.usuario.idUsuario),
+                                rutaDeInicio = Routes.Biblioteca.crearRuta(state.usuario.idUsuario),
                                 reproductorViewModel = reproductorViewModel
                             )
                         }
 
                         is AuthState.NoAutenticado -> {
-                            GrafoDeNavegacion(
+                            NavigationGraph(
                                 navController = navController,
-                                rutaDeInicio = Rutas.Login.ruta,
+                                rutaDeInicio = Routes.Login.ruta,
                                 reproductorViewModel = reproductorViewModel
                             )
                         }

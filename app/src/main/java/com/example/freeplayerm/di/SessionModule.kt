@@ -21,13 +21,10 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object SessionModule {
 
-    /**
-     * Provee el ComponentName para que MediaController se conecte al servicio.
-     */
+    /** Provee el ComponentName para que MediaController se conecte al servicio. */
     @OptIn(UnstableApi::class)
     @Provides
     @Singleton
-    fun provideMusicServiceComponentName(
-        @ApplicationContext context: Context
-    ): ComponentName = ComponentName(context, MusicService::class.java)
+    fun provideMusicServiceComponentName(@ApplicationContext context: Context): ComponentName =
+        ComponentName(context, MusicService::class.java)
 }

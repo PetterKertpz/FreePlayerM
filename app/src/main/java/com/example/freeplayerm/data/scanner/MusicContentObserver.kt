@@ -22,13 +22,15 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Observer que detecta cambios en MediaStore y dispara escaneos automáticos.
- * Usa debounce para evitar múltiples escaneos cuando se añaden varios archivos.
+ * Observer que detecta cambios en MediaStore y dispara escaneos automáticos. Usa debounce para
+ * evitar múltiples escaneos cuando se añaden varios archivos.
  */
 @Singleton
-class MusicContentObserver @Inject constructor(
+class MusicContentObserver
+@Inject
+constructor(
     @ApplicationContext private val context: Context,
-    private val musicRepository: LocalMusicRepository
+    private val musicRepository: LocalMusicRepository,
 ) {
     private val tag = "MusicContentObserver"
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -39,8 +41,11 @@ class MusicContentObserver @Inject constructor(
     // Estado observable para integración con MusicScannerManager
     sealed class EstadoObserver {
         data object NoRegistrado : EstadoObserver()
+
         data object Registrado : EstadoObserver()
+
         data object EsperandoDebounce : EstadoObserver()
+
         data object Escaneando : EstadoObserver()
     }
 
@@ -50,33 +55,35 @@ class MusicContentObserver @Inject constructor(
     // Debounce de 3 segundos para agrupar múltiples cambios
     private val debounceMs = 3000L
 
-    private val contentObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
-        override fun onChange(selfChange: Boolean) {
-            super.onChange(selfChange)
-            Log.d(tag, "Cambio detectado en MediaStore")
+    private val contentObserver =
+        object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                super.onChange(selfChange)
+                Log.d(tag, "Cambio detectado en MediaStore")
 
-            // Cancelar job anterior y reiniciar el debounce
-            debounceJob?.cancel()
-            _estado.value = EstadoObserver.EsperandoDebounce
+                // Cancelar job anterior y reiniciar el debounce
+                debounceJob?.cancel()
+                _estado.value = EstadoObserver.EsperandoDebounce
 
-            debounceJob = scope.launch {
-                delay(debounceMs)
-                Log.d(tag, "Iniciando escaneo automático por cambio en MediaStore")
-                _estado.value = EstadoObserver.Escaneando
-                try {
-                    musicRepository.escanearYGuardarMusica()
-                } catch (e: Exception) {
-                    Log.e(tag, "Error en escaneo automático", e)
-                } finally {
-                    _estado.value = EstadoObserver.Registrado
-                }
+                debounceJob =
+                    scope.launch {
+                        delay(debounceMs)
+                        Log.d(tag, "Iniciando escaneo automático por cambio en MediaStore")
+                        _estado.value = EstadoObserver.Escaneando
+                        try {
+                            musicRepository.escanearYGuardarMusica()
+                        } catch (e: Exception) {
+                            Log.e(tag, "Error en escaneo automático", e)
+                        } finally {
+                            _estado.value = EstadoObserver.Registrado
+                        }
+                    }
             }
         }
-    }
 
     /**
-     * Registra el observer para escuchar cambios en archivos de audio.
-     * Llamar desde Application.onCreate() o cuando se concedan permisos.
+     * Registra el observer para escuchar cambios en archivos de audio. Llamar desde
+     * Application.onCreate() o cuando se concedan permisos.
      */
     fun registrar() {
         if (isRegistered) {
@@ -88,7 +95,7 @@ class MusicContentObserver @Inject constructor(
             context.contentResolver.registerContentObserver(
                 MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
                 true, // notifyForDescendants
-                contentObserver
+                contentObserver,
             )
             isRegistered = true
             _estado.value = EstadoObserver.Registrado
@@ -99,9 +106,7 @@ class MusicContentObserver @Inject constructor(
         }
     }
 
-    /**
-     * Desregistra el observer. Llamar cuando ya no sea necesario.
-     */
+    /** Desregistra el observer. Llamar cuando ya no sea necesario. */
     fun desregistrar() {
         if (!isRegistered) return
 
@@ -116,13 +121,9 @@ class MusicContentObserver @Inject constructor(
         }
     }
 
-    /**
-     * Fuerza un escaneo inmediato sin esperar el debounce.
-     */
+    /** Fuerza un escaneo inmediato sin esperar el debounce. */
     fun forzarEscaneoInmediato() {
         debounceJob?.cancel()
-        scope.launch {
-            musicRepository.escanearYGuardarMusica()
-        }
+        scope.launch { musicRepository.escanearYGuardarMusica() }
     }
 }

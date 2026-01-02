@@ -11,8 +11,8 @@ import kotlin.concurrent.withLock
 /**
  * ⏱️ RATE LIMIT INTERCEPTOR
  *
- * Interceptor de OkHttp para manejar rate limiting automáticamente
- * Controla frecuencia de requests para evitar exceder límites de APIs
+ * Interceptor de OkHttp para manejar rate limiting automáticamente Controla frecuencia de requests
+ * para evitar exceder límites de APIs
  *
  * Características:
  * - ✅ Rate limiting configurable por ventana de tiempo
@@ -25,7 +25,7 @@ class RateLimitInterceptor(
     private val maxRequests: Int,
     private val timeWindowMillis: Long,
     private val strategy: RateLimitStrategy = RateLimitStrategy.WAIT,
-    private val targetHost: String? = null
+    private val targetHost: String? = null,
 ) : Interceptor {
 
     private val requests = mutableListOf<Long>()
@@ -47,9 +47,7 @@ class RateLimitInterceptor(
         }
     }
 
-    /**
-     * Estrategia: Esperar si se excede el límite
-     */
+    /** Estrategia: Esperar si se excede el límite */
     private fun interceptWithWait(chain: Interceptor.Chain): Response {
         lock.withLock {
             cleanupOldRequests()
@@ -73,20 +71,19 @@ class RateLimitInterceptor(
         return chain.proceed(chain.request())
     }
 
-    /**
-     * Estrategia: Fallar inmediatamente si se excede el límite
-     */
+    /** Estrategia: Fallar inmediatamente si se excede el límite */
     private fun interceptWithFailFast(chain: Interceptor.Chain): Response {
-        val canProceed = lock.withLock {
-            cleanupOldRequests()
+        val canProceed =
+            lock.withLock {
+                cleanupOldRequests()
 
-            if (requests.size < maxRequests) {
-                requests.add(System.currentTimeMillis())
-                true
-            } else {
-                false
+                if (requests.size < maxRequests) {
+                    requests.add(System.currentTimeMillis())
+                    true
+                } else {
+                    false
+                }
             }
-        }
 
         if (!canProceed) {
             Log.w(tag, "❌ Rate limit excedido. Request rechazado.")
@@ -98,28 +95,24 @@ class RateLimitInterceptor(
         return chain.proceed(chain.request())
     }
 
-    /**
-     * Estrategia: Reintentar con backoff exponencial
-     */
-    private fun interceptWithRetry(
-        chain: Interceptor.Chain,
-        maxRetries: Int = 3
-    ): Response {
+    /** Estrategia: Reintentar con backoff exponencial */
+    private fun interceptWithRetry(chain: Interceptor.Chain, maxRetries: Int = 3): Response {
         var attempt = 0
         var lastException: Exception? = null
 
         while (attempt < maxRetries) {
             try {
-                val canProceed = lock.withLock {
-                    cleanupOldRequests()
+                val canProceed =
+                    lock.withLock {
+                        cleanupOldRequests()
 
-                    if (requests.size < maxRequests) {
-                        requests.add(System.currentTimeMillis())
-                        true
-                    } else {
-                        false
+                        if (requests.size < maxRequests) {
+                            requests.add(System.currentTimeMillis())
+                            true
+                        } else {
+                            false
+                        }
                     }
-                }
 
                 if (canProceed) {
                     return chain.proceed(chain.request())
@@ -129,7 +122,6 @@ class RateLimitInterceptor(
                 val backoffMillis = calculateExponentialBackoff(attempt)
                 Log.d(tag, "⏳ Intento ${attempt + 1}/$maxRetries. Esperando ${backoffMillis}ms...")
                 Thread.sleep(backoffMillis)
-
             } catch (e: Exception) {
                 lastException = e
                 Log.e(tag, "Error en intento ${attempt + 1}: ${e.message}")
@@ -141,22 +133,18 @@ class RateLimitInterceptor(
         // Si llegamos aquí, todos los reintentos fallaron
         throw RateLimitExceededException(
             "Rate limit excedido después de $maxRetries intentos",
-            lastException
+            lastException,
         )
     }
 
-    /**
-     * Limpia requests antiguos fuera de la ventana de tiempo
-     */
+    /** Limpia requests antiguos fuera de la ventana de tiempo */
     private fun cleanupOldRequests() {
         val now = System.currentTimeMillis()
         val windowStart = now - timeWindowMillis
         requests.removeAll { it < windowStart }
     }
 
-    /**
-     * Calcula tiempo de espera basado en el request más antiguo
-     */
+    /** Calcula tiempo de espera basado en el request más antiguo */
     private fun calculateWaitTime(oldestRequest: Long): Long {
         val now = System.currentTimeMillis()
         val timeElapsed = now - oldestRequest
@@ -164,9 +152,7 @@ class RateLimitInterceptor(
         return maxOf(0L, remainingTime)
     }
 
-    /**
-     * Calcula backoff exponencial
-     */
+    /** Calcula backoff exponencial */
     private fun calculateExponentialBackoff(attempt: Int): Long {
         val baseDelay = 1000L // 1 segundo
         val maxDelay = 60000L // 60 segundos
@@ -174,9 +160,7 @@ class RateLimitInterceptor(
         return minOf(delay, maxDelay)
     }
 
-    /**
-     * Obtiene información del estado actual
-     */
+    /** Obtiene información del estado actual */
     fun getCurrentState(): RateLimitState {
         return lock.withLock {
             cleanupOldRequests()
@@ -185,14 +169,13 @@ class RateLimitInterceptor(
                 maxRequests = maxRequests,
                 remainingRequests = maxRequests - requests.size,
                 timeWindowMillis = timeWindowMillis,
-                nextAvailableSlot = if (requests.isNotEmpty()) requests.first() + timeWindowMillis else 0
+                nextAvailableSlot =
+                    if (requests.isNotEmpty()) requests.first() + timeWindowMillis else 0,
             )
         }
     }
 
-    /**
-     * Reinicia el contador de requests
-     */
+    /** Reinicia el contador de requests */
     fun reset() {
         lock.withLock {
             requests.clear()
@@ -203,9 +186,7 @@ class RateLimitInterceptor(
 
 // ==================== ENUMS & DATA CLASSES ====================
 
-/**
- * Estrategias de rate limiting
- */
+/** Estrategias de rate limiting */
 enum class RateLimitStrategy {
     /** Esperar hasta que haya un slot disponible */
     WAIT,
@@ -214,18 +195,16 @@ enum class RateLimitStrategy {
     FAIL_FAST,
 
     /** Reintentar con backoff exponencial */
-    RETRY_WITH_BACKOFF
+    RETRY_WITH_BACKOFF,
 }
 
-/**
- * Estado actual del rate limiter
- */
+/** Estado actual del rate limiter */
 data class RateLimitState(
     val currentRequests: Int,
     val maxRequests: Int,
     val remainingRequests: Int,
     val timeWindowMillis: Long,
-    val nextAvailableSlot: Long
+    val nextAvailableSlot: Long,
 ) {
     fun isAtLimit(): Boolean = currentRequests >= maxRequests
 
@@ -237,24 +216,18 @@ data class RateLimitState(
 
     override fun toString(): String {
         return "RateLimitState(requests: $currentRequests/$maxRequests, " +
-                "remaining: $remainingRequests, " +
-                "wait: ${getWaitTimeMillis()}ms)"
+            "remaining: $remainingRequests, " +
+            "wait: ${getWaitTimeMillis()}ms)"
     }
 }
 
-/**
- * Excepción lanzada cuando se excede el rate limit
- */
-class RateLimitExceededException(
-    message: String,
-    cause: Throwable? = null
-) : Exception(message, cause)
+/** Excepción lanzada cuando se excede el rate limit */
+class RateLimitExceededException(message: String, cause: Throwable? = null) :
+    Exception(message, cause)
 
 // ==================== BUILDERS & DSL ====================
 
-/**
- * Builder para configuración avanzada
- */
+/** Builder para configuración avanzada */
 class RateLimitInterceptorBuilder {
     private var maxRequests: Int = 10
     private var timeWindowMillis: Long = 60_000L
@@ -271,17 +244,16 @@ class RateLimitInterceptorBuilder {
 
     fun targetHost(host: String) = apply { this.targetHost = host }
 
-    fun build() = RateLimitInterceptor(
-        maxRequests = maxRequests,
-        timeWindowMillis = timeWindowMillis,
-        strategy = strategy,
-        targetHost = targetHost
-    )
+    fun build() =
+        RateLimitInterceptor(
+            maxRequests = maxRequests,
+            timeWindowMillis = timeWindowMillis,
+            strategy = strategy,
+            targetHost = targetHost,
+        )
 }
 
-/**
- * DSL para crear interceptor
- */
+/** DSL para crear interceptor */
 fun rateLimitInterceptor(block: RateLimitInterceptorBuilder.() -> Unit): RateLimitInterceptor {
     return RateLimitInterceptorBuilder().apply(block).build()
 }
@@ -289,40 +261,36 @@ fun rateLimitInterceptor(block: RateLimitInterceptorBuilder.() -> Unit): RateLim
 // ==================== PRESETS ====================
 
 object RateLimitPresets {
-    /**
-     * Preset para Genius API (10 requests por 60 segundos)
-     */
-    fun geniusApi() = RateLimitInterceptor(
-        maxRequests = 10,
-        timeWindowMillis = 60_000L,
-        strategy = RateLimitStrategy.WAIT,
-        targetHost = "api.genius.com"
-    )
+    /** Preset para Genius API (10 requests por 60 segundos) */
+    fun geniusApi() =
+        RateLimitInterceptor(
+            maxRequests = 10,
+            timeWindowMillis = 60_000L,
+            strategy = RateLimitStrategy.WAIT,
+            targetHost = "api.genius.com",
+        )
 
-    /**
-     * Preset conservador (5 requests por minuto)
-     */
-    fun conservative() = RateLimitInterceptor(
-        maxRequests = 5,
-        timeWindowMillis = 60_000L,
-        strategy = RateLimitStrategy.WAIT
-    )
+    /** Preset conservador (5 requests por minuto) */
+    fun conservative() =
+        RateLimitInterceptor(
+            maxRequests = 5,
+            timeWindowMillis = 60_000L,
+            strategy = RateLimitStrategy.WAIT,
+        )
 
-    /**
-     * Preset agresivo (20 requests por minuto)
-     */
-    fun aggressive() = RateLimitInterceptor(
-        maxRequests = 20,
-        timeWindowMillis = 60_000L,
-        strategy = RateLimitStrategy.WAIT
-    )
+    /** Preset agresivo (20 requests por minuto) */
+    fun aggressive() =
+        RateLimitInterceptor(
+            maxRequests = 20,
+            timeWindowMillis = 60_000L,
+            strategy = RateLimitStrategy.WAIT,
+        )
 
-    /**
-     * Preset para scraping (1 request por 3 segundos)
-     */
-    fun scraping() = RateLimitInterceptor(
-        maxRequests = 1,
-        timeWindowMillis = 3_000L,
-        strategy = RateLimitStrategy.WAIT
-    )
+    /** Preset para scraping (1 request por 3 segundos) */
+    fun scraping() =
+        RateLimitInterceptor(
+            maxRequests = 1,
+            timeWindowMillis = 3_000L,
+            strategy = RateLimitStrategy.WAIT,
+        )
 }

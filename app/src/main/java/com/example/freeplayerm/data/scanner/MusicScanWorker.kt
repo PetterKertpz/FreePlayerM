@@ -24,8 +24,8 @@ import java.util.concurrent.TimeUnit
 /**
  * 🔧 MUSIC SCAN WORKER - Escaneos en Segundo Plano
  *
- * Worker para ejecutar escaneos de música usando WorkManager.
- * Soporta escaneos únicos, periódicos y con reintentos.
+ * Worker para ejecutar escaneos de música usando WorkManager. Soporta escaneos únicos, periódicos y
+ * con reintentos.
  *
  * Características:
  * - Escaneos periódicos configurables (por defecto cada 6 horas)
@@ -38,10 +38,12 @@ import java.util.concurrent.TimeUnit
  * @author Scanner System v2.0
  */
 @HiltWorker
-class MusicScanWorker @AssistedInject constructor(
+class MusicScanWorker
+@AssistedInject
+constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val musicRepository: LocalMusicRepository
+    private val musicRepository: LocalMusicRepository,
 ) : CoroutineWorker(context, params) {
 
     companion object {
@@ -90,37 +92,40 @@ class MusicScanWorker @AssistedInject constructor(
             context: Context,
             intervalHours: Long = DEFAULT_PERIODIC_HOURS,
             requiresCharging: Boolean = false,
-            requiresIdle: Boolean = true
+            requiresIdle: Boolean = true,
         ) {
-            val constraints = Constraints.Builder()
-                .setRequiresBatteryNotLow(true)
-                .apply {
-                    if (requiresCharging) setRequiresCharging(true)
-                    if (requiresIdle && android.os.Build.VERSION.SDK_INT >= 23) {
-                        setRequiresDeviceIdle(true)
+            val constraints =
+                Constraints.Builder()
+                    .setRequiresBatteryNotLow(true)
+                    .apply {
+                        if (requiresCharging) setRequiresCharging(true)
+                        if (requiresIdle && android.os.Build.VERSION.SDK_INT >= 23) {
+                            setRequiresDeviceIdle(true)
+                        }
                     }
-                }
-                .build()
+                    .build()
 
-            val inputData = Data.Builder()
-                .putString(KEY_SCAN_TYPE, SCAN_TYPE_PERIODIC)
-                .build()
+            val inputData = Data.Builder().putString(KEY_SCAN_TYPE, SCAN_TYPE_PERIODIC).build()
 
-            val workRequest = PeriodicWorkRequestBuilder<MusicScanWorker>(
-                intervalHours, TimeUnit.HOURS,
-                DEFAULT_FLEX_MINUTES, TimeUnit.MINUTES
-            )
-                .setConstraints(constraints)
-                .setInputData(inputData)
-                .addTag(TAG_MUSIC_SCAN)
-                .addTag(TAG_PERIODIC)
-                .build()
+            val workRequest =
+                PeriodicWorkRequestBuilder<MusicScanWorker>(
+                        intervalHours,
+                        TimeUnit.HOURS,
+                        DEFAULT_FLEX_MINUTES,
+                        TimeUnit.MINUTES,
+                    )
+                    .setConstraints(constraints)
+                    .setInputData(inputData)
+                    .addTag(TAG_MUSIC_SCAN)
+                    .addTag(TAG_PERIODIC)
+                    .build()
 
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                WORK_NAME_PERIODIC,
-                ExistingPeriodicWorkPolicy.KEEP, // No reemplazar si ya existe
-                workRequest
-            )
+            WorkManager.getInstance(context)
+                .enqueueUniquePeriodicWork(
+                    WORK_NAME_PERIODIC,
+                    ExistingPeriodicWorkPolicy.KEEP, // No reemplazar si ya existe
+                    workRequest,
+                )
 
             Log.d(TAG, "📅 Escaneos periódicos programados cada ${intervalHours}h")
         }
@@ -131,69 +136,57 @@ class MusicScanWorker @AssistedInject constructor(
          * @param context Contexto de la aplicación
          * @param forceFullScan Si debe forzar escaneo completo ignorando caché
          */
-        fun ejecutarEscaneoInmediato(
-            context: Context,
-            forceFullScan: Boolean = false
-        ) {
-            val inputData = Data.Builder()
-                .putString(KEY_SCAN_TYPE, SCAN_TYPE_IMMEDIATE)
-                .putBoolean(KEY_FORCE_FULL_SCAN, forceFullScan)
-                .build()
+        fun ejecutarEscaneoInmediato(context: Context, forceFullScan: Boolean = false) {
+            val inputData =
+                Data.Builder()
+                    .putString(KEY_SCAN_TYPE, SCAN_TYPE_IMMEDIATE)
+                    .putBoolean(KEY_FORCE_FULL_SCAN, forceFullScan)
+                    .build()
 
-            val workRequest = OneTimeWorkRequestBuilder<MusicScanWorker>()
-                .setInputData(inputData)
-                .addTag(TAG_MUSIC_SCAN)
-                .addTag(TAG_IMMEDIATE)
-                .build()
+            val workRequest =
+                OneTimeWorkRequestBuilder<MusicScanWorker>()
+                    .setInputData(inputData)
+                    .addTag(TAG_MUSIC_SCAN)
+                    .addTag(TAG_IMMEDIATE)
+                    .build()
 
-            WorkManager.getInstance(context).enqueueUniqueWork(
-                WORK_NAME_IMMEDIATE,
-                ExistingWorkPolicy.REPLACE, // Reemplazar si ya existe uno pendiente
-                workRequest
-            )
+            WorkManager.getInstance(context)
+                .enqueueUniqueWork(
+                    WORK_NAME_IMMEDIATE,
+                    ExistingWorkPolicy.REPLACE, // Reemplazar si ya existe uno pendiente
+                    workRequest,
+                )
 
             Log.d(TAG, "🚀 Escaneo inmediato encolado${if (forceFullScan) " (forzado)" else ""}")
         }
 
-        /**
-         * Programa un escaneo para ejecutarse después del arranque del dispositivo.
-         */
+        /** Programa un escaneo para ejecutarse después del arranque del dispositivo. */
         fun programarEscaneoPorArranque(context: Context) {
-            val constraints = Constraints.Builder()
-                .setRequiresBatteryNotLow(true)
-                .build()
+            val constraints = Constraints.Builder().setRequiresBatteryNotLow(true).build()
 
-            val inputData = Data.Builder()
-                .putString(KEY_SCAN_TYPE, SCAN_TYPE_BOOT)
-                .build()
+            val inputData = Data.Builder().putString(KEY_SCAN_TYPE, SCAN_TYPE_BOOT).build()
 
-            val workRequest = OneTimeWorkRequestBuilder<MusicScanWorker>()
-                .setConstraints(constraints)
-                .setInputData(inputData)
-                .setInitialDelay(30, TimeUnit.SECONDS) // Esperar 30s después del boot
-                .addTag(TAG_MUSIC_SCAN)
-                .build()
+            val workRequest =
+                OneTimeWorkRequestBuilder<MusicScanWorker>()
+                    .setConstraints(constraints)
+                    .setInputData(inputData)
+                    .setInitialDelay(30, TimeUnit.SECONDS) // Esperar 30s después del boot
+                    .addTag(TAG_MUSIC_SCAN)
+                    .build()
 
-            WorkManager.getInstance(context).enqueueUniqueWork(
-                WORK_NAME_BOOT,
-                ExistingWorkPolicy.REPLACE,
-                workRequest
-            )
+            WorkManager.getInstance(context)
+                .enqueueUniqueWork(WORK_NAME_BOOT, ExistingWorkPolicy.REPLACE, workRequest)
 
             Log.d(TAG, "🔄 Escaneo post-arranque programado")
         }
 
-        /**
-         * Cancela todos los trabajos de escaneo pendientes.
-         */
+        /** Cancela todos los trabajos de escaneo pendientes. */
         fun cancelarTodos(context: Context) {
             WorkManager.getInstance(context).cancelAllWorkByTag(TAG_MUSIC_SCAN)
             Log.d(TAG, "🛑 Todos los escaneos cancelados")
         }
 
-        /**
-         * Cancela solo los escaneos periódicos.
-         */
+        /** Cancela solo los escaneos periódicos. */
         fun cancelarPeriodicos(context: Context) {
             WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME_PERIODIC)
             Log.d(TAG, "🛑 Escaneos periódicos cancelados")
@@ -205,26 +198,20 @@ class MusicScanWorker @AssistedInject constructor(
          * @return Flow con lista de WorkInfo
          */
         fun observarEstado(context: Context): Flow<List<WorkInfo>> {
-            return WorkManager.getInstance(context)
-                .getWorkInfosByTagFlow(TAG_MUSIC_SCAN)
+            return WorkManager.getInstance(context).getWorkInfosByTagFlow(TAG_MUSIC_SCAN)
         }
 
-        /**
-         * Observa si hay un escaneo en progreso.
-         */
+        /** Observa si hay un escaneo en progreso. */
         fun observarEscaneoEnProgreso(context: Context): Flow<Boolean> {
             return observarEstado(context).map { workInfos ->
                 workInfos.any { it.state == WorkInfo.State.RUNNING }
             }
         }
 
-        /**
-         * Verifica si los escaneos periódicos están programados.
-         */
+        /** Verifica si los escaneos periódicos están programados. */
         suspend fun estanProgramadosLosPeriodicos(context: Context): Boolean {
-            val workInfos = WorkManager.getInstance(context)
-                .getWorkInfosForUniqueWork(WORK_NAME_PERIODIC)
-                .get()
+            val workInfos =
+                WorkManager.getInstance(context).getWorkInfosForUniqueWork(WORK_NAME_PERIODIC).get()
 
             return workInfos.any {
                 it.state == WorkInfo.State.ENQUEUED || it.state == WorkInfo.State.RUNNING
@@ -238,20 +225,27 @@ class MusicScanWorker @AssistedInject constructor(
         val scanType = inputData.getString(KEY_SCAN_TYPE) ?: SCAN_TYPE_IMMEDIATE
         val forceFullScan = inputData.getBoolean(KEY_FORCE_FULL_SCAN, false)
 
-        Log.d(TAG, "🎵 Iniciando escaneo [$scanType] (intento ${runAttemptCount + 1}/$MAX_RETRY_ATTEMPTS)")
+        Log.d(
+            TAG,
+            "🎵 Iniciando escaneo [$scanType] (intento ${runAttemptCount + 1}/$MAX_RETRY_ATTEMPTS)",
+        )
 
         return try {
             val resultado = musicRepository.escanearYGuardarMusica()
 
             if (resultado != null) {
-                Log.d(TAG, "✅ Escaneo completado: +${resultado.nuevas}, -${resultado.eliminadas}, ~${resultado.actualizadas} (${resultado.tiempoMs}ms)")
+                Log.d(
+                    TAG,
+                    "✅ Escaneo completado: +${resultado.nuevas}, -${resultado.eliminadas}, ~${resultado.actualizadas} (${resultado.tiempoMs}ms)",
+                )
 
-                val outputData = Data.Builder()
-                    .putInt(KEY_RESULT_NEW, resultado.nuevas)
-                    .putInt(KEY_RESULT_DELETED, resultado.eliminadas)
-                    .putInt(KEY_RESULT_UPDATED, resultado.actualizadas)
-                    .putLong(KEY_RESULT_TIME_MS, resultado.tiempoMs)
-                    .build()
+                val outputData =
+                    Data.Builder()
+                        .putInt(KEY_RESULT_NEW, resultado.nuevas)
+                        .putInt(KEY_RESULT_DELETED, resultado.eliminadas)
+                        .putInt(KEY_RESULT_UPDATED, resultado.actualizadas)
+                        .putLong(KEY_RESULT_TIME_MS, resultado.tiempoMs)
+                        .build()
 
                 Result.success(outputData)
             } else {
@@ -261,9 +255,10 @@ class MusicScanWorker @AssistedInject constructor(
             }
         } catch (e: SecurityException) {
             Log.e(TAG, "❌ Sin permisos de almacenamiento", e)
-            val outputData = Data.Builder()
-                .putString(KEY_ERROR_MESSAGE, "Sin permisos de almacenamiento")
-                .build()
+            val outputData =
+                Data.Builder()
+                    .putString(KEY_ERROR_MESSAGE, "Sin permisos de almacenamiento")
+                    .build()
             Result.failure(outputData)
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error durante el escaneo", e)
@@ -272,9 +267,10 @@ class MusicScanWorker @AssistedInject constructor(
                 Log.d(TAG, "🔄 Programando reintento...")
                 Result.retry()
             } else {
-                val outputData = Data.Builder()
-                    .putString(KEY_ERROR_MESSAGE, e.localizedMessage ?: "Error desconocido")
-                    .build()
+                val outputData =
+                    Data.Builder()
+                        .putString(KEY_ERROR_MESSAGE, e.localizedMessage ?: "Error desconocido")
+                        .build()
                 Result.failure(outputData)
             }
         }

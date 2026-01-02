@@ -41,10 +41,12 @@ import javax.inject.Singleton
  * @author Scanner System v2.0
  */
 @Singleton
-class MusicScannerManager @Inject constructor(
+class MusicScannerManager
+@Inject
+constructor(
     @ApplicationContext private val context: Context,
     private val musicRepository: LocalMusicRepository,
-    private val contentObserver: MusicContentObserver
+    private val contentObserver: MusicContentObserver,
 ) {
     companion object {
         private const val TAG = "MusicScannerManager"
@@ -57,22 +59,20 @@ class MusicScannerManager @Inject constructor(
     private val _estaInicializado = MutableStateFlow(false)
     val estaInicializado: StateFlow<Boolean> = _estaInicializado.asStateFlow()
 
-    /**
-     * Estado unificado que combina todas las fuentes de escaneo.
-     */
+    /** Estado unificado que combina todas las fuentes de escaneo. */
     data class EstadoUnificado(
         val estaEscaneando: Boolean = false,
         val tipoEscaneoActivo: TipoEscaneo? = null,
         val progreso: Pair<Int, Int>? = null, // (actual, total)
         val ultimoResultado: ResultadoEscaneo? = null,
         val observerRegistrado: Boolean = false,
-        val escaneosPeriodicos: Boolean = false
+        val escaneosPeriodicos: Boolean = false,
     )
 
     enum class TipoEscaneo {
         MANUAL,
         AUTOMATICO,
-        PERIODICO
+        PERIODICO,
     }
 
     data class ResultadoEscaneo(
@@ -81,50 +81,53 @@ class MusicScannerManager @Inject constructor(
         val actualizadas: Int,
         val tiempoMs: Long,
         val exitoso: Boolean,
-        val error: String? = null
+        val error: String? = null,
     )
 
     private val _ultimoResultado = MutableStateFlow<ResultadoEscaneo?>(null)
 
-    val estadoUnificado: Flow<EstadoUnificado> = combine(
-        musicRepository.estadoEscaneo,
-        MusicScanWorker.observarEscaneoEnProgreso(context),
-        _ultimoResultado
-    ) { estadoRepo, workerEnProgreso, ultimoResultado ->
+    val estadoUnificado: Flow<EstadoUnificado> =
+        combine(
+            musicRepository.estadoEscaneo,
+            MusicScanWorker.observarEscaneoEnProgreso(context),
+            _ultimoResultado,
+        ) { estadoRepo, workerEnProgreso, ultimoResultado ->
+            val estaEscaneando =
+                when (estadoRepo) {
+                    is LocalMusicRepository.EstadoEscaneo.Escaneando -> true
+                    else -> workerEnProgreso
+                }
 
-        val estaEscaneando = when (estadoRepo) {
-            is LocalMusicRepository.EstadoEscaneo.Escaneando -> true
-            else -> workerEnProgreso
+            val progreso =
+                when (estadoRepo) {
+                    is LocalMusicRepository.EstadoEscaneo.Escaneando ->
+                        estadoRepo.progreso to estadoRepo.total
+                    else -> null
+                }
+
+            val tipoActivo =
+                when {
+                    estadoRepo is LocalMusicRepository.EstadoEscaneo.Escaneando -> {
+                        if (workerEnProgreso) TipoEscaneo.PERIODICO else TipoEscaneo.MANUAL
+                    }
+                    else -> null
+                }
+
+            EstadoUnificado(
+                estaEscaneando = estaEscaneando,
+                tipoEscaneoActivo = tipoActivo,
+                progreso = progreso,
+                ultimoResultado = ultimoResultado,
+                observerRegistrado = _estaInicializado.value,
+                escaneosPeriodicos = _estaInicializado.value,
+            )
         }
-
-        val progreso = when (estadoRepo) {
-            is LocalMusicRepository.EstadoEscaneo.Escaneando ->
-                estadoRepo.progreso to estadoRepo.total
-            else -> null
-        }
-
-        val tipoActivo = when {
-            estadoRepo is LocalMusicRepository.EstadoEscaneo.Escaneando -> {
-                if (workerEnProgreso) TipoEscaneo.PERIODICO else TipoEscaneo.MANUAL
-            }
-            else -> null
-        }
-
-        EstadoUnificado(
-            estaEscaneando = estaEscaneando,
-            tipoEscaneoActivo = tipoActivo,
-            progreso = progreso,
-            ultimoResultado = ultimoResultado,
-            observerRegistrado = _estaInicializado.value,
-            escaneosPeriodicos = _estaInicializado.value
-        )
-    }
 
     // ==================== API PÚBLICA ====================
 
     /**
-     * Inicializa el sistema completo de escaneo.
-     * Llamar cuando se confirmen los permisos de almacenamiento.
+     * Inicializa el sistema completo de escaneo. Llamar cuando se confirmen los permisos de
+     * almacenamiento.
      */
     fun inicializar(ejecutarEscaneoInicial: Boolean = true) {
         if (_estaInicializado.value) {
@@ -153,9 +156,7 @@ class MusicScannerManager @Inject constructor(
         }
     }
 
-    /**
-     * Detiene todo el sistema de escaneo.
-     */
+    /** Detiene todo el sistema de escaneo. */
     fun detener() {
         Log.d(TAG, "🛑 Deteniendo sistema de escaneo...")
 
@@ -166,8 +167,7 @@ class MusicScannerManager @Inject constructor(
     }
 
     /**
-     * Ejecuta un escaneo manual inmediato.
-     * Usa el repositorio directamente para máxima velocidad.
+     * Ejecuta un escaneo manual inmediato. Usa el repositorio directamente para máxima velocidad.
      */
     fun escanearAhora() {
         scope.launch {
@@ -175,39 +175,39 @@ class MusicScannerManager @Inject constructor(
             try {
                 val resultado = musicRepository.escanearYGuardarMusica()
                 if (resultado != null) {
-                    _ultimoResultado.value = ResultadoEscaneo(
-                        nuevas = resultado.nuevas,
-                        eliminadas = resultado.eliminadas,
-                        actualizadas = resultado.actualizadas,
-                        tiempoMs = resultado.tiempoMs,
-                        exitoso = true
-                    )
+                    _ultimoResultado.value =
+                        ResultadoEscaneo(
+                            nuevas = resultado.nuevas,
+                            eliminadas = resultado.eliminadas,
+                            actualizadas = resultado.actualizadas,
+                            tiempoMs = resultado.tiempoMs,
+                            exitoso = true,
+                        )
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error en escaneo manual", e)
-                _ultimoResultado.value = ResultadoEscaneo(
-                    nuevas = 0,
-                    eliminadas = 0,
-                    actualizadas = 0,
-                    tiempoMs = 0,
-                    exitoso = false,
-                    error = e.localizedMessage
-                )
+                _ultimoResultado.value =
+                    ResultadoEscaneo(
+                        nuevas = 0,
+                        eliminadas = 0,
+                        actualizadas = 0,
+                        tiempoMs = 0,
+                        exitoso = false,
+                        error = e.localizedMessage,
+                    )
             }
         }
     }
 
     /**
-     * Ejecuta un escaneo en segundo plano usando WorkManager.
-     * Útil cuando no necesitas el resultado inmediato.
+     * Ejecuta un escaneo en segundo plano usando WorkManager. Útil cuando no necesitas el resultado
+     * inmediato.
      */
     fun escanearEnSegundoPlano() {
         MusicScanWorker.ejecutarEscaneoInmediato(context)
     }
 
-    /**
-     * Habilita o deshabilita la detección automática de nuevos archivos.
-     */
+    /** Habilita o deshabilita la detección automática de nuevos archivos. */
     fun setDeteccionAutomatica(habilitada: Boolean) {
         if (habilitada) {
             contentObserver.registrar()
@@ -227,16 +227,12 @@ class MusicScannerManager @Inject constructor(
         MusicScanWorker.programarEscaneosPeriodicos(context, horasValidas)
     }
 
-    /**
-     * Observa el estado de los trabajos de WorkManager.
-     */
+    /** Observa el estado de los trabajos de WorkManager. */
     fun observarTrabajosEnCola(): Flow<List<WorkInfo>> {
         return MusicScanWorker.observarEstado(context)
     }
 
-    /**
-     * Limpia el último resultado (útil para resetear UI).
-     */
+    /** Limpia el último resultado (útil para resetear UI). */
     fun limpiarUltimoResultado() {
         _ultimoResultado.value = null
         musicRepository.reiniciarEstado()
@@ -249,25 +245,29 @@ class MusicScannerManager @Inject constructor(
             musicRepository.estadoEscaneo.collect { estado ->
                 when (estado) {
                     is LocalMusicRepository.EstadoEscaneo.Completado -> {
-                        _ultimoResultado.value = ResultadoEscaneo(
-                            nuevas = estado.nuevas,
-                            eliminadas = estado.eliminadas,
-                            actualizadas = estado.actualizadas,
-                            tiempoMs = estado.tiempoMs,
-                            exitoso = true
-                        )
+                        _ultimoResultado.value =
+                            ResultadoEscaneo(
+                                nuevas = estado.nuevas,
+                                eliminadas = estado.eliminadas,
+                                actualizadas = estado.actualizadas,
+                                tiempoMs = estado.tiempoMs,
+                                exitoso = true,
+                            )
                     }
                     is LocalMusicRepository.EstadoEscaneo.Error -> {
-                        _ultimoResultado.value = ResultadoEscaneo(
-                            nuevas = 0,
-                            eliminadas = 0,
-                            actualizadas = 0,
-                            tiempoMs = 0,
-                            exitoso = false,
-                            error = estado.mensaje
-                        )
+                        _ultimoResultado.value =
+                            ResultadoEscaneo(
+                                nuevas = 0,
+                                eliminadas = 0,
+                                actualizadas = 0,
+                                tiempoMs = 0,
+                                exitoso = false,
+                                error = estado.mensaje,
+                            )
                     }
-                    else -> { /* Ignorar otros estados */ }
+                    else -> {
+                        /* Ignorar otros estados */
+                    }
                 }
             }
         }

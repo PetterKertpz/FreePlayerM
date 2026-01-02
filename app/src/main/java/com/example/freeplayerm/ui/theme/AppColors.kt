@@ -1,141 +1,153 @@
 package com.example.freeplayerm.ui.theme
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 
 /**
- * 🎨 Paleta de colores corporativa optimizada.
- * - Escalable
- * - Consistente en nombres
- * - Preparada para Light/Dark Theme
- * - Útil tanto para branding como para utilidades generales
+ * Sistema de colores para FreePlayerM.
+ *
+ * Organizado en:
+ * - Colores base (Blanco, Negro, Transparente)
+ * - Escala principal (ElectricViolet) - 16 tonos
+ * - Escala de grises (Grays) - 7 tonos
+ * - Colores semánticos (Error, Success, Warning, Info)
+ * - Colores de acento (Favorito, etc.)
  */
+@Immutable
 object AppColors {
 
-    val Negro = Color(0xFF000000)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // COLORES BASE
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
     val Blanco = Color(0xFFFFFFFF)
-    val Gris = Color(0xFF808080)
+    val Negro = Color(0xFF000000)
     val Transparente = Color(0x00000000)
 
-    // 🔷 Colores principales
-    val Primario = Color(0xFF0A3D62)
-    val PrimarioClaro = Color(0xFF3C6382)
-    val PrimarioOscuro = Color(0xFF082845)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // ESCALA PRINCIPAL — ELECTRIC VIOLET
+    // Desde casi-blanco (v1) hasta negro-violeta profundo (v16)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    val Secundario = Color(0xFF10AC84)
-    val SecundarioClaro = Color(0xFF1DD1A1)
-    val SecundarioOscuro = Color(0xFF0E8C6B)
+    @Immutable
+    object ElectricViolet {
+        // Tonos claros (para Light Theme y acentos en Dark)
+        val v1 = Color(0xFFF3EEFF)  // Fondo Light / Tinte muy suave
+        val v2 = Color(0xFFE1D6FF)  // onBackground Light
+        val v3 = Color(0xFFC6AFFF)  // Container Light
+        val v4 = Color(0xFFB08AFF)  // Acento suave Dark / Secondary
+        val v5 = Color(0xFF9D64FE)  // Transición
 
-    // 🌈 Colores de acento
-    val AcentoVioleta = Color(0xFFEE82EE)
-    val AcentoAzul = Color(0xFF0984E3)
-    val AcentoNaranja = Color(0xFFFF9F43)
-    val AcentoRosa = Color(0xFFFF6B81)
+        // Tonos vibrantes (Primarios)
+        val v6 = Color(0xFF8C32FB)  // Primary Dark (vibrante)
+        val v7 = Color(0xFF7300DD)  // Primary Light
+        val v8 = Color(0xFF5D00B8)  // Secondary Light
 
-    // 🚨 Estados
-    val Exito = Color(0xFF00B894)
-    val ExitoClaro = Color(0xFF55EFC4)
-    val ExitoOscuro = Color(0xFF019875)
+        // Tonos profundos (Containers y fondos Dark)
+        val v9 = Color(0xFF380074)   // PrimaryContainer Dark
+        val v10 = Color(0xFF1F0048)  // SecondaryContainer Dark
+        val v11 = Color(0xFF170039)  // Superficie elevada Dark
+        val v12 = Color(0xFF130032)  // onBackground/onSurface Light
+        val v13 = Color(0xFF11002E)  // Transición profunda
 
-    val Advertencia = Color(0xFFFBC531)
-    val AdvertenciaClaro = Color(0xFFFFEAA7)
-    val AdvertenciaOscuro = Color(0xFFD4AC0D)
-
-    val Error = Color(0xFFEE5253)
-    val ErrorClaro = Color(0xFFFF7675)
-    val ErrorOscuro = Color(0xFFC0392B)
-
-    val Info = Color(0xFF3498DB)
-    val InfoClaro = Color(0xFF74B9FF)
-    val InfoOscuro = Color(0xFF21618C)
-
-    // ⚪ Escala de grises
-    val GrisMuyClaro = Color(0xFFFAFAFA)
-    val GrisClaro = Color(0xFFEEEEEE)
-    val GrisMedio = Color(0xFF9E9E9E)
-    val GrisOscuro = Color(0xFF616161)
-    val GrisProfundo = Color(0xFF212121)
-
-    // 🖼️ Fondos y superficies
-    val Fondo = Color(0xFFF5F6FA)
-    val Superficie = Color(0xFFFFFFFF)
-    val Tarjeta = Color(0xFFF0F3F5)
-    val Sombra = Color(0x88000000)
-
-    // ✍️ Texto
-    val TextoPrincipal = Color(0xFF2D3436)
-    val TextoSecundario = Color(0xFF636E72)
-    val TextoDeshabilitado = Color(0xFFB2BEC3)
-    val TextoEnPrimario = Color(0xFFFFFFFF)
-
-    // 🔴 Rojos
-    val RojoClaro = Color(0xFFFFCDD2)
-    val RojoMedio = Color(0xFFE57373)
-    val RojoFuerte = Color(0xFFF44336)
-    val RojoOscuro = Color(0xFFD32F2F)
-    val RojoProfundo = Color(0xFFB71C1C)
-
-    // 🟢 Verdes
-    val VerdeClaro = Color(0xFFC8E6C9)
-    val VerdeMedio = Color(0xFF81C784)
-    val VerdeFuerte = Color(0xFF4CAF50)
-    val VerdeOscuro = Color(0xFF388E3C)
-    val VerdeProfundo = Color(0xFF1B5E20)
-
-    // 🔵 Azules
-    val AzulClaro = Color(0xFF90CAF9)
-    val AzulMedio = Color(0xFF64B5F6)
-    val AzulFuerte = Color(0xFF2196F3)
-    val AzulOscuro = Color(0xFF1976D2)
-    val AzulProfundo = Color(0xFF0D47A1)
-
-    // 🟡 Amarillos
-    val AmarilloClaro = Color(0xFFFFF59D)
-    val AmarilloMedio = Color(0xFFFFF176)
-    val AmarilloFuerte = Color(0xFFFFEB3B)
-    val AmarilloOscuro = Color(0xFFFBC02D)
-    val AmarilloProfundo = Color(0xFFF57F17)
-
-    // 🟣 Púrpuras
-    val PurpuraClaro = Color(0xFFE1BEE7)
-    val PurpuraMedio = Color(0xFFBA68C8)
-    val PurpuraFuerte = Color(0xFF9C27B0)
-    val PurpuraOscuro = Color(0xFF7B1FA2)
-    val PurpuraProfundo = Color(0xFF4A148C)
-
-    // 🟠 Naranjas
-    val NaranjaClaro = Color(0xFFFFE0B2)
-    val NaranjaMedio = Color(0xFFFFB74D)
-    val NaranjaFuerte = Color(0xFFFF9800)
-    val NaranjaOscuro = Color(0xFFF57C00)
-    val NaranjaProfundo = Color(0xFFE65100)
-
-    // 🌈 Extras
-    val Rosa = Color(0xFFFF4081)
-    val Cyan = Color(0xFF00BCD4)
-    val Turquesa = Color(0xFF1DE9B6)
-    val Lima = Color(0xFFCDDC39)
-    val Cafe = Color(0xFF795548)
-
-    // 🌙 Paleta oscura
-    object Dark {
-        val Fondo = Color(0xFF1E272E)
-        val Superficie = Color(0xFF2F3640)
-        val Tarjeta = Color(0xFF353B48)
-
-        val TextoPrincipal = Color(0xFFF5F6FA)
-        val TextoSecundario = Color(0xFFBDC3C7)
-        val TextoDeshabilitado = Color(0xFF718093)
+        // Tonos más oscuros (Fondos Dark Theme)
+        val v14 = Color(0xFF10002D)  // Surface Dark
+        val v15 = Color(0xFF0E0021)  // Background Dark
+        val v16 = Color(0xFF05000C)  // Fondo más profundo (reproductor expandido)
     }
 
-    // 📋 Listas útiles (para recorrer dinámicamente en un selector de colores)
-    val ListaBasica = listOf(
-        Primario, Secundario, AcentoVioleta, AcentoAzul, AcentoNaranja, AcentoRosa,
-        Exito, Advertencia, Error, Info,
-        RojoFuerte, VerdeFuerte, AzulFuerte, AmarilloFuerte, PurpuraFuerte, NaranjaFuerte,
-        Rosa, Cyan, Turquesa, Lima, Cafe
-    )
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // ESCALA DE GRISES — Para texto secundario, iconos, bordes
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    val ListaGrises = listOf(
-        GrisMuyClaro, GrisClaro, GrisMedio, GrisOscuro, GrisProfundo
-    )
+    @Immutable
+    object Grays {
+        val v0 = Color(0xFFBDBDBD)  // Texto secundario Light
+        val v1 = Color(0xFF949494)  // Texto secundario Dark
+        val v2 = Color(0xFF757575)  // Iconos activos secundarios
+        val v3 = Color(0xFF595959)  // Iconos inactivos
+        val v4 = Color(0xFF383838)  // Texto deshabilitado / Placeholder
+        val v5 = Color(0xFF212121)  // Bordes sutiles Dark
+        val v6 = Color(0xFF151515)  // Fondo inputs Dark
+        val v7 = Color(0xFF0A0A0A)  // Overlay oscuro
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // COLORES SEMÁNTICOS — Estados y feedback
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    @Immutable
+    object Semantic {
+        // Error
+        val Error = Color(0xFFB20506)
+        val ErrorLight = Color(0xFFFF5449)
+        val ErrorDark = Color(0xFF930000)
+        val OnError = Color(0xFFFFFFFF)
+        val ErrorContainer = Color(0xFFFFDAD6)
+        val OnErrorContainer = Color(0xFF410002)
+
+        // Success
+        val Success = Color(0xFF0AC429)
+        val SuccessLight = Color(0xFF5EF67A)
+        val SuccessDark = Color(0xFF008A1A)
+        val OnSuccess = Color(0xFFFFFFFF)
+        val SuccessContainer = Color(0xFFC8FFC4)
+        val OnSuccessContainer = Color(0xFF002204)
+
+        // Warning
+        val Warning = Color(0xFFFFA726)
+        val WarningLight = Color(0xFFFFD95B)
+        val WarningDark = Color(0xFFC77800)
+        val OnWarning = Color(0xFF000000)
+        val WarningContainer = Color(0xFFFFE0A0)
+        val OnWarningContainer = Color(0xFF2E1500)
+
+        // Info
+        val Info = Color(0xFF29B6F6)
+        val InfoLight = Color(0xFF73E8FF)
+        val InfoDark = Color(0xFF0086C3)
+        val OnInfo = Color(0xFF000000)
+        val InfoContainer = Color(0xFFCAEFFF)
+        val OnInfoContainer = Color(0xFF001E2B)
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // COLORES DE ACENTO — Acciones especiales
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    @Immutable
+    object Accent {
+        val Favorito = Color(0xFFE056FD)
+        val FavoritoPressed = Color(0xFFBE2EDC)
+        val FavoritoContainer = Color(0xFF4A0072)
+
+        val Shuffle = Color(0xFF00E5FF)
+        val Repeat = Color(0xff70c900)
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // OVERLAYS Y SCRIM — Para modales, bottom sheets, gradientes
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    @Immutable
+    object Overlay {
+        val Scrim = Color(0x99000000)          // 60% negro
+        val ScrimLight = Color(0x4D000000)     // 30% negro
+        val ScrimHeavy = Color(0xCC000000)     // 80% negro
+        val GradientStart = Color(0x00000000)  // Transparente
+        val GradientEnd = Color(0xE6000000)    // 90% negro (para artwork overlay)
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // COMPATIBILIDAD — Alias para migración suave
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    @Deprecated("Usar Semantic.Error", ReplaceWith("Semantic.Error"))
+    val Error = Semantic.Error
+
+    @Deprecated("Usar Semantic.Success", ReplaceWith("Semantic.Success"))
+    val Exito = Semantic.Success
+
+    @Deprecated("Usar Accent.Favorito", ReplaceWith("Accent.Favorito"))
+    val Favorito = Accent.Favorito
 }

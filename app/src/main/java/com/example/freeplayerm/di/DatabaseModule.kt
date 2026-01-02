@@ -7,8 +7,17 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.freeplayerm.data.local.AppDatabase
-import com.example.freeplayerm.data.local.dao.*
-import com.example.freeplayerm.data.local.entity.GeneroEntity
+import com.example.freeplayerm.data.local.dao.AlbumDao
+import com.example.freeplayerm.data.local.dao.ArtistDao
+import com.example.freeplayerm.data.local.dao.FavoriteDao
+import com.example.freeplayerm.data.local.dao.GenreDao
+import com.example.freeplayerm.data.local.dao.LyricsDao
+import com.example.freeplayerm.data.local.dao.PlaybackHistoryDao
+import com.example.freeplayerm.data.local.dao.PlaybackQueueDao
+import com.example.freeplayerm.data.local.dao.PlaylistDao
+import com.example.freeplayerm.data.local.dao.SongDao
+import com.example.freeplayerm.data.local.dao.UserDao
+import com.example.freeplayerm.data.local.entity.GenreEntity
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -19,8 +28,8 @@ import javax.inject.Singleton
 /**
  * 🔧 DATABASE MODULE - HILT DI v8.0
  *
- * Módulo de Hilt para proveer la base de datos Room
- * Incluye configuración de migraciones, callbacks y fallbacks
+ * Módulo de Hilt para proveer la base de datos Room Incluye configuración de migraciones, callbacks
+ * y fallbacks
  *
  * Características:
  * - Singleton de base de datos con Room
@@ -37,20 +46,14 @@ object DatabaseModule {
 
     // ==================== PROVEER BASE DE DATOS ====================
 
-    /**
-     * Provee la instancia singleton de la base de datos
-     */
+    /** Provee la instancia singleton de la base de datos */
     @Provides
     @Singleton
     fun provideDatabase(
         @ApplicationContext context: Context,
-        callback: RoomDatabase.Callback
+        callback: RoomDatabase.Callback,
     ): AppDatabase {
-        return Room.databaseBuilder(
-            context,
-            AppDatabase::class.java,
-            AppDatabase.DATABASE_NAME
-        )
+        return Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.DATABASE_NAME)
             // ⚠️ PARA DESARROLLO: Permite recrear BD en conflictos
             // ⚠️ PARA PRODUCCIÓN: Cambiar a false e implementar migraciones
             .fallbackToDestructiveMigration(true) // ⬅️ Cambiar a false en producción
@@ -66,115 +69,85 @@ object DatabaseModule {
 
     // ==================== PROVEER DAOs PRINCIPALES ====================
 
-    /**
-     * Provee DAO de usuarios
-     * Incluye autenticación, perfil y sesiones
-     */
+    /** Provee DAO de usuarios Incluye autenticación, perfil y sesiones */
     @Provides
     @Singleton
-    fun provideUsuarioDao(database: AppDatabase): UsuarioDao {
-        return database.usuarioDao()
+    fun provideUsuarioDao(database: AppDatabase): UserDao {
+        return database.userDao()
     }
 
-    /**
-     * Provee DAO de canciones
-     * Incluye CRUD completo y búsquedas
-     */
+    /** Provee DAO de canciones Incluye CRUD completo y búsquedas */
     @Provides
     @Singleton
-    fun provideCancionDao(database: AppDatabase): CancionDao {
-        return database.cancionDao()
+    fun provideCancionDao(database: AppDatabase): SongDao {
+        return database.songDao()
     }
 
-    /**
-     * Provee DAO de artistas
-     * Incluye biografías y estadísticas
-     */
+    /** Provee DAO de artistas Incluye biografías y estadísticas */
     @Provides
     @Singleton
-    fun provideArtistaDao(database: AppDatabase): ArtistaDao {
-        return database.artistaDao()
+    fun provideArtistaDao(database: AppDatabase): ArtistDao {
+        return database.artistDao()
     }
 
-    /**
-     * Provee DAO de álbumes
-     * Incluye tracks y metadatos
-     */
+    /** Provee DAO de álbumes Incluye tracks y metadatos */
     @Provides
     @Singleton
     fun provideAlbumDao(database: AppDatabase): AlbumDao {
         return database.albumDao()
     }
 
-    /**
-     * Provee DAO de géneros
-     * Incluye jerarquías y clasificaciones
-     */
+    /** Provee DAO de géneros Incluye jerarquías y clasificaciones */
     @Provides
     @Singleton
-    fun provideGeneroDao(database: AppDatabase): GeneroDao {
-        return database.generoDao()
+    fun provideGeneroDao(database: AppDatabase): GenreDao {
+        return database.genreDao()
     }
 
-    /**
-     * Provee DAO de letras
-     * Incluye caché y sincronización
-     */
+    /** Provee DAO de letras Incluye caché y sincronización */
     @Provides
     @Singleton
-    fun provideLetraDao(database: AppDatabase): LetraDao {
-        return database.letraDao()
+    fun provideLetraDao(database: AppDatabase): LyricsDao {
+        return database.lyricsDao()
     }
 
     // ==================== PROVEER DAOs DE LISTAS ====================
 
-    /**
-     * Provee DAO de listas de reproducción
-     * Incluye playlists colaborativas y públicas
-     */
+    /** Provee DAO de listas de reproducción Incluye playlists colaborativas y públicas */
     @Provides
     @Singleton
-    fun provideListaReproduccionDao(database: AppDatabase): ListaReproduccionDao {
-        return database.listaReproduccionDao()
+    fun provideListaReproduccionDao(database: AppDatabase): PlaylistDao {
+        return database.playlistDao()
     }
 
-    /**
-     * Provee DAO de favoritos
-     * Incluye calificaciones y ordenamiento
-     */
+    /** Provee DAO de favoritos Incluye calificaciones y ordenamiento */
     @Provides
     @Singleton
-    fun provideFavoritoDao(database: AppDatabase): FavoritoDao {
-        return database.favoritoDao()
+    fun provideFavoritoDao(database: AppDatabase): FavoriteDao {
+        return database.favoriteDao()
     }
 
     // ==================== PROVEER DAOs DE REPRODUCCIÓN ====================
 
-    /**
-     * Provee DAO de historial de reproducción
-     * Incluye analytics y estadísticas
-     */
+    /** Provee DAO de historial de reproducción Incluye analytics y estadísticas */
     @Provides
     @Singleton
-    fun provideHistorialReproduccionDao(database: AppDatabase): HistorialReproduccionDao {
-        return database.historialReproduccionDao()
+    fun provideHistorialReproduccionDao(database: AppDatabase): PlaybackHistoryDao {
+        return database.playbackHistoryDao()
     }
 
-    /**
-     * Provee DAO de cola de reproducción
-     * Incluye reordenamiento y gestión
-     */
+    /** Provee DAO de cola de reproducción Incluye reordenamiento y gestión */
     @Provides
     @Singleton
-    fun provideColaReproduccionDao(database: AppDatabase): ColaReproduccionDao {
-        return database.colaReproduccionDao()
+    fun provideColaReproduccionDao(database: AppDatabase): PlaybackQueueDao {
+        return database.playbackQueueDao()
     }
 
     // ==================== CALLBACK PARA DATOS INICIALES ====================
 
     /**
-     * Callback para poblar datos iniciales al crear la BD
-     * Inserta géneros principales con sus configuraciones
+     * Callback para poblar datos iniciales al crear la BD Inserta géneros principales con sus
+     * configuraciones
      */
     @Provides
     @Singleton
@@ -184,10 +157,10 @@ object DatabaseModule {
                 super.onCreate(db)
 
                 // ==================== INSERTAR GÉNEROS POR DEFECTO ====================
-                GeneroEntity.GENEROS_PRINCIPALES.forEach { nombre ->
-                    val nombreNormalizado = GeneroEntity.normalizar(nombre)
-                    val color = GeneroEntity.obtenerColorSugerido(nombre) ?: "#666666"
-                    val emoji = GeneroEntity.obtenerEmojiSugerido(nombre) ?: "🎵"
+                GenreEntity.GENEROS_PRINCIPALES.forEach { nombre ->
+                    val nombreNormalizado = GenreEntity.normalizar(nombre)
+                    val color = GenreEntity.obtenerColorSugerido(nombre) ?: "#666666"
+                    val emoji = GenreEntity.obtenerEmojiSugerido(nombre) ?: "🎵"
                     val timestamp = System.currentTimeMillis()
 
                     db.execSQL(
@@ -202,7 +175,7 @@ object DatabaseModule {
                                 ultima_actualizacion
                             ) VALUES (?, ?, ?, ?, 1, ?, ?)
                         """,
-                        arrayOf<Any>(nombre, nombreNormalizado, color, emoji, timestamp, timestamp)
+                        arrayOf<Any>(nombre, nombreNormalizado, color, emoji, timestamp, timestamp),
                     )
                 }
             }
@@ -219,20 +192,22 @@ object DatabaseModule {
      * - Agregar campos de tokens a usuarios
      * - Crear índices para optimización
      */
-    private val MIGRATION_6_7 = object : Migration(6, 7) {
-        override fun migrate(db: SupportSQLiteDatabase) {
+    private val MIGRATION_6_7 =
+        object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
 
-            // ==================== USUARIOS: NUEVOS CAMPOS ====================
+                // ==================== USUARIOS: NUEVOS CAMPOS ====================
 
-            db.execSQL("ALTER TABLE usuarios ADD COLUMN token_sesion TEXT")
-            db.execSQL("ALTER TABLE usuarios ADD COLUMN refresh_token TEXT")
-            db.execSQL("ALTER TABLE usuarios ADD COLUMN token_expiracion INTEGER")
-            db.execSQL("ALTER TABLE usuarios ADD COLUMN salt TEXT")
-            db.execSQL("ALTER TABLE usuarios ADD COLUMN ultimo_cambio_contrasena INTEGER")
+                db.execSQL("ALTER TABLE usuarios ADD COLUMN token_sesion TEXT")
+                db.execSQL("ALTER TABLE usuarios ADD COLUMN refresh_token TEXT")
+                db.execSQL("ALTER TABLE usuarios ADD COLUMN token_expiracion INTEGER")
+                db.execSQL("ALTER TABLE usuarios ADD COLUMN salt TEXT")
+                db.execSQL("ALTER TABLE usuarios ADD COLUMN ultimo_cambio_contrasena INTEGER")
 
-            // ==================== NUEVA TABLA: CANCION_ARTISTA ====================
+                // ==================== NUEVA TABLA: CANCION_ARTISTA ====================
 
-            db.execSQL("""
+                db.execSQL(
+                    """
                 CREATE TABLE IF NOT EXISTS cancion_artista (
                     id_cancion INTEGER NOT NULL,
                     id_artista INTEGER NOT NULL,
@@ -247,16 +222,26 @@ object DatabaseModule {
                     FOREIGN KEY(id_cancion) REFERENCES canciones(id_cancion) ON DELETE CASCADE,
                     FOREIGN KEY(id_artista) REFERENCES artistas(id_artista) ON DELETE CASCADE
                 )
-            """)
+            """
+                )
 
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_cancion_artista_id_cancion ON cancion_artista(id_cancion)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_cancion_artista_id_artista ON cancion_artista(id_artista)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_cancion_artista_tipo_participacion ON cancion_artista(tipo_participacion)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_cancion_artista_id_cancion_orden ON cancion_artista(id_cancion, orden)")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_cancion_artista_id_cancion ON cancion_artista(id_cancion)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_cancion_artista_id_artista ON cancion_artista(id_artista)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_cancion_artista_tipo_participacion ON cancion_artista(tipo_participacion)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_cancion_artista_id_cancion_orden ON cancion_artista(id_cancion, orden)"
+                )
 
-            // ==================== NUEVA TABLA: HISTORIAL_REPRODUCCION ====================
+                // ==================== NUEVA TABLA: HISTORIAL_REPRODUCCION ====================
 
-            db.execSQL("""
+                db.execSQL(
+                    """
                 CREATE TABLE IF NOT EXISTS historial_reproduccion (
                     id_historial INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                     id_usuario INTEGER NOT NULL,
@@ -288,18 +273,32 @@ object DatabaseModule {
                     FOREIGN KEY(id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
                     FOREIGN KEY(id_cancion) REFERENCES canciones(id_cancion) ON DELETE CASCADE
                 )
-            """)
+            """
+                )
 
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_historial_reproduccion_id_usuario ON historial_reproduccion(id_usuario)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_historial_reproduccion_id_cancion ON historial_reproduccion(id_cancion)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_historial_reproduccion_fecha_reproduccion ON historial_reproduccion(fecha_reproduccion)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_historial_reproduccion_id_usuario_fecha ON historial_reproduccion(id_usuario, fecha_reproduccion)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_historial_reproduccion_completo ON historial_reproduccion(completo)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_historial_reproduccion_origen ON historial_reproduccion(origen)")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_historial_reproduccion_id_usuario ON historial_reproduccion(id_usuario)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_historial_reproduccion_id_cancion ON historial_reproduccion(id_cancion)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_historial_reproduccion_fecha_reproduccion ON historial_reproduccion(fecha_reproduccion)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_historial_reproduccion_id_usuario_fecha ON historial_reproduccion(id_usuario, fecha_reproduccion)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_historial_reproduccion_completo ON historial_reproduccion(completo)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_historial_reproduccion_origen ON historial_reproduccion(origen)"
+                )
 
-            // ==================== NUEVA TABLA: PREFERENCIAS_USUARIO ====================
+                // ==================== NUEVA TABLA: PREFERENCIAS_USUARIO ====================
 
-            db.execSQL("""
+                db.execSQL(
+                    """
                 CREATE TABLE IF NOT EXISTS preferencias_usuario (
                     id_usuario INTEGER PRIMARY KEY NOT NULL,
                     tema_oscuro INTEGER NOT NULL DEFAULT 0,
@@ -359,13 +358,17 @@ object DatabaseModule {
                     version_preferencias INTEGER NOT NULL DEFAULT 1,
                     FOREIGN KEY(id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
                 )
-            """)
+            """
+                )
 
-            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_preferencias_usuario_id_usuario ON preferencias_usuario(id_usuario)")
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS index_preferencias_usuario_id_usuario ON preferencias_usuario(id_usuario)"
+                )
 
-            // ==================== NUEVA TABLA: ESTADO_REPRODUCCION ====================
+                // ==================== NUEVA TABLA: ESTADO_REPRODUCCION ====================
 
-            db.execSQL("""
+                db.execSQL(
+                    """
                 CREATE TABLE IF NOT EXISTS estado_reproduccion (
                     id_usuario INTEGER PRIMARY KEY NOT NULL,
                     id_cancion_actual INTEGER,
@@ -403,14 +406,20 @@ object DatabaseModule {
                     FOREIGN KEY(id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
                     FOREIGN KEY(id_cancion_actual) REFERENCES canciones(id_cancion) ON DELETE SET NULL
                 )
-            """)
+            """
+                )
 
-            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_estado_reproduccion_id_usuario ON estado_reproduccion(id_usuario)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_estado_reproduccion_id_cancion_actual ON estado_reproduccion(id_cancion_actual)")
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS index_estado_reproduccion_id_usuario ON estado_reproduccion(id_usuario)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_estado_reproduccion_id_cancion_actual ON estado_reproduccion(id_cancion_actual)"
+                )
 
-            // ==================== NUEVA TABLA: COLA_REPRODUCCION ====================
+                // ==================== NUEVA TABLA: COLA_REPRODUCCION ====================
 
-            db.execSQL("""
+                db.execSQL(
+                    """
                 CREATE TABLE IF NOT EXISTS cola_reproduccion (
                     id_cola INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                     id_usuario INTEGER NOT NULL,
@@ -434,15 +443,26 @@ object DatabaseModule {
                     FOREIGN KEY(id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
                     FOREIGN KEY(id_cancion) REFERENCES canciones(id_cancion) ON DELETE CASCADE
                 )
-            """)
+            """
+                )
 
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_cola_reproduccion_id_usuario ON cola_reproduccion(id_usuario)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_cola_reproduccion_id_cancion ON cola_reproduccion(id_cancion)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_cola_reproduccion_id_usuario_orden ON cola_reproduccion(id_usuario, orden)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_cola_reproduccion_reproducido ON cola_reproduccion(reproducido)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_cola_reproduccion_fecha_agregado ON cola_reproduccion(fecha_agregado)")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_cola_reproduccion_id_usuario ON cola_reproduccion(id_usuario)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_cola_reproduccion_id_cancion ON cola_reproduccion(id_cancion)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_cola_reproduccion_id_usuario_orden ON cola_reproduccion(id_usuario, orden)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_cola_reproduccion_reproducido ON cola_reproduccion(reproducido)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_cola_reproduccion_fecha_agregado ON cola_reproduccion(fecha_agregado)"
+                )
+            }
         }
-    }
 
     /**
      * Migración de versión 7 a 8
@@ -451,13 +471,14 @@ object DatabaseModule {
      * - Agregar tablas de características avanzadas
      * - Optimización de índices existentes
      */
-    private val MIGRATION_7_8 = object : Migration(7, 8) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            // Agregar tablas adicionales si es necesario
-            // Por ahora solo optimización de índices
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_canciones_titulo ON canciones(titulo)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_artistas_nombre ON artistas(nombre)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_albumes_titulo ON albumes(titulo)")
+    private val MIGRATION_7_8 =
+        object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Agregar tablas adicionales si es necesario
+                // Por ahora solo optimización de índices
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_canciones_titulo ON canciones(titulo)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_artistas_nombre ON artistas(nombre)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_albumes_titulo ON albumes(titulo)")
+            }
         }
-    }
 }

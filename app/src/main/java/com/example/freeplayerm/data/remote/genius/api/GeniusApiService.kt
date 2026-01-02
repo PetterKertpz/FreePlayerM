@@ -12,8 +12,7 @@ import retrofit2.http.Query
 /**
  * 🌐 GENIUS API SERVICE
  *
- * Interface Retrofit para consumir Genius API
- * Base URL: https://api.genius.com/
+ * Interface Retrofit para consumir Genius API Base URL: https://api.genius.com/
  *
  * Requiere: Authorization header con Bearer token (configurado en interceptor)
  */
@@ -25,8 +24,7 @@ interface GeniusApiService {
      * @param query Término de búsqueda
      * @return Lista de resultados ordenados por relevancia
      */
-    @GET("search")
-    suspend fun search(@Query("q") query: String): Response<GeniusSearchResponse>
+    @GET("search") suspend fun search(@Query("q") query: String): Response<GeniusSearchResponse>
 
     /**
      * Obtiene detalles completos de una canción
@@ -38,7 +36,7 @@ interface GeniusApiService {
     @GET("songs/{id}")
     suspend fun getSong(
         @Path("id") id: String,
-        @Query("text_format") textFormat: String = "plain"
+        @Query("text_format") textFormat: String = "plain",
     ): Response<GeniusSongResponse>
 
     /**
@@ -51,6 +49,6 @@ interface GeniusApiService {
     @GET("artists/{id}")
     suspend fun getArtist(
         @Path("id") id: String,
-        @Query("text_format") textFormat: String = "plain"
+        @Query("text_format") textFormat: String = "plain",
     ): Response<GeniusArtistResponse>
 }

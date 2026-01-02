@@ -19,8 +19,8 @@ import javax.inject.Singleton
 /**
  * 🖼️ IMAGE REPOSITORY (UNIFIED)
  *
- * Repositorio unificado para manejo de imágenes
- * Soporta tanto descarga desde URLs como copia desde URIs locales
+ * Repositorio unificado para manejo de imágenes Soporta tanto descarga desde URLs como copia desde
+ * URIs locales
  *
  * Características:
  * - ✅ Descarga desde URLs remotas (covers de Genius, etc.)
@@ -34,9 +34,11 @@ import javax.inject.Singleton
  * - `filesDir/covers/` → Imágenes permanentes del usuario
  */
 @Singleton
-class ImageRepository @Inject constructor(
+class ImageRepository
+@Inject
+constructor(
     @ApplicationContext private val context: Context,
-    @ImageClient private val okHttpClient: OkHttpClient
+    @ImageClient private val okHttpClient: OkHttpClient,
 ) {
     private val tag = "ImageRepository"
 
@@ -53,15 +55,13 @@ class ImageRepository @Inject constructor(
         private val ALLOWED_EXTENSIONS = listOf("jpg", "jpeg", "png", "webp")
     }
 
-    /**
-     * Tipo de almacenamiento para la imagen
-     */
+    /** Tipo de almacenamiento para la imagen */
     enum class StorageType {
         /** Cache temporal (se puede borrar automáticamente) */
         CACHE,
 
         /** Almacenamiento permanente del usuario */
-        PERMANENT
+        PERMANENT,
     }
 
     // ==================== API PÚBLICA ====================
@@ -77,16 +77,14 @@ class ImageRepository @Inject constructor(
     suspend fun downloadImage(
         url: String,
         filename: String,
-        storageType: StorageType = StorageType.CACHE
+        storageType: StorageType = StorageType.CACHE,
     ): String? {
         return withContext(Dispatchers.IO) {
             var response: okhttp3.Response? = null
             try {
                 Log.d(tag, "📥 Descargando imagen: $url")
 
-                val request = Request.Builder()
-                    .url(url)
-                    .build()
+                val request = Request.Builder().url(url).build()
 
                 response = okHttpClient.newCall(request).execute()
 
@@ -100,14 +98,11 @@ class ImageRepository @Inject constructor(
                 val file = File(targetDir, "$filename.$extension")
 
                 response.body.byteStream().use { inputStream ->
-                    FileOutputStream(file).use { outputStream ->
-                        inputStream.copyTo(outputStream)
-                    }
+                    FileOutputStream(file).use { outputStream -> inputStream.copyTo(outputStream) }
                 }
 
                 Log.d(tag, "✅ Imagen guardada: ${file.absolutePath}")
                 file.absolutePath
-
             } catch (e: IOException) {
                 Log.e(tag, "❌ Error de IO al descargar imagen: ${e.message}")
                 null
@@ -127,10 +122,7 @@ class ImageRepository @Inject constructor(
      * @param storageType Tipo de almacenamiento
      * @return URI del archivo copiado o null si falla
      */
-    suspend fun copyImageFromUri(
-        uri: Uri,
-        storageType: StorageType = StorageType.PERMANENT
-    ): Uri? {
+    suspend fun copyImageFromUri(uri: Uri, storageType: StorageType = StorageType.PERMANENT): Uri? {
         return withContext(Dispatchers.IO) {
             try {
                 Log.d(tag, "📋 Copiando imagen desde URI: $uri")
@@ -147,14 +139,11 @@ class ImageRepository @Inject constructor(
                 val outputFile = File(targetDir, "$filename.$extension")
 
                 inputStream.use { input ->
-                    FileOutputStream(outputFile).use { output ->
-                        input.copyTo(output)
-                    }
+                    FileOutputStream(outputFile).use { output -> input.copyTo(output) }
                 }
 
                 Log.d(tag, "✅ Imagen copiada: ${outputFile.absolutePath}")
                 Uri.fromFile(outputFile)
-
             } catch (e: Exception) {
                 Log.e(tag, "❌ Error copiando imagen: ${e.message}", e)
                 null
@@ -214,7 +203,6 @@ class ImageRepository @Inject constructor(
 
                 Log.d(tag, "🧹 Cache limpiado: $deletedCount archivos eliminados")
                 deletedCount
-
             } catch (e: Exception) {
                 Log.e(tag, "❌ Error limpiando cache: ${e.message}", e)
                 0
@@ -222,22 +210,17 @@ class ImageRepository @Inject constructor(
         }
     }
 
-    /**
-     * Obtiene el tamaño total del cache en MB
-     */
+    /** Obtiene el tamaño total del cache en MB */
     suspend fun getCacheSize(): Long {
         return withContext(Dispatchers.IO) {
             try {
                 val cacheDir = File(context.cacheDir, CACHE_IMAGES_DIR)
                 if (!cacheDir.exists()) return@withContext 0L
 
-                val sizeBytes = cacheDir.walkTopDown()
-                    .filter { it.isFile }
-                    .map { it.length() }
-                    .sum()
+                val sizeBytes =
+                    cacheDir.walkTopDown().filter { it.isFile }.map { it.length() }.sum()
 
                 sizeBytes / (1024 * 1024) // Convertir a MB
-
             } catch (e: Exception) {
                 Log.e(tag, "❌ Error calculando tamaño de cache: ${e.message}", e)
                 0L
@@ -245,23 +228,20 @@ class ImageRepository @Inject constructor(
         }
     }
 
-    /**
-     * Verifica si una imagen existe
-     */
+    /** Verifica si una imagen existe */
     fun imageExists(imagePath: String): Boolean {
         return File(imagePath).exists()
     }
 
     // ==================== MÉTODOS PRIVADOS ====================
 
-    /**
-     * Obtiene el directorio según el tipo de almacenamiento
-     */
+    /** Obtiene el directorio según el tipo de almacenamiento */
     private fun getDirectory(storageType: StorageType): File {
-        val dir = when (storageType) {
-            StorageType.CACHE -> File(context.cacheDir, CACHE_IMAGES_DIR)
-            StorageType.PERMANENT -> File(context.filesDir, USER_COVERS_DIR)
-        }
+        val dir =
+            when (storageType) {
+                StorageType.CACHE -> File(context.cacheDir, CACHE_IMAGES_DIR)
+                StorageType.PERMANENT -> File(context.filesDir, USER_COVERS_DIR)
+            }
 
         if (!dir.exists()) {
             dir.mkdirs()
@@ -270,9 +250,7 @@ class ImageRepository @Inject constructor(
         return dir
     }
 
-    /**
-     * Detecta la extensión de la imagen desde URL o Content-Type
-     */
+    /** Detecta la extensión de la imagen desde URL o Content-Type */
     private fun detectImageExtension(url: String, contentType: String?): String {
         // Intentar desde Content-Type primero
         contentType?.let {
@@ -284,16 +262,15 @@ class ImageRepository @Inject constructor(
         }
 
         // Intentar desde URL
-        val extension = url.substringAfterLast('.', "")
-            .substringBefore('?') // Remover query params
-            .lowercase()
+        val extension =
+            url.substringAfterLast('.', "")
+                .substringBefore('?') // Remover query params
+                .lowercase()
 
         return if (extension in ALLOWED_EXTENSIONS) extension else "jpg"
     }
 
-    /**
-     * Obtiene la extensión desde un URI
-     */
+    /** Obtiene la extensión desde un URI */
     private fun getExtensionFromUri(uri: Uri): String? {
         return try {
             val mimeType = context.contentResolver.getType(uri)
@@ -303,8 +280,9 @@ class ImageRepository @Inject constructor(
                 mimeType?.contains("webp") == true -> "webp"
                 else -> {
                     // Intentar desde el path del URI
-                    uri.path?.substringAfterLast('.')?.lowercase()
-                        ?.takeIf { it in ALLOWED_EXTENSIONS }
+                    uri.path?.substringAfterLast('.')?.lowercase()?.takeIf {
+                        it in ALLOWED_EXTENSIONS
+                    }
                 }
             }
         } catch (e: Exception) {

@@ -4,15 +4,42 @@ package com.example.freeplayerm.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.example.freeplayerm.data.local.dao.*
-import com.example.freeplayerm.data.local.entity.*
-import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
+import com.example.freeplayerm.data.local.dao.AlbumDao
+import com.example.freeplayerm.data.local.dao.ArtistDao
+import com.example.freeplayerm.data.local.dao.FavoriteDao
+import com.example.freeplayerm.data.local.dao.GenreDao
+import com.example.freeplayerm.data.local.dao.LyricsDao
+import com.example.freeplayerm.data.local.dao.PlaybackHistoryDao
+import com.example.freeplayerm.data.local.dao.PlaybackQueueDao
+import com.example.freeplayerm.data.local.dao.PlaylistDao
+import com.example.freeplayerm.data.local.dao.SongDao
+import com.example.freeplayerm.data.local.dao.UserDao
+import com.example.freeplayerm.data.local.entity.AlbumCreditEntity
+import com.example.freeplayerm.data.local.entity.AlbumEntity
+import com.example.freeplayerm.data.local.entity.ArtistEntity
+import com.example.freeplayerm.data.local.entity.ArtistSocialLinksEntity
+import com.example.freeplayerm.data.local.entity.FavoriteEntity
+import com.example.freeplayerm.data.local.entity.GeniusAnnotationEntity
+import com.example.freeplayerm.data.local.entity.GenreEntity
+import com.example.freeplayerm.data.local.entity.GenreMoodEntity
+import com.example.freeplayerm.data.local.entity.LyricsEntity
+import com.example.freeplayerm.data.local.entity.LyricsTranslationEntity
+import com.example.freeplayerm.data.local.entity.PlaybackHistoryEntity
+import com.example.freeplayerm.data.local.entity.PlaybackQueueEntity
+import com.example.freeplayerm.data.local.entity.PlaybackStateEntity
+import com.example.freeplayerm.data.local.entity.PlaylistCollaboratorEntity
+import com.example.freeplayerm.data.local.entity.PlaylistEntity
+import com.example.freeplayerm.data.local.entity.PlaylistItemEntity
+import com.example.freeplayerm.data.local.entity.SongArtistCrossRef
+import com.example.freeplayerm.data.local.entity.SongEntity
+import com.example.freeplayerm.data.local.entity.UserEntity
+import com.example.freeplayerm.data.local.entity.UserPreferencesEntity
+import com.example.freeplayerm.data.local.entity.relations.SongWithArtist
 
 /**
  * 🗄️ APP DATABASE - ROOM DATABASE v2.1
  *
- * Base de datos principal de la aplicación
- * Gestiona todas las entidades y DAOs del sistema
+ * Base de datos principal de la aplicación Gestiona todas las entidades y DAOs del sistema
  *
  * Características:
  * - Versión 2 con esquema completo actualizado
@@ -24,40 +51,41 @@ import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
  * @version 2.1 - Production Ready with Schema Export
  */
 @Database(
-    entities = [
-        // ==================== ENTIDADES BASE PRINCIPALES ====================
-        UsuarioEntity::class,
-        ArtistaEntity::class,
-        AlbumEntity::class,
-        GeneroEntity::class,
-        CancionEntity::class,
+    entities =
+        [
+            // ==================== ENTIDADES BASE PRINCIPALES ====================
+            UserEntity::class,
+            ArtistEntity::class,
+            AlbumEntity::class,
+            GenreEntity::class,
+            SongEntity::class,
 
-        // ==================== LISTAS Y ORGANIZACIÓN ====================
-        ListaReproduccionEntity::class,
-        DetalleListaReproduccionEntity::class,
+            // ==================== LISTAS Y ORGANIZACIÓN ====================
+            PlaylistEntity::class,
+            PlaylistItemEntity::class,
 
-        // ==================== FAVORITOS Y PREFERENCIAS ====================
-        FavoritoEntity::class,
-        LetraEntity::class,
+            // ==================== FAVORITOS Y PREFERENCIAS ====================
+            FavoriteEntity::class,
+            LyricsEntity::class,
 
-        // ==================== RELACIONES Y REPRODUCCIÓN ====================
-        CancionArtistaEntity::class,
-        HistorialReproduccionEntity::class,
-        PreferenciasUsuarioEntity::class,
-        EstadoReproduccionEntity::class,
-        ColaReproduccionEntity::class,
+            // ==================== RELACIONES Y REPRODUCCIÓN ====================
+            SongArtistCrossRef::class,
+            PlaybackHistoryEntity::class,
+            UserPreferencesEntity::class,
+            PlaybackStateEntity::class,
+            PlaybackQueueEntity::class,
 
-        // ==================== CARACTERÍSTICAS AVANZADAS ====================
-        LetraTraduccionEntity::class,
-        GeniusAnnotationEntity::class,
-        RedesSocialesArtistaEntity::class,
-        CreditoAlbumEntity::class,
-        GeneroMoodEntity::class,
-        ListaColaboradorEntity::class,
-    ],
-    views = [CancionConArtista::class],
+            // ==================== CARACTERÍSTICAS AVANZADAS ====================
+            LyricsTranslationEntity::class,
+            GeniusAnnotationEntity::class,
+            ArtistSocialLinksEntity::class,
+            AlbumCreditEntity::class,
+            GenreMoodEntity::class,
+            PlaylistCollaboratorEntity::class,
+        ],
+    views = [SongWithArtist::class],
     version = 1,
-    exportSchema = false // ✅ Habilitado para documentar cambios de esquema
+    exportSchema = false, // ✅ Habilitado para documentar cambios de esquema
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -70,7 +98,7 @@ abstract class AppDatabase : RoomDatabase() {
      * - Gestión de perfil y sesiones
      * - Validación de credenciales
      */
-    abstract fun usuarioDao(): UsuarioDao
+    abstract fun userDao(): UserDao
 
     /**
      * DAO para operaciones de canciones
@@ -79,7 +107,7 @@ abstract class AppDatabase : RoomDatabase() {
      * - Filtros por género, año, duración
      * - Estadísticas de reproducción
      */
-    abstract fun cancionDao(): CancionDao
+    abstract fun songDao(): SongDao
 
     /**
      * DAO para operaciones de artistas
@@ -88,7 +116,7 @@ abstract class AppDatabase : RoomDatabase() {
      * - Estadísticas de canciones y álbumes
      * - Normalización de nombres
      */
-    abstract fun artistaDao(): ArtistaDao
+    abstract fun artistDao(): ArtistDao
 
     /**
      * DAO para operaciones de álbumes
@@ -106,7 +134,7 @@ abstract class AppDatabase : RoomDatabase() {
      * - Estadísticas por género
      * - Colores y emojis asociados
      */
-    abstract fun generoDao(): GeneroDao
+    abstract fun genreDao(): GenreDao
 
     /**
      * DAO para operaciones de letras
@@ -115,7 +143,7 @@ abstract class AppDatabase : RoomDatabase() {
      * - Detección de canciones sin letra
      * - Limpieza de datos huérfanos
      */
-    abstract fun letraDao(): LetraDao
+    abstract fun lyricsDao(): LyricsDao
 
     // ==================== DAOs DE LISTAS Y FAVORITOS ====================
 
@@ -126,7 +154,7 @@ abstract class AppDatabase : RoomDatabase() {
      * - Cálculo de duración total
      * - Estadísticas de reproducciones
      */
-    abstract fun listaReproduccionDao(): ListaReproduccionDao
+    abstract fun playlistDao(): PlaylistDao
 
     /**
      * DAO para operaciones de favoritos
@@ -135,7 +163,7 @@ abstract class AppDatabase : RoomDatabase() {
      * - Ordenamiento personalizado
      * - Estadísticas de favoritos
      */
-    abstract fun favoritoDao(): FavoritoDao
+    abstract fun favoriteDao(): FavoriteDao
 
     // ==================== DAOs DE REPRODUCCIÓN ====================
 
@@ -146,7 +174,7 @@ abstract class AppDatabase : RoomDatabase() {
      * - Filtros por fecha, origen, contexto
      * - Top canciones y tendencias
      */
-    abstract fun historialReproduccionDao(): HistorialReproduccionDao
+    abstract fun playbackHistoryDao(): PlaybackHistoryDao
 
     /**
      * DAO para operaciones de la cola de reproducción
@@ -155,45 +183,39 @@ abstract class AppDatabase : RoomDatabase() {
      * - Reproducción de siguiente/anterior
      * - Mezcla aleatoria de cola
      */
-    abstract fun colaReproduccionDao(): ColaReproduccionDao
+    abstract fun playbackQueueDao(): PlaybackQueueDao
 
     // ==================== CONFIGURACIÓN ====================
 
     companion object {
-        /**
-         * Nombre de la base de datos SQLite
-         */
+        /** Nombre de la base de datos SQLite */
         const val DATABASE_NAME = "freeplayerm_database"
 
         /**
          * 📋 HISTORIAL DE VERSIONES Y MIGRACIONES
          *
-         * ═══════════════════════════════════════════════════════════════
-         * VERSION 2 - ACTUAL (Diciembre 2024)
-         * ═══════════════════════════════════════════════════════════════
-         * ✅ Cambios críticos:
-         *    - TypeConverters: Date <-> Long (antes Int, causaba overflow Y2K38)
-         *    - DAOs: @Insert return type Int → Long (requisito de Room KSP)
-         *    - Converters: Eliminados duplicados List<String> (conflictos Room)
+         * ═══════════════════════════════════════════════════════════════ VERSION 2 - ACTUAL
+         * (Diciembre 2024) ═══════════════════════════════════════════════════════════════ ✅
+         * Cambios críticos:
+         * - TypeConverters: Date <-> Long (antes Int, causaba overflow Y2K38)
+         * - DAOs: @Insert return type Int → Long (requisito de Room KSP)
+         * - Converters: Eliminados duplicados List<String> (conflictos Room)
          *
          * ✅ Mejoras:
-         *    - Sincronización completa de campos Entity-DAO
-         *    - Optimización de índices y relaciones
-         *    - Soporte completo para 20 entidades
-         *    - Exportación de esquema habilitada
+         * - Sincronización completa de campos Entity-DAO
+         * - Optimización de índices y relaciones
+         * - Soporte completo para 20 entidades
+         * - Exportación de esquema habilitada
          *
-         * ═══════════════════════════════════════════════════════════════
-         * VERSION 1 - BASE INICIAL
+         * ═══════════════════════════════════════════════════════════════ VERSION 1 - BASE INICIAL
          * ═══════════════════════════════════════════════════════════════
          * - Esquema básico con 9 entidades principales
          * - DAOs básicos sin funcionalidad avanzada
          * - TypeConverters simples (Int para timestamps)
          *
-         * ═══════════════════════════════════════════════════════════════
-         * MIGRACIÓN DE v1 → v2
-         * ═══════════════════════════════════════════════════════════════
-         * Implementar en DatabaseModule.kt:
-         *
+         * ═══════════════════════════════════════════════════════════════ MIGRACIÓN DE v1 → v2
+         * ═══════════════════════════════════════════════════════════════ Implementar en
+         * DatabaseModule.kt:
          * ```kotlin
          * val MIGRATION_1_2 = object : Migration(1, 2) {
          *     override fun migrate(database: SupportSQLiteDatabase) {
@@ -235,43 +257,40 @@ abstract class AppDatabase : RoomDatabase() {
          *     .build()
          * ```
          *
-         * ═══════════════════════════════════════════════════════════════
-         * ENTIDADES POR CATEGORÍA
-         * ═══════════════════════════════════════════════════════════════
-         * 📁 CORE (5):
-         *    - UsuarioEntity
-         *    - CancionEntity
-         *    - ArtistaEntity
-         *    - AlbumEntity
-         *    - GeneroEntity
+         * ═══════════════════════════════════════════════════════════════ ENTIDADES POR CATEGORÍA
+         * ═══════════════════════════════════════════════════════════════ 📁 CORE (5):
+         * - UserEntity
+         * - SongEntity
+         * - ArtistEntity
+         * - AlbumEntity
+         * - GenreEntity
          *
          * 📁 COLECCIONES (3):
-         *    - ListaReproduccionEntity
-         *    - DetalleListaReproduccionEntity
-         *    - FavoritoEntity
+         * - PlaylistEntity
+         * - PlaylistItemEntity
+         * - FavoriteEntity
          *
          * 📁 CONTENIDO (2):
-         *    - LetraEntity
-         *    - LetraTraduccionEntity
+         * - LyricsEntity
+         * - LyricsTranslationEntity
          *
          * 📁 REPRODUCCIÓN (3):
-         *    - HistorialReproduccionEntity
-         *    - ColaReproduccionEntity
-         *    - EstadoReproduccionEntity
+         * - PlaybackHistoryEntity
+         * - PlaybackQueueEntity
+         * - PlaybackStateEntity
          *
          * 📁 METADATA (4):
-         *    - GeniusAnnotationEntity
-         *    - RedesSocialesArtistaEntity
-         *    - CreditoAlbumEntity
-         *    - GeneroMoodEntity
+         * - GeniusAnnotationEntity
+         * - ArtistSocialLinksEntity
+         * - AlbumCreditEntity
+         * - GenreMoodEntity
          *
          * 📁 RELACIONES (3):
-         *    - CancionArtistaEntity
-         *    - ListaColaboradorEntity
-         *    - PreferenciasUsuarioEntity
+         * - SongArtistCrossRef
+         * - PlaylistCollaboratorEntity
+         * - UserPreferencesEntity
          *
-         * ═══════════════════════════════════════════════════════════════
-         * NOTAS DE DESARROLLO
+         * ═══════════════════════════════════════════════════════════════ NOTAS DE DESARROLLO
          * ═══════════════════════════════════════════════════════════════
          * - Esquemas exportados en: app/schemas/com.example.freeplayerm.data.local.AppDatabase/
          * - Tests de migración en: app/src/androidTest/.../MigrationTest.kt

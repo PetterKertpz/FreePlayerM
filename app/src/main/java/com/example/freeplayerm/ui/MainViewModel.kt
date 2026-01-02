@@ -4,7 +4,7 @@ package com.example.freeplayerm.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.freeplayerm.data.local.entity.UsuarioEntity
+import com.example.freeplayerm.data.local.entity.UserEntity
 import com.example.freeplayerm.data.repository.SessionRepository
 import com.example.freeplayerm.data.repository.UserRepository
 import com.example.freeplayerm.data.scanner.MusicScannerManager
@@ -36,7 +36,7 @@ import javax.inject.Inject
 
 sealed class AuthState {
     data object Cargando : AuthState()
-    data class Autenticado(val usuario: UsuarioEntity) : AuthState()
+    data class Autenticado(val usuario: UserEntity) : AuthState()
     data object NoAutenticado : AuthState()
 }
 

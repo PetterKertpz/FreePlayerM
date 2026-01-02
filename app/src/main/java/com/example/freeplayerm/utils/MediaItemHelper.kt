@@ -7,9 +7,9 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.util.UnstableApi
 import androidx.core.net.toUri
-import com.example.freeplayerm.data.local.entity.CancionEntity
-import com.example.freeplayerm.data.local.dao.CancionDao
-import com.example.freeplayerm.data.local.entity.relations.CancionConArtista
+import com.example.freeplayerm.data.local.entity.SongEntity
+import com.example.freeplayerm.data.local.dao.SongDao
+import com.example.freeplayerm.data.local.entity.relations.SongWithArtist
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -19,7 +19,7 @@ import javax.inject.Singleton
 /**
  * ⚡ MEDIA ITEM HELPER - OPTIMIZADO v3.0
  *
- * Utilidad para convertir entre MediaItem (Media3) y CancionConArtista (BD)
+ * Utilidad para convertir entre MediaItem (Media3) y SongWithArtist (BD)
  *
  * Características:
  * - Conversión bidireccional completa
@@ -34,7 +34,7 @@ import javax.inject.Singleton
 @Singleton
 @OptIn(UnstableApi::class)
 class MediaItemHelper @Inject constructor(
-    private val cancionDao: CancionDao
+    private val songDao: SongDao
 ) {
 
     companion object {
@@ -42,10 +42,10 @@ class MediaItemHelper @Inject constructor(
         private const val USUARIO_DEFAULT = 1
     }
 
-    // ==================== CONVERSIÓN: CancionConArtista → MediaItem ====================
+    // ==================== CONVERSIÓN: SongWithArtist → MediaItem ====================
 
     /**
-     * Crea un MediaItem desde CancionConArtista con todos los metadatos
+     * Crea un MediaItem desde SongWithArtist con todos los metadatos
      *
      * Este es el método principal que deberías usar en el ViewModel
      *
@@ -54,11 +54,11 @@ class MediaItemHelper @Inject constructor(
      * @return MediaItem listo para ExoPlayer
      */
     /**
-     * Crea un MediaItem desde CancionConArtista con todos los metadatos
+     * Crea un MediaItem desde SongWithArtist con todos los metadatos
      * @throws IllegalArgumentException si archivoPath es null o vacío
      */
     fun crearMediaItem(
-        cancion: CancionConArtista,
+        cancion: SongWithArtist,
         artworkBitmap: Bitmap? = null
     ): MediaItem {
         val archivoPath = cancion.cancion.archivoPath
@@ -83,10 +83,10 @@ class MediaItemHelper @Inject constructor(
     }
 
     /**
-     * Crea MediaItem desde CancionEntity simple (sin artista)
+     * Crea MediaItem desde SongEntity simple (sin artista)
      */
     fun crearMediaItemDesdeEntity(
-        cancion: CancionEntity,
+        cancion: SongEntity,
         artworkBitmap: Bitmap? = null
     ): MediaItem {
         Log.d(TAG, "🎵 Creando MediaItem desde Entity: ${cancion.titulo}")
@@ -117,7 +117,7 @@ class MediaItemHelper @Inject constructor(
      * Crea múltiples MediaItems en lote (más eficiente)
      */
     fun crearMediaItems(
-        canciones: List<CancionConArtista>,
+        canciones: List<SongWithArtist>,
         artworkMap: Map<Int, Bitmap> = emptyMap()
     ): List<MediaItem> {
         Log.d(TAG, "📦 Creando ${canciones.size} MediaItems en lote")
@@ -129,10 +129,10 @@ class MediaItemHelper @Inject constructor(
     }
 
     /**
-     * Construye metadata completo desde CancionConArtista
+     * Construye metadata completo desde SongWithArtist
      */
     private fun construirMetadata(
-        cancion: CancionConArtista,
+        cancion: SongWithArtist,
         artworkBitmap: Bitmap?
     ): MediaMetadata {
         return MediaMetadata.Builder()
@@ -187,34 +187,34 @@ class MediaItemHelper @Inject constructor(
         }
     }
 
-    // ==================== CONVERSIÓN: MediaItem → CancionConArtista ====================
+    // ==================== CONVERSIÓN: MediaItem → SongWithArtist ====================
 
     /**
-     * Convierte MediaItem a CancionConArtista
+     * Convierte MediaItem a SongWithArtist
      *
      * Intenta obtener datos de BD primero, si no existe crea desde metadata
      */
     suspend fun mediaItemACancionConArtista(
         mediaItem: MediaItem,
         usuarioId: Int = USUARIO_DEFAULT
-    ): CancionConArtista? = withContext(Dispatchers.IO) {
+    ): SongWithArtist? = withContext(Dispatchers.IO) {
         if (!esMediaItemValido(mediaItem)) return@withContext null
 
         val idCancion = mediaItem.mediaId.toLongOrNull()
             ?: return@withContext crearDesdeMetadata(mediaItem, 0)
 
         // Intentar obtener de BD
-        cancionDao.obtenerCancionConArtistaPorId(idCancion.toInt(), usuarioId)
+        songDao.obtenerCancionConArtistaPorId(idCancion.toInt(), usuarioId)
             ?: crearDesdeMetadata(mediaItem, idCancion.toInt())
     }
 
     /**
-     * Crea CancionConArtista desde metadata de MediaItem
+     * Crea SongWithArtist desde metadata de MediaItem
      */
     private fun crearDesdeMetadata(
         mediaItem: MediaItem,
         idCancion: Int
-    ): CancionConArtista? {
+    ): SongWithArtist? {
         return try {
             val metadata = mediaItem.mediaMetadata
 
@@ -230,7 +230,7 @@ class MediaItemHelper @Inject constructor(
             val duracionMs = metadata.durationMs ?: 0L
             val duracionSegundos = (duracionMs / 1000).toInt()
 
-            val cancionEntity = CancionEntity(
+            val songEntity = SongEntity(
                 idCancion = idCancion,
                 titulo = titulo,
                 idArtista = null,
@@ -243,8 +243,8 @@ class MediaItemHelper @Inject constructor(
                 geniusUrl = null
             )
 
-            val resultado = CancionConArtista(
-                cancion = cancionEntity,
+            val resultado = SongWithArtist(
+                cancion = songEntity,
                 artistaNombre = artista,
                 albumNombre = album,
                 generoNombre = genero,
@@ -253,7 +253,7 @@ class MediaItemHelper @Inject constructor(
                 fechaLanzamiento = metadata.releaseYear.toString()
             )
 
-            Log.d(TAG, "✅ CancionConArtista creado desde metadata")
+            Log.d(TAG, "✅ SongWithArtist creado desde metadata")
             resultado
 
         } catch (e: Exception) {
@@ -268,22 +268,22 @@ class MediaItemHelper @Inject constructor(
     suspend fun obtenerConResiliencia(
         mediaItem: MediaItem,
         usuarioId: Int = USUARIO_DEFAULT
-    ): CancionConArtista? = withContext(Dispatchers.IO) {
+    ): SongWithArtist? = withContext(Dispatchers.IO) {
         mediaItemACancionConArtista(mediaItem, usuarioId)
             ?: extraerDatosBasicos(mediaItem)?.let { crearCancionMinima(mediaItem, it) }
     }
 
     /**
-     * Crea CancionConArtista con datos mínimos
+     * Crea SongWithArtist con datos mínimos
      */
     private fun crearCancionMinima(
         mediaItem: MediaItem,
         datosBasicos: Pair<String, String>
-    ): CancionConArtista {
+    ): SongWithArtist {
         val (titulo, artista) = datosBasicos
         val idCancion = mediaItem.mediaId.toLongOrNull() ?: 0L
 
-        val cancionEntity = CancionEntity(
+        val songEntity = SongEntity(
             idCancion = idCancion.toInt(),
             titulo = titulo,
             idArtista = null,
@@ -296,8 +296,8 @@ class MediaItemHelper @Inject constructor(
             geniusUrl = null
         )
 
-        return CancionConArtista(
-            cancion = cancionEntity,
+        return SongWithArtist(
+            cancion = songEntity,
             artistaNombre = artista,
             albumNombre = "",
             generoNombre = "",
@@ -381,7 +381,7 @@ class MediaItemHelper @Inject constructor(
     ): Boolean {
         return try {
             val idCancion = extraerIdCancion(mediaItem) ?: return false
-            cancionDao.obtenerCancionConArtistaPorId(idCancion, usuarioId) != null
+            songDao.obtenerCancionConArtistaPorId(idCancion, usuarioId) != null
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error verificando existencia", e)
             false
@@ -489,7 +489,7 @@ class MediaItemHelper @Inject constructor(
         replaceWith = ReplaceWith("crearMediaItem(cancion, artworkBitmap)")
     )
     fun crearMediaItemDesdeEntidad(
-        cancion: CancionConArtista,
+        cancion: SongWithArtist,
         artworkBitmap: Bitmap? = null
     ): MediaItem {
         return crearMediaItem(cancion, artworkBitmap)
@@ -502,7 +502,7 @@ class MediaItemHelper @Inject constructor(
         message = "Usar mediaItemACancionConArtista() en su lugar",
         replaceWith = ReplaceWith("mediaItemACancionConArtista(mediaItem)")
     )
-    suspend fun mediaItemToCancionConArtista(mediaItem: MediaItem): CancionConArtista? {
+    suspend fun mediaItemToCancionConArtista(mediaItem: MediaItem): SongWithArtist? {
         return mediaItemACancionConArtista(mediaItem)
     }
 
@@ -513,7 +513,7 @@ class MediaItemHelper @Inject constructor(
         message = "Usar obtenerConResiliencia() en su lugar",
         replaceWith = ReplaceWith("obtenerConResiliencia(mediaItem)")
     )
-    suspend fun obtenerDatosCancionConResiliencia(mediaItem: MediaItem): CancionConArtista? {
+    suspend fun obtenerDatosCancionConResiliencia(mediaItem: MediaItem): SongWithArtist? {
         return obtenerConResiliencia(mediaItem)
     }
 

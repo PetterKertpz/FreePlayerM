@@ -8,7 +8,6 @@ import coil.memory.MemoryCache
 import coil.request.CachePolicy
 import coil.util.DebugLogger
 import com.example.freeplayerm.BuildConfig
-import com.example.freeplayerm.R
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -42,7 +41,7 @@ object ImageLoadingModule {
     @Singleton
     fun provideImageLoader(
         @ApplicationContext context: Context,
-        @ImageClient okHttpClient: OkHttpClient
+        @ImageClient okHttpClient: OkHttpClient,
     ): ImageLoader {
         return ImageLoader.Builder(context)
             // ⚡ MEMORY CACHE - 25% de RAM
@@ -82,13 +81,12 @@ object ImageLoadingModule {
                     logger(DebugLogger())
                 }
             }
-
             .build()
     }
 
     @Provides
     @Singleton
-    @ImageClient  // ← Agregar qualifier
+    @ImageClient // ← Agregar qualifier
     fun provideImageOkHttpClient(): OkHttpClient {
         return OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
@@ -98,7 +96,7 @@ object ImageLoadingModule {
                 okhttp3.ConnectionPool(
                     maxIdleConnections = 10,
                     keepAliveDuration = 5,
-                    TimeUnit.MINUTES
+                    TimeUnit.MINUTES,
                 )
             )
             .retryOnConnectionFailure(true)

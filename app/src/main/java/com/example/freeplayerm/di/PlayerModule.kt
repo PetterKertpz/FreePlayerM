@@ -18,16 +18,17 @@ object PlayerModule {
 
     @Provides
     @Singleton
-    fun provideAudioAttributes(): AudioAttributes = AudioAttributes.Builder()
-        .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-        .setUsage(C.USAGE_MEDIA)
-        .build()
+    fun provideAudioAttributes(): AudioAttributes =
+        AudioAttributes.Builder()
+            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+            .setUsage(C.USAGE_MEDIA)
+            .build()
 
     @Provides
     @Singleton
     fun provideExoPlayer(
         @ApplicationContext context: Context,
-        audioAttributes: AudioAttributes
+        audioAttributes: AudioAttributes,
     ): Player {
         return ExoPlayer.Builder(context)
             .setAudioAttributes(audioAttributes, true)

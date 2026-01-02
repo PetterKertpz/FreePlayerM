@@ -7,8 +7,8 @@ import java.util.Date
 /**
  * 🔄 TYPE CONVERTERS - ROOM DATABASE
  *
- * Clase que define conversores de tipos para Room
- * Permite a Room trabajar con tipos de datos que no soporta nativamente
+ * Clase que define conversores de tipos para Room Permite a Room trabajar con tipos de datos que no
+ * soporta nativamente
  *
  * Tipos soportados:
  * - Date <-> Long (timestamp en milisegundos)

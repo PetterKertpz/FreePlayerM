@@ -7,20 +7,17 @@ import com.squareup.moshi.JsonClass
 /**
  * 🎵 GENIUS SONG RESPONSE
  *
- * DTO completo para endpoint /songs/{id} de Genius API
- * Captura TODOS los datos disponibles según documentación oficial
+ * DTO completo para endpoint /songs/{id} de Genius API Captura TODOS los datos disponibles según
+ * documentación oficial
  */
-
 @JsonClass(generateAdapter = true)
 data class GeniusSongResponse(
     @Json(name = "meta") val meta: MetaInfo,
-    @Json(name = "response") val response: SongResponseData
+    @Json(name = "response") val response: SongResponseData,
 )
 
 @JsonClass(generateAdapter = true)
-data class SongResponseData(
-    @Json(name = "song") val song: SongDetails
-)
+data class SongResponseData(@Json(name = "song") val song: SongDetails)
 
 @JsonClass(generateAdapter = true)
 data class SongDetails(
@@ -47,7 +44,8 @@ data class SongDetails(
     // ==================== FECHAS ====================
     @Json(name = "release_date") val releaseDate: String? = null,
     @Json(name = "release_date_for_display") val releaseDateDisplay: String? = null,
-    @Json(name = "release_date_components") val releaseDateComponents: ReleaseDateComponents? = null,
+    @Json(name = "release_date_components")
+    val releaseDateComponents: ReleaseDateComponents? = null,
 
     // ==================== IMÁGENES ====================
     @Json(name = "song_art_image_url") val songArtImageUrl: String? = null,
@@ -90,7 +88,7 @@ data class SongDetails(
 
     // ==================== TIMESTAMPS ====================
     @Json(name = "lyrics_updated_at") val lyricsUpdatedAt: Long? = null,
-    @Json(name = "updated_by_human_at") val updatedByHumanAt: Long? = null
+    @Json(name = "updated_by_human_at") val updatedByHumanAt: Long? = null,
 )
 
 // ==================== SUPPORTING DATA CLASSES ====================
@@ -104,7 +102,7 @@ data class ArtistInfo(
     @Json(name = "header_image_url") val headerImageUrl: String? = null,
     @Json(name = "header_image_thumbnail_url") val headerImageThumbnailUrl: String? = null,
     @Json(name = "is_verified") val isVerified: Boolean? = null,
-    @Json(name = "is_meme_verified") val isMemeVerified: Boolean? = null
+    @Json(name = "is_meme_verified") val isMemeVerified: Boolean? = null,
 )
 
 @JsonClass(generateAdapter = true)
@@ -117,14 +115,14 @@ data class AlbumInfo(
     @Json(name = "cover_art_thumbnail_url") val coverArtThumbnailUrl: String? = null,
     @Json(name = "artist") val artist: ArtistInfo? = null,
     @Json(name = "release_date") val releaseDate: String? = null,
-    @Json(name = "release_date_components") val releaseDateComponents: ReleaseDateComponents? = null
+    @Json(name = "release_date_components") val releaseDateComponents: ReleaseDateComponents? = null,
 )
 
 @JsonClass(generateAdapter = true)
 data class ReleaseDateComponents(
     @Json(name = "year") val year: Int? = null,
     @Json(name = "month") val month: Int? = null,
-    @Json(name = "day") val day: Int? = null
+    @Json(name = "day") val day: Int? = null,
 )
 
 @JsonClass(generateAdapter = true)
@@ -137,14 +135,14 @@ data class SongStats(
     @Json(name = "contributors") val contributors: Int? = null,
     @Json(name = "iq_earners") val iqEarners: Int? = null,
     @Json(name = "transcribers") val transcribers: Int? = null,
-    @Json(name = "verified_annotations") val verifiedAnnotations: Int? = null
+    @Json(name = "verified_annotations") val verifiedAnnotations: Int? = null,
 )
 
 @JsonClass(generateAdapter = true)
 data class Description(
     @Json(name = "plain") val plain: String? = null,
     @Json(name = "html") val html: String? = null,
-    @Json(name = "markdown") val markdown: String? = null
+    @Json(name = "markdown") val markdown: String? = null,
 )
 
 @JsonClass(generateAdapter = true)
@@ -156,7 +154,7 @@ data class DescriptionAnnotation(
     @Json(name = "api_path") val apiPath: String? = null,
     @Json(name = "classification") val classification: String? = null,
     @Json(name = "fragment") val fragment: String? = null,
-    @Json(name = "body") val body: Description? = null
+    @Json(name = "body") val body: Description? = null,
 )
 
 @JsonClass(generateAdapter = true)
@@ -164,19 +162,19 @@ data class MediaItem(
     @Json(name = "provider") val provider: String,
     @Json(name = "type") val type: String,
     @Json(name = "url") val url: String,
-    @Json(name = "native_uri") val nativeUri: String? = null
+    @Json(name = "native_uri") val nativeUri: String? = null,
 )
 
 @JsonClass(generateAdapter = true)
 data class SongRelationship(
     @Json(name = "type") val type: String,
-    @Json(name = "songs") val songs: List<SongResult>? = null
+    @Json(name = "songs") val songs: List<SongResult>? = null,
 )
 
 @JsonClass(generateAdapter = true)
 data class CustomPerformance(
     @Json(name = "label") val label: String,
-    @Json(name = "artists") val artists: List<ArtistInfo>
+    @Json(name = "artists") val artists: List<ArtistInfo>,
 )
 
 @JsonClass(generateAdapter = true)
@@ -184,55 +182,39 @@ data class UserInfo(
     @Json(name = "id") val id: String,
     @Json(name = "login") val login: String? = null,
     @Json(name = "name") val name: String? = null,
-    @Json(name = "iq") val iq: Int? = null
+    @Json(name = "iq") val iq: Int? = null,
 )
 
 // ==================== EXTENSION FUNCTIONS ====================
 
-/**
- * Obtiene la mejor URL de portada disponible
- */
+/** Obtiene la mejor URL de portada disponible */
 fun SongDetails.getBestCoverArtUrl(): String? {
-    return songArtImageUrl
-        ?: album?.coverArtUrl
-        ?: headerImageUrl
+    return songArtImageUrl ?: album?.coverArtUrl ?: headerImageUrl
 }
 
-/**
- * Obtiene thumbnail de portada
- */
+/** Obtiene thumbnail de portada */
 fun SongDetails.getCoverArtThumbnail(): String? {
-    return songArtImageThumbnailUrl
-        ?: album?.coverArtThumbnailUrl
-        ?: headerImageThumbnailUrl
+    return songArtImageThumbnailUrl ?: album?.coverArtThumbnailUrl ?: headerImageThumbnailUrl
 }
 
-/**
- * Obtiene todos los artistas involucrados
- */
+/** Obtiene todos los artistas involucrados */
 fun SongDetails.getAllArtists(): List<ArtistInfo> {
     val artists = mutableListOf(primaryArtist)
     featuredArtists?.let { artists.addAll(it) }
     return artists
 }
 
-/**
- * Obtiene lista de productores
- */
+/** Obtiene lista de productores */
 fun SongDetails.getProducers(): List<String> {
     return producerArtists?.map { it.name } ?: emptyList()
 }
 
-/**
- * Obtiene lista de escritores
- */
+/** Obtiene lista de escritores */
 fun SongDetails.getWriters(): List<String> {
     return writerArtists?.map { it.name } ?: emptyList()
 }
 
-/**
- * Obtiene media links agrupados por plataforma
- */
+/** Obtiene media links agrupados por plataforma */
 fun SongDetails.getMediaLinks(): Map<String, String> {
     val links = mutableMapOf<String, String>()
 
@@ -250,23 +232,17 @@ fun SongDetails.getMediaLinks(): Map<String, String> {
     return links
 }
 
-/**
- * Verifica si la canción es popular/trending
- */
+/** Verifica si la canción es popular/trending */
 fun SongDetails.isPopular(): Boolean {
     return hot == true || (pageviews ?: 0) > 1_000_000
 }
 
-/**
- * Obtiene descripción en texto plano
- */
+/** Obtiene descripción en texto plano */
 fun SongDetails.getPlainDescription(): String? {
     return description?.plain
 }
 
-/**
- * Construye fecha de lanzamiento estructurada
- */
+/** Construye fecha de lanzamiento estructurada */
 fun SongDetails.getReleaseDateString(): String? {
     return releaseDateDisplay ?: releaseDate
 }
