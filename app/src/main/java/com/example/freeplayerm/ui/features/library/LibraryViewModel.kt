@@ -22,6 +22,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import java.text.Normalizer
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,6 +33,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -49,13 +51,16 @@ constructor(
 ) : ViewModel() {
    private val _estadoUi = MutableStateFlow(BibliotecaEstado())
    val estadoUi = _estadoUi.asStateFlow()
+   
+   // Nuevo: Canal de efectos de navegación
+   private val _efectosNavegacion = Channel<EfectoNavegacion>(Channel.BUFFERED)
+   val efectosNavegacion: Flow<EfectoNavegacion> = _efectosNavegacion.receiveAsFlow()
+   
    private val fuenteDeCancionesActiva =
       MutableStateFlow<Flow<List<SongWithArtist>>>(flowOf(emptyList()))
    private val usuarioIdFlow =
       _estadoUi.map { it.usuarioActual?.idUsuario }.distinctUntilChanged().filterNotNull()
-
-   // Mantenemos este Job para las cargas que no son de canciones (álbumes, artistas, etc.)
-
+   
    init {
       observarYFiltrarCancionesActuales()
       observarYFiltrarAlbumes()
@@ -63,6 +68,7 @@ constructor(
       observarYFiltrarGeneros()
       observarYFiltrarListas()
       observarEstadoEscaneo()
+      
       viewModelScope.launch {
          userPreferencesRepository.userPreferences.collect { preferences ->
             _estadoUi.update {
@@ -74,6 +80,10 @@ constructor(
             }
          }
       }
+      
+      // Nuevo: Sistema de navegación
+      val _efectosNavegacion = Channel<EfectoNavegacion>(Channel.BUFFERED)
+      val efectosNavegacion: Flow<EfectoNavegacion> = _efectosNavegacion.receiveAsFlow()
    }
 
    private fun observarYFiltrarArtistas() {
@@ -139,7 +149,6 @@ constructor(
                )
             }
          }
-         
          is BibliotecaEvento.DesactivarModoSeleccionListas -> {
             _estadoUi.update {
                it.copy(
@@ -590,6 +599,11 @@ constructor(
                musicScannerManager.inicializar(ejecutarEscaneoInicial = true)
             } else {
                android.util.Log.d("BibliotecaVM", "✅ MusicScannerManager ya inicializado")
+            }
+         }
+         BibliotecaEvento.AbrirPerfil -> {
+            viewModelScope.launch {
+               _efectosNavegacion.send(EfectoNavegacion.AbrirPerfil)
             }
          }
       }

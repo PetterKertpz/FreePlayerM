@@ -75,12 +75,14 @@ enum class RepeatMode {
 enum class ExpandedTab {
    LYRICS,
    INFO,
+   CREDITS,
    LINKS;
    
    val titleKey: String
       get() = when (this) {
          LYRICS -> "tab_lyrics"
          INFO -> "tab_info"
+         CREDITS -> "tab_credits"
          LINKS -> "tab_links"
       }
    

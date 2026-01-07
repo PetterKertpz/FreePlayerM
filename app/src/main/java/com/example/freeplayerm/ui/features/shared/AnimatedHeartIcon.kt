@@ -21,7 +21,7 @@ fun IconoCorazonAnimado(
     // 1. Animación de color
     // Anima el color del tinte entre 'onSurfaceVariant' (para no favorito) y RojoMedio (para favorito).
     val colorAnimado by animateColorAsState(
-        targetValue = if (esFavorito) AppColors.Favorito else LocalContentColor.current,
+        targetValue = if (esFavorito) AppColors.Accent.Favorito else LocalContentColor.current,
         animationSpec = tween(durationMillis = 300), // Duración de la animación de color
         label = "color_favorito"
     )

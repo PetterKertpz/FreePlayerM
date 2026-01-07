@@ -125,6 +125,7 @@ sealed interface BibliotecaEvento {
 
    data object ReducirZoom : BibliotecaEvento
    
+   data object AbrirPerfil : BibliotecaEvento
    // ─── Modo selección de Listas ───
    data class ActivarModoSeleccionListas(val lista: PlaylistEntity) : BibliotecaEvento
    

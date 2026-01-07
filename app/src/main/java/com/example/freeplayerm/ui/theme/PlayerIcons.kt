@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Workspaces
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.freeplayerm.ui.features.player.model.RepeatMode  // ✅ Corregido
 import com.example.freeplayerm.ui.features.player.model.PlaybackMode  // ✅ Corregido
@@ -86,6 +87,7 @@ object PlayerIcons {
    
    val TabLyrics: ImageVector = Icons.AutoMirrored.Filled.Article
    val TabInfo: ImageVector = Icons.Default.Info
+   val TabCredits: ImageVector = Icons.Default.Workspaces
    val TabLinks: ImageVector = Icons.Default.Link
    
    // ==================== EXTERNAL LINKS ====================
@@ -158,6 +160,7 @@ object PlayerIcons {
       when (tab) {
          ExpandedTab.LYRICS -> TabLyrics
          ExpandedTab.INFO -> TabInfo
+         ExpandedTab.CREDITS -> TabCredits
          ExpandedTab.LINKS -> TabLinks
       }
    

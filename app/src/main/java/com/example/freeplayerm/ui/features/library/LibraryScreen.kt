@@ -85,6 +85,7 @@ fun LibraryScreen(
    usuarioId: Int,
    libraryViewModel: LibraryViewModel = hiltViewModel(),
    onPermisosConfirmados: () -> Unit = {},
+   onNavigateToPerfil: () -> Unit = {},
 ) {
    val context = LocalContext.current
    val focusManager = LocalFocusManager.current
@@ -120,6 +121,17 @@ fun LibraryScreen(
       }
       LaunchedEffect(usuarioId) { libraryViewModel.cargarDatosDeUsuario(usuarioId) }
 
+      LaunchedEffect(Unit) {
+         libraryViewModel.efectosNavegacion.collect { efecto ->
+            when (efecto) {
+               EfectoNavegacion.AbrirPerfil -> onNavigateToPerfil()
+               EfectoNavegacion.AbrirConfiguraciones -> {
+                  // TODO: Implementar cuando creemos la pantalla de configuraciones
+               }
+            }
+         }
+      }
+
       CuerpoBibliotecaGalactico(
          estadoBiblioteca = estadoBiblioteca,
          lazyListState = lazyListState,
@@ -151,18 +163,19 @@ fun CuerpoBibliotecaGalactico(
    BackHandler(enabled = playerState.panelMode == PlayerPanelMode.EXPANDED) {
       playerViewModel.onEvent(PlayerEvent.Panel.Collapse)
    }
-   
+
    BackHandler(
-      enabled = playerState.panelMode != PlayerPanelMode.EXPANDED &&
+      enabled =
+         playerState.panelMode != PlayerPanelMode.EXPANDED &&
             (estadoBiblioteca.esModoSeleccion ||
-                  estadoBiblioteca.esModoSeleccionListas ||  // <- Agregar esta línea
-                  estadoBiblioteca.cuerpoActual != TipoDeCuerpoBiblioteca.CANCIONES)
+               estadoBiblioteca.esModoSeleccionListas || // <- Agregar esta línea
+               estadoBiblioteca.cuerpoActual != TipoDeCuerpoBiblioteca.CANCIONES)
    ) {
       when {
          estadoBiblioteca.esModoSeleccion -> {
             onBibliotecaEvento(BibliotecaEvento.DesactivarModoSeleccion)
          }
-         estadoBiblioteca.esModoSeleccionListas -> {  // <- Agregar este caso
+         estadoBiblioteca.esModoSeleccionListas -> { // <- Agregar este caso
             onBibliotecaEvento(BibliotecaEvento.DesactivarModoSeleccionListas)
          }
          estadoBiblioteca.cuerpoActual != TipoDeCuerpoBiblioteca.CANCIONES -> {

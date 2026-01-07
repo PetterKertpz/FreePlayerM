@@ -15,7 +15,27 @@ data class PlayerState(
    val playbackMode: PlaybackMode = PlaybackMode.DEFAULT,
    val repeatMode: RepeatMode = RepeatMode.DEFAULT,
    val isFavorite: Boolean = false,
-
+   
+   // ==================== NUEVOS CAMPOS GENIUS ====================
+   val isHot: Boolean = false,
+   val pageviews: Int? = null,
+   val lyricsState: String? = null, // "complete", "incomplete"
+   val recordingLocation: String? = null,
+   val language: String? = null,
+   
+   // ==================== COLABORACIONES ====================
+   val featuredArtists: List<String> = emptyList(),
+   val producers: List<String> = emptyList(),
+   val remixers: List<String> = emptyList(),
+   
+   // ==================== CRÉDITOS DETALLADOS ====================
+   val credits: Map<String, List<String>> = emptyMap(), // "PRODUCER" -> ["Name1", "Name2"]
+   
+   // ==================== CALIDAD Y ORIGEN ====================
+   val audioQuality: String? = null,
+   val bitrate: Int? = null,
+   val sourceType: String? = null, // "LOCAL", "REMOTA", "STREAMING"
+   
    // === PANEL ===
    val panelMode: PlayerPanelMode = PlayerPanelMode.DEFAULT,
    val activeTab: ExpandedTab = ExpandedTab.DEFAULT,
@@ -138,14 +158,19 @@ data class PlayerState(
          when (activeTab) {
             ExpandedTab.LYRICS -> isLoadingLyrics
             ExpandedTab.INFO -> isLoadingInfo
+            ExpandedTab.CREDITS -> false
             ExpandedTab.LINKS -> false
          }
-
+   
    val hasActiveTabContent: Boolean
       get() =
          when (activeTab) {
             ExpandedTab.LYRICS -> !lyrics.isNullOrBlank()
             ExpandedTab.INFO -> !artistInfo.isNullOrBlank()
+            ExpandedTab.CREDITS -> featuredArtists.isNotEmpty() ||
+                  producers.isNotEmpty() ||
+                  remixers.isNotEmpty() ||
+                  credits.isNotEmpty()
             ExpandedTab.LINKS -> hasLinks
          }
 
