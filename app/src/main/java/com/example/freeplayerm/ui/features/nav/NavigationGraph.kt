@@ -11,14 +11,14 @@ import com.example.freeplayerm.ui.features.auth.login.LoginScreen
 import com.example.freeplayerm.ui.features.auth.recovery.PasswordRecoveryScreen
 import com.example.freeplayerm.ui.features.auth.register.RegisterScreen
 import com.example.freeplayerm.ui.features.library.LibraryScreen
-import com.example.freeplayerm.ui.features.player.ReproductorViewModel
+import com.example.freeplayerm.ui.features.player.viewmodel.PlayerViewModel
 
 // --- CAMBIO CLAVE AQUÍ ---
 @Composable
 fun NavigationGraph(
     navController: NavHostController,
     rutaDeInicio: String,
-    reproductorViewModel: ReproductorViewModel, // <-- Aceptamos el ViewModel compartido
+    playerViewModel: PlayerViewModel, // <-- Aceptamos el ViewModel compartido
 ) {
     NavHost(navController = navController, startDestination = rutaDeInicio) {
         composable(Routes.Login.ruta) { LoginScreen(navController) }
@@ -32,7 +32,7 @@ fun NavigationGraph(
             // Se lo pasamos a la pantalla Biblioteca
             LibraryScreen(
                 usuarioId = usuarioId,
-                reproductorViewModel = reproductorViewModel, // <-- ¡NUEVO!
+                
             )
         }
     }

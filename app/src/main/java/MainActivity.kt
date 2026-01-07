@@ -26,7 +26,7 @@ import com.example.freeplayerm.ui.AuthState
 import com.example.freeplayerm.ui.MainViewModel
 import com.example.freeplayerm.ui.features.nav.NavigationGraph
 import com.example.freeplayerm.ui.features.nav.Routes
-import com.example.freeplayerm.ui.features.player.ReproductorViewModel
+import com.example.freeplayerm.ui.features.player.viewmodel.PlayerViewModel
 import com.example.freeplayerm.ui.features.splash.PantallaDeCarga
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -35,7 +35,7 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private val mainViewModel: MainViewModel by viewModels()
-    private val reproductorViewModel: ReproductorViewModel by viewModels()
+    private val reproductorViewModel: PlayerViewModel by viewModels()
 
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -111,7 +111,7 @@ class MainActivity : ComponentActivity() {
                             NavigationGraph(
                                 navController = navController,
                                 rutaDeInicio = Routes.Biblioteca.crearRuta(state.usuario.idUsuario),
-                                reproductorViewModel = reproductorViewModel
+                                playerViewModel = reproductorViewModel
                             )
                         }
 
@@ -119,7 +119,7 @@ class MainActivity : ComponentActivity() {
                             NavigationGraph(
                                 navController = navController,
                                 rutaDeInicio = Routes.Login.ruta,
-                                reproductorViewModel = reproductorViewModel
+                                playerViewModel = reproductorViewModel
                             )
                         }
                     }

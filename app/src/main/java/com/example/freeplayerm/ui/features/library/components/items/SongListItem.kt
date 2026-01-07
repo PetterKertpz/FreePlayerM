@@ -127,15 +127,6 @@ fun ItemCancion(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-
-        // ✅ BOTÓN DE OPCIONES
-        IconButton(onClick = alClickMasOpciones) {
-            Icon(
-                imageVector = Icons.Default.MoreVert,
-                contentDescription = "Más opciones",
-                tint = Color.White.copy(alpha = 0.6f),
-            )
-        }
     }
 }
 

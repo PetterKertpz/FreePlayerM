@@ -23,7 +23,7 @@ import com.example.freeplayerm.ui.features.library.NivelZoom
 import com.example.freeplayerm.ui.features.library.components.items.ItemCancion
 import com.example.freeplayerm.ui.features.library.components.layouts.LibraryListLayout
 import com.example.freeplayerm.ui.features.library.domain.toItems
-import com.example.freeplayerm.ui.features.player.ReproductorEvento
+import com.example.freeplayerm.ui.features.player.model.PlayerEvent
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 
 /**
@@ -34,12 +34,12 @@ import com.example.freeplayerm.ui.theme.FreePlayerMTheme
  */
 @Composable
 fun SongsContent(
-    canciones: List<SongWithArtist>,
-    modifier: Modifier = Modifier,
-    lazyListState: LazyListState,
-    estado: BibliotecaEstado,
-    onBibliotecaEvento: (BibliotecaEvento) -> Unit,
-    onReproductorEvento: (ReproductorEvento) -> Unit,
+   canciones: List<SongWithArtist>,
+   modifier: Modifier = Modifier,
+   lazyListState: LazyListState,
+   estado: BibliotecaEstado,
+   onBibliotecaEvento: (BibliotecaEvento) -> Unit,
+   onPlayerEvent: (PlayerEvent) -> Unit,
 ) {
     // ✅ Convertir entidades a items de UI con estado de selección (Optimizado)
     val items by
@@ -67,8 +67,8 @@ fun SongsContent(
                 if (estado.esModoSeleccion) {
                     onBibliotecaEvento(BibliotecaEvento.AlternarSeleccionCancion(cancionItem.id))
                 } else {
-                    onReproductorEvento(
-                        ReproductorEvento.Reproduccion.EstablecerColaYReproducir(
+                    onPlayerEvent(
+                       PlayerEvent.Playback.SetQueueAndPlay(
                             estado.canciones,
                             cancionItem.songWithArtist,
                         )
@@ -223,7 +223,7 @@ private val MockState =
 private fun PreviewSongsList(
     @PreviewParameter(SongsProvider::class) canciones: List<SongWithArtist>
 ) {
-    val data = if (canciones.isEmpty()) SongsProvider().values.first() else canciones
+    val data = canciones.ifEmpty { SongsProvider().values.first() }
 
     // Estado mockeado con datos
     val stateWithData = MockState.copy(canciones = data)
@@ -235,7 +235,7 @@ private fun PreviewSongsList(
                 lazyListState = rememberLazyListState(),
                 estado = stateWithData,
                 onBibliotecaEvento = {},
-                onReproductorEvento = {},
+                onPlayerEvent = {},
             )
         }
     }
@@ -257,7 +257,7 @@ private fun PreviewSongsEmpty() {
                 lazyListState = rememberLazyListState(),
                 estado = MockState, // Estado vacío por defecto
                 onBibliotecaEvento = {},
-                onReproductorEvento = {},
+                onPlayerEvent = {},
             )
         }
     }
