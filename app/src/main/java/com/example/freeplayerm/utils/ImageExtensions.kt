@@ -4,16 +4,18 @@ import android.content.Context
 import com.example.freeplayerm.R
 
 
-fun Context.optimizedImageRequest(
-    data: Any?,
-    crossfadeDuration: Int = 300
+fun Context.mediaStoreImageRequest(
+   contentUri: String?,
+   crossfadeDuration: Int = 300
 ): coil.request.ImageRequest {
-    return coil.request.ImageRequest.Builder(this)
-        .data(data)
-        .crossfade(crossfadeDuration)
-        .memoryCacheKey(data.toString())
-        .diskCacheKey(data.toString())
-        .build()
+   return coil.request.ImageRequest.Builder(this)
+      .data(contentUri)
+      .crossfade(crossfadeDuration)
+      .memoryCacheKey(contentUri)
+      .diskCacheKey(contentUri)
+      // ✅ CRÍTICO: Permite que Coil use ContentResolver
+      .allowHardware(true)
+      .build()
 }
 
 // Extension para placeholders consistentes

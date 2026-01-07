@@ -59,45 +59,39 @@ import com.example.freeplayerm.ui.features.library.domain.LibraryZoomConfig
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 import kotlin.math.sqrt
 
-/**
- * 📋 LAYOUT ESPECIAL MEJORADO PARA LISTAS
- *
- * Versión premium con: ✨ Transiciones fluidas animadas 🎭 Efectos visuales sofisticados 🌊
- * Animaciones de entrada en cascada 🎯 Tamaño adaptativo según zoom 📏 Espaciado inteligente
- * dinámico ⚡ Gestos optimizados (un nivel por gesto)
- */
+
 @Composable
 fun <T : LibraryItem> LibraryListLayout(
-    items: List<T>,
-    listState: LazyListState,
-    baseItemHeight: Dp = 72.dp,
-    nivelZoom: NivelZoom = NivelZoom.NORMAL,
-    onZoomChange: (NivelZoom) -> Unit = {},
-    searchQuery: String = "",
-    emptyMessage: String = "No hay elementos disponibles",
-    modifier: Modifier = Modifier,
-    contentPadding: PaddingValues = PaddingValues(bottom = 100.dp),
-    itemSpacing: Dp = 8.dp,
-    itemContent: @Composable (T) -> Unit,
+   items: List<T>,
+   listState: LazyListState,
+   baseItemHeight: Dp = 72.dp,
+   nivelZoom: NivelZoom = NivelZoom.NORMAL,
+   onZoomChange: (NivelZoom) -> Unit = {},
+   searchQuery: String = "",
+   emptyMessage: String = "No hay elementos disponibles",
+   modifier: Modifier = Modifier,
+   contentPadding: PaddingValues = PaddingValues(bottom = 100.dp),
+   itemSpacing: Dp = 8.dp,
+   itemContent: @Composable (T) -> Unit,
 ) {
-    // 📐 Configuración dinámica centralizada
-    val factorEscala = LibraryZoomConfig.factorEscala(nivelZoom)
-    val factorEspaciado = LibraryZoomConfig.factorEspaciado(nivelZoom)
-
-    val dynamicItemSpacing by animateDpAsState(
-        targetValue = itemSpacing * factorEspaciado,
-        animationSpec = tween(300, easing = FastOutSlowInEasing),
-        label = "item_spacing",
-    )
-
-    val itemHeightAjustado by animateDpAsState(
-        targetValue = baseItemHeight * factorEscala,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow,
-        ),
-        label = "item_height",
-    )
+   // 📐 Configuración dinámica centralizada
+   val factorEscala = LibraryZoomConfig.factorEscalaLista(nivelZoom)
+   val factorEspaciado = LibraryZoomConfig.factorEspaciado(nivelZoom)
+   
+   val dynamicItemSpacing by animateDpAsState(
+      targetValue = itemSpacing * factorEspaciado,
+      animationSpec = tween(300, easing = FastOutSlowInEasing),
+      label = "item_spacing",
+   )
+   
+   val itemHeightAjustado by animateDpAsState(
+      targetValue = baseItemHeight * factorEscala,
+      animationSpec = spring(
+         dampingRatio = Spring.DampingRatioMediumBouncy,
+         stiffness = Spring.StiffnessLow,
+      ),
+      label = "item_height",
+   )
 
     // Estado para detectar un solo gesto completo
     var escalaAcumulada by remember { mutableFloatStateOf(1f) }
@@ -190,45 +184,44 @@ fun <T : LibraryItem> LibraryListLayout(
 /** 🎭 Item mejorado con animaciones en cascada */
 @Composable
 private fun EnhancedListItem(
-    index: Int,
-    itemHeight: Dp,
-    content: @Composable () -> Unit
+   index: Int,
+   itemHeight: Dp,
+   content: @Composable () -> Unit
 ) {
-    var isVisible by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(index * 25L)
-        isVisible = true
-    }
-
-    val alpha by animateFloatAsState(
-        targetValue = if (isVisible) 1f else 0f,
-        animationSpec = tween(250, easing = FastOutSlowInEasing),
-        label = "item_alpha",
-    )
-
-    val offsetX by animateDpAsState(
-        targetValue = if (isVisible) 0.dp else (-30).dp,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium,
-        ),
-        label = "item_offset",
-    )
-
-    // ✅ Box con altura específica que el contenido debe respetar
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(itemHeight)
-            .graphicsLayer {
-                this.alpha = alpha
-                translationX = offsetX.toPx()
-            },
-        contentAlignment = Alignment.CenterStart, // ✅ Añadido para alineación vertical
-    ) {
-        content()
-    }
+   var isVisible by remember { mutableStateOf(false) }
+   
+   LaunchedEffect(Unit) {
+      kotlinx.coroutines.delay(index * 25L)
+      isVisible = true
+   }
+   
+   val alpha by animateFloatAsState(
+      targetValue = if (isVisible) 1f else 0f,
+      animationSpec = tween(250, easing = FastOutSlowInEasing),
+      label = "item_alpha",
+   )
+   
+   val offsetX by animateDpAsState(
+      targetValue = if (isVisible) 0.dp else (-30).dp,
+      animationSpec = spring(
+         dampingRatio = Spring.DampingRatioMediumBouncy,
+         stiffness = Spring.StiffnessMedium,
+      ),
+      label = "item_offset",
+   )
+   
+   Box(
+      modifier = Modifier
+         .fillMaxWidth()
+         .height(itemHeight)
+         .graphicsLayer {
+            this.alpha = alpha
+            translationX = offsetX.toPx()
+         },
+      contentAlignment = Alignment.CenterStart,
+   ) {
+      content()
+   }
 }
 
 /** 🔍 Estado vacío de búsqueda mejorado */

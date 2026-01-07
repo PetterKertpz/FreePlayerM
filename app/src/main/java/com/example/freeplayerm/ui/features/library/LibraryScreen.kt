@@ -339,11 +339,11 @@ private fun ContenidoPrincipalBiblioteca(
    TransicionDeContenidoBiblioteca(targetState = estadoBiblioteca.cuerpoActual) { cuerpo ->
       when (cuerpo) {
          TipoDeCuerpoBiblioteca.CANCIONES,
+         TipoDeCuerpoBiblioteca.CANCIONES_DE_LISTA,
          TipoDeCuerpoBiblioteca.CANCIONES_DE_ALBUM,
          TipoDeCuerpoBiblioteca.CANCIONES_DE_ARTISTA,
          TipoDeCuerpoBiblioteca.CANCIONES_DE_GENERO,
-         TipoDeCuerpoBiblioteca.FAVORITOS,
-         TipoDeCuerpoBiblioteca.CANCIONES_DE_LISTA -> {
+         TipoDeCuerpoBiblioteca.FAVORITOS -> {
             SongsContent(
                canciones = estadoBiblioteca.canciones,
                estado = estadoBiblioteca,

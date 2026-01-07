@@ -7,24 +7,6 @@ import com.example.freeplayerm.data.local.entity.PlaylistEntity
 import com.example.freeplayerm.data.local.entity.relations.SongWithArtist
 import com.example.freeplayerm.ui.features.library.NivelZoom
 
-/**
- * 🎯 CONTRATOS UNIFICADOS PARA ITEMS DE BIBLIOTECA
- *
- * Abstracción ligera sobre entidades de Room para facilitar el manejo unificado en componentes de
- * UI reutilizables.
- *
- * NO reemplaza las entidades, solo las envuelve para UI.
- */
-
-// ==================== INTERFACE BASE ====================
-
-/**
- * 📚 Contrato base para elementos visualizables en la biblioteca.
- *
- * Esta interfaz permite que los componentes de UI (Grids, Listas) sean agnósticos al tipo concreto
- * de entidad (Canción, Álbum, Playlist, etc.), dependiendo solo de los datos necesarios para su
- * renderizado visual básico.
- */
 interface LibraryItem {
     /** Identificador único del elemento (usado para key en LazyLists) */
     val id: Int
@@ -181,33 +163,27 @@ object LibraryPreviewsData {
 // 📐 CONFIGURACIÓN CENTRALIZADA DE ZOOM
 // =================================================================
 
-/**
- * Tokens de diseño para el sistema de zoom de la biblioteca.
- * Centraliza los multiplicadores para garantizar consistencia.
- */
+
 object LibraryZoomConfig {
-
-    // Multiplicadores de tamaño por nivel
-    const val FACTOR_PEQUENO = 0.75f
-    const val FACTOR_NORMAL = 1.0f
-    const val FACTOR_GRANDE = 1.35f
-
-    // Multiplicadores de espaciado
-    const val SPACING_FACTOR_PEQUENO = 0.7f
-    const val SPACING_FACTOR_NORMAL = 1.0f
-    const val SPACING_FACTOR_GRANDE = 1.3f
-
-    /** Obtiene el factor de escala para un nivel de zoom */
-    fun factorEscala(nivel: NivelZoom): Float = when (nivel) {
-        NivelZoom.PEQUENO -> FACTOR_PEQUENO
-        NivelZoom.NORMAL -> FACTOR_NORMAL
-        NivelZoom.GRANDE -> FACTOR_GRANDE
-    }
-
-    /** Obtiene el factor de espaciado para un nivel de zoom */
-    fun factorEspaciado(nivel: NivelZoom): Float = when (nivel) {
-        NivelZoom.PEQUENO -> SPACING_FACTOR_PEQUENO
-        NivelZoom.NORMAL -> SPACING_FACTOR_NORMAL
-        NivelZoom.GRANDE -> SPACING_FACTOR_GRANDE
-    }
+   
+   // Columnas por nivel de zoom (para grids)
+   fun columnasGrid(nivel: NivelZoom): Int = when (nivel) {
+      NivelZoom.PEQUENO -> 4
+      NivelZoom.NORMAL -> 3
+      NivelZoom.GRANDE -> 2
+   }
+   
+   // Multiplicadores de espaciado
+   fun factorEspaciado(nivel: NivelZoom): Float = when (nivel) {
+      NivelZoom.PEQUENO -> 0.6f
+      NivelZoom.NORMAL -> 1.0f
+      NivelZoom.GRANDE -> 1.2f
+   }
+   
+   // Factor de escala para listas (no grids)
+   fun factorEscalaLista(nivel: NivelZoom): Float = when (nivel) {
+      NivelZoom.PEQUENO -> 0.85f
+      NivelZoom.NORMAL -> 1.0f
+      NivelZoom.GRANDE -> 1.2f
+   }
 }

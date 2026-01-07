@@ -23,13 +23,6 @@ import com.example.freeplayerm.ui.features.library.components.layouts.LibraryGri
 import com.example.freeplayerm.ui.features.library.domain.toItem
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 
-/**
- * 💿 CONTENIDO DE ÁLBUMES CON DISEÑO MEJORADO
- *
- * Características: ✨ Usa LibraryGridLayout genérico con animaciones 🎯 Tamaño optimizado para
- * mostrar 3+ álbumes en pantalla 🎨 Gestos de zoom suaves (un nivel por gesto) 📱 Responsive con
- * estados vacíos integrados ⚡ Performance optimizado con derivedStateOf
- */
 @Composable
 fun AlbumsContent(
     albumes: List<AlbumEntity>,
@@ -43,21 +36,19 @@ fun AlbumsContent(
     val items by remember(albumes) { derivedStateOf { albumes.map { it.toItem() } } }
 
     // 🎨 Usar layout genérico mejorado con animaciones
-    LibraryGridLayout(
-        items = items,
-        gridState = lazyGridState,
-        minItemSize = 150.dp, // 🎯 Optimizado para ItemAlbumVinilo compacto (175dp)
-        nivelZoom = nivelZoom,
-        onZoomChange = onZoomChange,
-        emptyMessage = "No hay álbumes en tu biblioteca",
-        modifier = modifier,
-        contentPadding = PaddingValues(16.dp),
-        verticalSpacing = 20.dp,
-        horizontalSpacing = 12.dp,
-    ) { albumItem ->
-        // 💿 Visualización de álbum con diseño vinilo compacto
-        ItemAlbum(album = albumItem.album, alClick = onAlbumClick)
-    }
+   LibraryGridLayout(
+      items = items,
+      gridState = lazyGridState,
+      nivelZoom = nivelZoom,
+      onZoomChange = onZoomChange,
+      emptyMessage = "No hay álbumes en tu biblioteca",
+      modifier = modifier,
+      contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
+      verticalSpacing = 12.dp,
+      horizontalSpacing = 8.dp,
+   ) { albumItem ->
+      ItemAlbum(album = albumItem.album, alClick = onAlbumClick)
+   }
 }
 
 // ==================== PREVIEWS & FAKE DATA ====================
@@ -239,69 +230,114 @@ private fun PreviewAlbumsNormal(
         }
     }
 }
+// ==================== PREVIEWS ====================
 
 @Preview(
-    name = "🔍 Zoom Pequeño - Más items",
-    showBackground = true,
-    backgroundColor = 0xFF0F0518,
-    widthDp = 360,
-    heightDp = 640,
+   name = "🔍 Zoom PEQUEÑO - 4 columnas",
+   showBackground = true,
+   backgroundColor = 0xFF0F0518,
+   widthDp = 360,
+   heightDp = 700,
 )
 @Composable
 private fun PreviewAlbumsZoomPequeno() {
-    FreePlayerMTheme(darkTheme = true) {
-        Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0F0518))) {
-            AlbumsContent(
-                albumes = AlbumsProvider().values.first(),
-                lazyGridState = rememberLazyGridState(),
-                nivelZoom = NivelZoom.PEQUENO,
-                onZoomChange = {},
-                onAlbumClick = {},
-            )
-        }
-    }
+   FreePlayerMTheme(darkTheme = true) {
+      Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0F0518))) {
+         AlbumsContent(
+            albumes = AlbumsProvider().values.first(),
+            lazyGridState = rememberLazyGridState(),
+            nivelZoom = NivelZoom.PEQUENO,
+            onZoomChange = {},
+            onAlbumClick = {},
+         )
+      }
+   }
 }
 
 @Preview(
-    name = "🔎 Zoom Grande - Detalle",
-    showBackground = true,
-    backgroundColor = 0xFF0F0518,
-    widthDp = 360,
-    heightDp = 640,
+   name = "📚 Zoom NORMAL - 3 columnas",
+   showBackground = true,
+   backgroundColor = 0xFF0F0518,
+   widthDp = 360,
+   heightDp = 700,
+)
+@Composable
+private fun PreviewAlbumsZoomNormal() {
+   FreePlayerMTheme(darkTheme = true) {
+      Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0F0518))) {
+         AlbumsContent(
+            albumes = AlbumsProvider().values.first(),
+            lazyGridState = rememberLazyGridState(),
+            nivelZoom = NivelZoom.NORMAL,
+            onZoomChange = {},
+            onAlbumClick = {},
+         )
+      }
+   }
+}
+
+@Preview(
+   name = "🔎 Zoom GRANDE - 2 columnas",
+   showBackground = true,
+   backgroundColor = 0xFF0F0518,
+   widthDp = 360,
+   heightDp = 700,
 )
 @Composable
 private fun PreviewAlbumsZoomGrande() {
-    FreePlayerMTheme(darkTheme = true) {
-        Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0F0518))) {
-            AlbumsContent(
-                albumes = AlbumsProvider().values.first(),
-                lazyGridState = rememberLazyGridState(),
-                nivelZoom = NivelZoom.GRANDE,
-                onZoomChange = {},
-                onAlbumClick = {},
-            )
-        }
-    }
+   FreePlayerMTheme(darkTheme = true) {
+      Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0F0518))) {
+         AlbumsContent(
+            albumes = AlbumsProvider().values.first(),
+            lazyGridState = rememberLazyGridState(),
+            nivelZoom = NivelZoom.GRANDE,
+            onZoomChange = {},
+            onAlbumClick = {},
+         )
+      }
+   }
 }
 
 @Preview(
-    name = "📭 Estado Vacío",
-    showBackground = true,
-    backgroundColor = 0xFF0F0518,
-    widthDp = 360,
-    heightDp = 640,
+   name = "📱 Tablet - Zoom Normal",
+   showBackground = true,
+   backgroundColor = 0xFF0F0518,
+   widthDp = 600,
+   heightDp = 900,
+)
+@Composable
+private fun PreviewAlbumsTablet() {
+   FreePlayerMTheme(darkTheme = true) {
+      Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0F0518))) {
+         AlbumsContent(
+            albumes = AlbumsProvider().values.first(),
+            lazyGridState = rememberLazyGridState(),
+            nivelZoom = NivelZoom.NORMAL,
+            onZoomChange = {},
+            onAlbumClick = {},
+         )
+      }
+   }
+}
+
+@Preview(
+   name = "📭 Estado Vacío",
+   showBackground = true,
+   backgroundColor = 0xFF0F0518,
+   widthDp = 360,
+   heightDp = 640,
 )
 @Composable
 private fun PreviewAlbumsEmpty() {
-    FreePlayerMTheme(darkTheme = true) {
-        Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0F0518))) {
-            AlbumsContent(
-                albumes = emptyList(),
-                lazyGridState = rememberLazyGridState(),
-                nivelZoom = NivelZoom.NORMAL,
-                onZoomChange = {},
-                onAlbumClick = {},
-            )
-        }
-    }
+   FreePlayerMTheme(darkTheme = true) {
+      Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0F0518))) {
+         AlbumsContent(
+            albumes = emptyList(),
+            lazyGridState = rememberLazyGridState(),
+            nivelZoom = NivelZoom.NORMAL,
+            onZoomChange = {},
+            onAlbumClick = {},
+         )
+      }
+   }
 }

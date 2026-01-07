@@ -46,7 +46,6 @@ fun ArtistsContent(
     LibraryGridLayout(
         items = items,
         gridState = lazyGridState,
-        minItemSize = 130.dp, // 🎯 Optimizado para ItemArtistaGalactico
         nivelZoom = nivelZoom,
         onZoomChange = onZoomChange,
         emptyMessage = "No hay artistas en tu biblioteca",

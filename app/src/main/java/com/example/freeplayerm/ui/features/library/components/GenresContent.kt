@@ -46,7 +46,6 @@ fun GenresContent(
     LibraryGridLayout(
         items = items,
         gridState = lazyGridState,
-        minItemSize = 150.dp, // 🎯 Tamaño equilibrado para tarjetas con color
         nivelZoom = nivelZoom,
         onZoomChange = onZoomChange,
         emptyMessage = "No hay géneros disponibles",

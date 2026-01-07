@@ -300,7 +300,9 @@ fun PreviewFloatingTitle() {
 fun PreviewAnimatedHeader() {
     GalaxyContextWrapper {
         // Validamos la superposición del Borde Oscuro vs Relleno Morado
-        EncabezadoLogoAnimado()
+        EncabezadoLogoAnimado(
+        
+        )
     }
 }
 
