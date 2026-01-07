@@ -50,11 +50,11 @@ fun ItemCancion(
    alClick: () -> Unit,
    alClickMasOpciones: () -> Unit,
    modifier: Modifier = Modifier,
-   alLongClick: (() -> Unit)? = null,
+   alLongClick: (() -> Unit) = {},
 ) {
    GlassCard(
       onClick = alClick,
-      seleccionado = esSeleccionado,
+      isSelected = esSeleccionado,
       onLongClick = alLongClick,
       modifier = modifier.fillMaxWidth(),
    ) {

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -58,49 +59,37 @@ private object GlassCardDefaults {
 fun GlassCard(
    onClick: () -> Unit,
    modifier: Modifier = Modifier,
-   seleccionado: Boolean = false,
-   onLongClick: (() -> Unit)? = null,
+   onLongClick: () -> Unit = {},
+   isSelected: Boolean = false,
    content: @Composable RowScope.() -> Unit,
 ) {
-   // Animación del color de borde
-   val borderColor by
-      animateColorAsState(
-         targetValue =
-            if (seleccionado) GlassCardDefaults.BorderSelected else GlassCardDefaults.BorderNormal,
-         animationSpec = tween(300),
-         label = "border_color",
-      )
-
-   // Animación del color de fondo (overlay sobre el gradiente)
-   val backgroundColor by
-      animateColorAsState(
-         targetValue =
-            if (seleccionado) GlassCardDefaults.BackgroundSelected else Color.Transparent,
-         animationSpec = tween(300),
-         label = "background_color",
-      )
-
-   Row(
-      modifier =
-         modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp, horizontal = 8.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(GlassCardDefaults.GlassGradient)
-            .background(backgroundColor)
-            .border(
-               width = if (seleccionado) 1.5.dp else 1.dp,
-               color = borderColor,
-               shape = RoundedCornerShape(12.dp),
-            )
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(10.dp),
-      verticalAlignment = Alignment.CenterVertically,
-   ) {
-      content()
+   val borderColor = if (isSelected) {
+      Color(0xFFD500F9).copy(alpha = 0.7f)
+   } else {
+      Color.White.copy(alpha = 0.1f)
    }
+   
+   val backgroundColor = if (isSelected) {
+      Color(0xFFD500F9).copy(alpha = 0.15f)
+   } else {
+      Color.White.copy(alpha = 0.05f)
+   }
+   
+   Row(
+      modifier = modifier
+         .fillMaxSize()
+         .clip(RoundedCornerShape(12.dp))
+         .background(backgroundColor)
+         .border(1.dp, borderColor, RoundedCornerShape(12.dp))
+         .combinedClickable(
+            onClick = onClick,
+            onLongClick = onLongClick,
+         )
+         .padding(8.dp),
+      verticalAlignment = Alignment.CenterVertically,
+      content = content,
+   )
 }
-
 // ==================== PREVIEWS & MOCKS ====================
 
 /** 📦 Datos de prueba para previsualizar diferentes estados */
@@ -152,7 +141,7 @@ private fun GlassCardPreview(
 ) {
    FreePlayerMTheme(darkTheme = true) {
       Box(modifier = Modifier.padding(16.dp)) {
-         GlassCard(onClick = {}, onLongClick = {}, seleccionado = data.seleccionado) {
+         GlassCard(onClick = {}, onLongClick = {}, isSelected = data.seleccionado) {
             // CONTENIDO SIMULADO (RowScope)
 
             // 1. Placeholder de Icono/Portada

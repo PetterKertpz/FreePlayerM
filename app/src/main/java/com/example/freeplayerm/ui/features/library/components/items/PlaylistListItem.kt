@@ -1,6 +1,12 @@
 package com.example.freeplayerm.ui.features.library.components.items
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -14,9 +20,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,7 +38,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,15 +50,60 @@ import com.example.freeplayerm.ui.features.library.domain.LibraryZoomConfig
 import com.example.freeplayerm.utils.mediaStoreImageRequest
 
 @Composable
-fun ItemLista(lista: PlaylistEntity, onClick: () -> Unit, modifier: Modifier = Modifier) {
-   GlassCard(onClick = onClick, modifier = modifier.fillMaxWidth()) {
-      // ✅ PORTADA - tamaño proporcional
+fun ItemLista(
+   lista: PlaylistEntity,
+   onClick: () -> Unit,
+   modifier: Modifier = Modifier,
+   esModoSeleccion: Boolean = false,
+   estaSeleccionada: Boolean = false,
+   onLongClick: (() -> Unit) = {},
+) {
+   GlassCard(
+      onClick = onClick,
+      isSelected = estaSeleccionada,
+      onLongClick = onLongClick,
+      modifier = modifier.fillMaxWidth(),
+   ) {
+      // Checkbox de selección
+      AnimatedVisibility(
+         visible = esModoSeleccion,
+         enter = fadeIn() + scaleIn(),
+         exit = fadeOut() + scaleOut(),
+      ) {
+         Box(
+            modifier = Modifier
+               .padding(end = 8.dp)
+               .size(24.dp)
+               .clip(CircleShape)
+               .background(
+                  if (estaSeleccionada) Color(0xFFD500F9)
+                  else Color.Transparent
+               )
+               .border(
+                  2.dp,
+                  if (estaSeleccionada) Color(0xFFD500F9) else Color.Gray,
+                  CircleShape,
+               ),
+            contentAlignment = Alignment.Center,
+         ) {
+            if (estaSeleccionada) {
+               Icon(
+                  imageVector = Icons.Default.Check,
+                  contentDescription = null,
+                  tint = Color.White,
+                  modifier = Modifier.size(16.dp),
+               )
+            }
+         }
+      }
+      
+      // Portada
       BoxWithConstraints(
-         modifier =
-            Modifier.fillMaxHeight()
-               .aspectRatio(1f)
-               .clip(RoundedCornerShape(8.dp))
-               .background(Color(0xFF2A0F35)),
+         modifier = Modifier
+            .fillMaxHeight()
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0xFF2A0F35)),
          contentAlignment = Alignment.Center,
       ) {
          if (!lista.portadaUrl.isNullOrEmpty()) {
@@ -71,10 +123,10 @@ fun ItemLista(lista: PlaylistEntity, onClick: () -> Unit, modifier: Modifier = M
             )
          }
       }
-
+      
       Spacer(Modifier.width(12.dp))
-
-      // ✅ INFORMACIÓN DE LA LISTA
+      
+      // Información de la lista
       Column(
          modifier = Modifier.weight(1f).fillMaxHeight(),
          verticalArrangement = Arrangement.Center,
@@ -90,7 +142,9 @@ fun ItemLista(lista: PlaylistEntity, onClick: () -> Unit, modifier: Modifier = M
          Spacer(modifier = Modifier.height(2.dp))
          Text(
             text = lista.descripcion?.takeIf { it.isNotBlank() } ?: "Lista local",
-            color = Color.White.copy(alpha = if (lista.descripcion.isNullOrBlank()) 0.4f else 0.6f),
+            color = Color.White.copy(
+               alpha = if (lista.descripcion.isNullOrBlank()) 0.4f else 0.6f
+            ),
             fontSize = 13.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -148,20 +202,21 @@ private fun PlaylistWrapper(content: @Composable () -> Unit) {
       content()
    }
 }
+
 // ==================== PREVIEWS ====================
 
 @Composable
 private fun PlaylistItemPreviewWrapper(
    nivelZoom: NivelZoom = NivelZoom.NORMAL,
-   content: @Composable () -> Unit
+   content: @Composable () -> Unit,
 ) {
    val altura = 80.dp * LibraryZoomConfig.factorEscalaLista(nivelZoom)
    Box(
-      modifier = Modifier
-         .fillMaxWidth()
-         .height(altura)
-         .background(Color(0xFF050010))
-         .padding(horizontal = 8.dp)
+      modifier =
+         Modifier.fillMaxWidth()
+            .height(altura)
+            .background(Color(0xFF050010))
+            .padding(horizontal = 8.dp)
    ) {
       content()
    }
@@ -171,79 +226,60 @@ private fun PlaylistItemPreviewWrapper(
 @Composable
 private fun PreviewPlaylistZoomPequeno() {
    val lista = PlaylistEntity(1, 1, "Workout 2024", "High energy beats", "fake_url")
-   PlaylistItemPreviewWrapper(NivelZoom.PEQUENO) {
-      ItemLista(lista = lista, onClick = {})
-   }
+   PlaylistItemPreviewWrapper(NivelZoom.PEQUENO) { ItemLista(lista = lista, onClick = {}) }
 }
 
 @Preview(name = "📋 Zoom Normal", widthDp = 360)
 @Composable
 private fun PreviewPlaylistZoomNormal() {
    val lista = PlaylistEntity(1, 1, "Workout 2024", "High energy beats", "fake_url")
-   PlaylistItemPreviewWrapper(NivelZoom.NORMAL) {
-      ItemLista(lista = lista, onClick = {})
-   }
+   PlaylistItemPreviewWrapper(NivelZoom.NORMAL) { ItemLista(lista = lista, onClick = {}) }
 }
 
 @Preview(name = "🔎 Zoom Grande", widthDp = 360)
 @Composable
 private fun PreviewPlaylistZoomGrande() {
    val lista = PlaylistEntity(1, 1, "Workout 2024", "High energy beats", "fake_url")
-   PlaylistItemPreviewWrapper(NivelZoom.GRANDE) {
-      ItemLista(lista = lista, onClick = {})
-   }
+   PlaylistItemPreviewWrapper(NivelZoom.GRANDE) { ItemLista(lista = lista, onClick = {}) }
 }
 
 @Preview(name = "🎵 Sin Portada", widthDp = 360)
 @Composable
 private fun PreviewPlaylistSinPortada() {
    val lista = PlaylistEntity(2, 1, "Mis Favoritos", null, null)
-   PlaylistItemPreviewWrapper(NivelZoom.NORMAL) {
-      ItemLista(lista = lista, onClick = {})
-   }
+   PlaylistItemPreviewWrapper(NivelZoom.NORMAL) { ItemLista(lista = lista, onClick = {}) }
 }
 
 @Preview(name = "📝 Texto Largo", widthDp = 360)
 @Composable
 private fun PreviewPlaylistTextoLargo() {
-   val lista = PlaylistEntity(
-      3, 1,
-      "Playlist con nombre extremadamente largo",
-      "Descripción muy detallada que debería cortarse",
-      null
-   )
-   PlaylistItemPreviewWrapper(NivelZoom.NORMAL) {
-      ItemLista(lista = lista, onClick = {})
-   }
+   val lista =
+      PlaylistEntity(
+         3,
+         1,
+         "Playlist con nombre extremadamente largo",
+         "Descripción muy detallada que debería cortarse",
+         null,
+      )
+   PlaylistItemPreviewWrapper(NivelZoom.NORMAL) { ItemLista(lista = lista, onClick = {}) }
 }
 
 @Preview(name = "📱 Lista Contexto (x3)", widthDp = 360, heightDp = 320)
 @Composable
 private fun PreviewPlaylistListaContexto() {
    val altura = 80.dp * LibraryZoomConfig.factorEscalaLista(NivelZoom.NORMAL)
-   Box(
-      modifier = Modifier
-         .fillMaxSize()
-         .background(Color(0xFF050010))
-         .padding(8.dp)
-   ) {
+   Box(modifier = Modifier.fillMaxSize().background(Color(0xFF050010)).padding(8.dp)) {
       Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
          Box(Modifier.height(altura)) {
-            ItemLista(
-               lista = PlaylistEntity(1, 1, "Gym Hits", "Energy", null),
-               onClick = {}
-            )
+            ItemLista(lista = PlaylistEntity(1, 1, "Gym Hits", "Energy", null), onClick = {})
          }
          Box(Modifier.height(altura)) {
-            ItemLista(
-               lista = PlaylistEntity(2, 1, "Sleep Sounds", null, null),
-               onClick = {}
-            )
+            ItemLista(lista = PlaylistEntity(2, 1, "Sleep Sounds", null, null), onClick = {})
          }
          Box(Modifier.height(altura)) {
             ItemLista(
                lista = PlaylistEntity(3, 1, "Road Trip", "California vibes", "url"),
-               onClick = {}
+               onClick = {},
             )
          }
       }

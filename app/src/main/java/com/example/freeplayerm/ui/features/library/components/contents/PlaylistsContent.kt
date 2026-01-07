@@ -1,9 +1,10 @@
-package com.example.freeplayerm.ui.features.library.components
+package com.example.freeplayerm.ui.features.library.components.contents
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
@@ -20,6 +21,8 @@ import com.example.freeplayerm.data.local.entity.PlaylistEntity
 import com.example.freeplayerm.ui.features.library.NivelZoom
 import com.example.freeplayerm.ui.features.library.components.items.ItemLista
 import com.example.freeplayerm.ui.features.library.components.layouts.LibraryListLayout
+import com.example.freeplayerm.ui.features.library.domain.LibraryZoomConfig
+import com.example.freeplayerm.ui.features.library.domain.PlaylistItem
 import com.example.freeplayerm.ui.features.library.domain.toItem
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme
 
@@ -31,31 +34,52 @@ import com.example.freeplayerm.ui.theme.FreePlayerMTheme
  */
 @Composable
 fun PlaylistsContent(
-    listas: List<PlaylistEntity>,
-    lazyListState: LazyListState,
-    nivelZoom: NivelZoom = NivelZoom.NORMAL,
-    onZoomChange: (NivelZoom) -> Unit = {},
-    onListaClick: (PlaylistEntity) -> Unit,
-    modifier: Modifier = Modifier,
+   listas: List<PlaylistEntity>,
+   lazyListState: LazyListState,
+   nivelZoom: NivelZoom,
+   onZoomChange: (NivelZoom) -> Unit,
+   onListaClick: (PlaylistEntity) -> Unit,
+   modifier: Modifier = Modifier,
+   // Nuevos parámetros
+   esModoSeleccion: Boolean = false,
+   listasSeleccionadas: Set<Int> = emptySet(),
+   onActivarModoSeleccion: (PlaylistEntity) -> Unit = {},
+   onAlternarSeleccion: (Int) -> Unit = {},
 ) {
-    // ✅ Optimización de conversión
-    val items by remember(listas) { derivedStateOf { listas.map { it.toItem() } } }
-
-    // 📋 Layout de Lista (Ideal para Playlists con descripción)
-    LibraryListLayout(
-        items = items,
-        listState = lazyListState,
-        baseItemHeight = 80.dp, // 🎯 Un poco más alto para mostrar portadas y detalles
-        nivelZoom = nivelZoom,
-        onZoomChange = onZoomChange,
-        emptyMessage = "Crea tu primera lista de reproducción",
-        modifier = modifier,
-        contentPadding = PaddingValues(bottom = 100.dp, top = 16.dp), // Espacio para mini-player
-        itemSpacing = 12.dp,
-    ) { listaItem ->
-        // 🌌 Item con diseño Galáctico
-        ItemLista(lista = listaItem.lista, onClick = { onListaClick(listaItem.lista) })
-    }
+   val factorEscala = LibraryZoomConfig.factorEscalaLista(nivelZoom)
+   val itemHeight = (80.dp * factorEscala)
+   
+   LibraryListLayout(
+      items = listas.map { PlaylistItem(it) },
+      listState = lazyListState,
+      baseItemHeight = 80.dp,
+      nivelZoom = nivelZoom,
+      onZoomChange = onZoomChange,
+      emptyMessage = "No tienes listas creadas",
+      modifier = modifier,
+   ) { playlistItem ->
+      val lista = playlistItem.lista
+      val estaSeleccionada = lista.idLista in listasSeleccionadas
+      
+      ItemLista(
+         lista = lista,
+         onClick = {
+            if (esModoSeleccion) {
+               onAlternarSeleccion(lista.idLista)
+            } else {
+               onListaClick(lista)
+            }
+         },
+         onLongClick = {
+            if (!esModoSeleccion) {
+               onActivarModoSeleccion(lista)
+            }
+         },
+         esModoSeleccion = esModoSeleccion,
+         estaSeleccionada = estaSeleccionada,
+         modifier = Modifier.height(itemHeight),
+      )
+   }
 }
 
 // ==================== PREVIEWS & FAKE DATA ====================

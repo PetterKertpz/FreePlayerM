@@ -1,4 +1,4 @@
-package com.example.freeplayerm.ui.features.library.components
+package com.example.freeplayerm.ui.features.library.components.contents
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box

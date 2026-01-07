@@ -54,17 +54,19 @@ import com.example.freeplayerm.data.local.entity.SongEntity
 import com.example.freeplayerm.data.local.entity.UserEntity
 import com.example.freeplayerm.data.local.entity.relations.SongWithArtist
 import com.example.freeplayerm.ui.features.auth.components.GalaxyBackground
-import com.example.freeplayerm.ui.features.library.components.AlbumsContent
-import com.example.freeplayerm.ui.features.library.components.ArtistsContent
+import com.example.freeplayerm.ui.features.library.components.DialogoCrearLista
 import com.example.freeplayerm.ui.features.library.components.FabSeleccionBiblioteca
-import com.example.freeplayerm.ui.features.library.components.GenresContent
 import com.example.freeplayerm.ui.features.library.components.PermissionRequestScreen
 import com.example.freeplayerm.ui.features.library.components.PlaylistDialog
-import com.example.freeplayerm.ui.features.library.components.PlaylistsContent
+import com.example.freeplayerm.ui.features.library.components.PlaylistSelectionFab
 import com.example.freeplayerm.ui.features.library.components.SearchBarWithFilters
 import com.example.freeplayerm.ui.features.library.components.SeccionEncabezadoConEstado
-import com.example.freeplayerm.ui.features.library.components.SongsContent
 import com.example.freeplayerm.ui.features.library.components.TransicionDeContenidoBiblioteca
+import com.example.freeplayerm.ui.features.library.components.contents.AlbumsContent
+import com.example.freeplayerm.ui.features.library.components.contents.ArtistsContent
+import com.example.freeplayerm.ui.features.library.components.contents.GenresContent
+import com.example.freeplayerm.ui.features.library.components.contents.PlaylistsContent
+import com.example.freeplayerm.ui.features.library.components.contents.SongsContent
 import com.example.freeplayerm.ui.features.player.gesture.PlayerGestureConstants
 import com.example.freeplayerm.ui.features.player.layouts.PlayerPanel
 import com.example.freeplayerm.ui.features.player.layouts.PlayerScreen
@@ -149,16 +151,19 @@ fun CuerpoBibliotecaGalactico(
    BackHandler(enabled = playerState.panelMode == PlayerPanelMode.EXPANDED) {
       playerViewModel.onEvent(PlayerEvent.Panel.Collapse)
    }
-
+   
    BackHandler(
-      enabled =
-         playerState.panelMode != PlayerPanelMode.EXPANDED &&
+      enabled = playerState.panelMode != PlayerPanelMode.EXPANDED &&
             (estadoBiblioteca.esModoSeleccion ||
-               estadoBiblioteca.cuerpoActual != TipoDeCuerpoBiblioteca.CANCIONES)
+                  estadoBiblioteca.esModoSeleccionListas ||  // <- Agregar esta línea
+                  estadoBiblioteca.cuerpoActual != TipoDeCuerpoBiblioteca.CANCIONES)
    ) {
       when {
          estadoBiblioteca.esModoSeleccion -> {
             onBibliotecaEvento(BibliotecaEvento.DesactivarModoSeleccion)
+         }
+         estadoBiblioteca.esModoSeleccionListas -> {  // <- Agregar este caso
+            onBibliotecaEvento(BibliotecaEvento.DesactivarModoSeleccionListas)
          }
          estadoBiblioteca.cuerpoActual != TipoDeCuerpoBiblioteca.CANCIONES -> {
             onBibliotecaEvento(BibliotecaEvento.CambiarCuerpo(TipoDeCuerpoBiblioteca.CANCIONES))
@@ -308,6 +313,13 @@ fun CuerpoBibliotecaGalactico(
                estadoBiblioteca = estadoBiblioteca,
                onBibliotecaEvento = onBibliotecaEvento,
             )
+            PlaylistSelectionFab(
+               modifier =
+                  Modifier.align(Alignment.BottomEnd)
+                     .padding(end = 16.dp, bottom = alturaPanelActual + 16.dp),
+               estadoBiblioteca = estadoBiblioteca,
+               onBibliotecaEvento = onBibliotecaEvento,
+            )
          }
       }
    }
@@ -387,6 +399,14 @@ private fun ContenidoPrincipalBiblioteca(
                nivelZoom = estadoBiblioteca.nivelZoom,
                onZoomChange = onZoomChange,
                onListaClick = { onBibliotecaEvento(BibliotecaEvento.ListaSeleccionada(it)) },
+               esModoSeleccion = estadoBiblioteca.esModoSeleccionListas,
+               listasSeleccionadas = estadoBiblioteca.listasSeleccionadas,
+               onActivarModoSeleccion = {
+                  onBibliotecaEvento(BibliotecaEvento.ActivarModoSeleccionListas(it))
+               },
+               onAlternarSeleccion = {
+                  onBibliotecaEvento(BibliotecaEvento.AlternarSeleccionLista(it))
+               },
             )
       }
    }
@@ -394,6 +414,7 @@ private fun ContenidoPrincipalBiblioteca(
 
 @Composable
 private fun ManejadorDeDialogos(estado: BibliotecaEstado, onEvento: (BibliotecaEvento) -> Unit) {
+   // Diálogo existente de playlist
    if (estado.mostrarDialogoPlaylist) {
       PlaylistDialog(
          listasExistentes = estado.listas,
@@ -407,6 +428,23 @@ private fun ManejadorDeDialogos(estado: BibliotecaEstado, onEvento: (BibliotecaE
             if (estado.esModoSeleccion)
                onEvento(BibliotecaEvento.AnadirCancionesSeleccionadasAListas(ids))
             else onEvento(BibliotecaEvento.AnadirCancionAListasExistentes(ids))
+         },
+      )
+   }
+
+   // Nuevo: Diálogo de edición de lista seleccionada
+   if (estado.listaParaEditar != null) {
+      DialogoCrearLista(
+         listaAEditar = estado.listaParaEditar,
+         onDismiss = { onEvento(BibliotecaEvento.CerrarDialogoEditarListaSeleccionada) },
+         onCrear = { nombre, descripcion, portadaUri ->
+            onEvento(
+               BibliotecaEvento.GuardarCambiosListaSeleccionada(
+                  nombre = nombre,
+                  descripcion = descripcion,
+                  portadaUri = portadaUri,
+               )
+            )
          },
       )
    }
