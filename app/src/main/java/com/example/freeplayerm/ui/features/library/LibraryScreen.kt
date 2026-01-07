@@ -1,9 +1,7 @@
 package com.example.freeplayerm.ui.features.library
 
 import android.Manifest
-import android.content.Intent
 import android.os.Build
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -46,7 +44,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.freeplayerm.data.local.entity.AlbumEntity
@@ -69,10 +66,8 @@ import com.example.freeplayerm.ui.features.library.components.SeccionEncabezadoC
 import com.example.freeplayerm.ui.features.library.components.SongsContent
 import com.example.freeplayerm.ui.features.library.components.TransicionDeContenidoBiblioteca
 import com.example.freeplayerm.ui.features.player.gesture.PlayerGestureConstants
-import com.example.freeplayerm.ui.features.player.layouts.PlayerContent
 import com.example.freeplayerm.ui.features.player.layouts.PlayerPanel
 import com.example.freeplayerm.ui.features.player.layouts.PlayerScreen
-import com.example.freeplayerm.ui.features.player.model.PlayerEffect
 import com.example.freeplayerm.ui.features.player.model.PlayerEvent
 import com.example.freeplayerm.ui.features.player.model.PlayerPanelMode
 import com.example.freeplayerm.ui.features.player.model.PlayerState
@@ -91,7 +86,7 @@ fun LibraryScreen(
 ) {
    val context = LocalContext.current
    val focusManager = LocalFocusManager.current
-   
+
    val permisoRequerido =
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
          Manifest.permission.READ_MEDIA_AUDIO
@@ -99,19 +94,19 @@ fun LibraryScreen(
          Manifest.permission.READ_EXTERNAL_STORAGE
       }
    val estadoPermiso = rememberPermissionState(permission = permisoRequerido)
-   
+
    if (estadoPermiso.status.isGranted) {
       val estadoBiblioteca by libraryViewModel.estadoUi.collectAsStateWithLifecycle()
-      
+
       val cuerpoActual = estadoBiblioteca.cuerpoActual
       val listScrollStates = remember { mutableMapOf<TipoDeCuerpoBiblioteca, LazyListState>() }
       val gridScrollStates = remember { mutableMapOf<TipoDeCuerpoBiblioteca, LazyGridState>() }
-      
+
       val lazyListState =
          remember(cuerpoActual) { listScrollStates.getOrPut(cuerpoActual) { LazyListState() } }
       val lazyGridState =
          remember(cuerpoActual) { gridScrollStates.getOrPut(cuerpoActual) { LazyGridState() } }
-      
+
       LaunchedEffect(Unit) {
          onPermisosConfirmados()
          libraryViewModel.enEvento(BibliotecaEvento.PermisoConcedido)
@@ -122,7 +117,7 @@ fun LibraryScreen(
          }
       }
       LaunchedEffect(usuarioId) { libraryViewModel.cargarDatosDeUsuario(usuarioId) }
-      
+
       CuerpoBibliotecaGalactico(
          estadoBiblioteca = estadoBiblioteca,
          lazyListState = lazyListState,
@@ -150,16 +145,16 @@ fun CuerpoBibliotecaGalactico(
    playerViewModel: PlayerViewModel = hiltViewModel(),
 ) {
    val playerState by playerViewModel.state.collectAsStateWithLifecycle()
-   
+
    BackHandler(enabled = playerState.panelMode == PlayerPanelMode.EXPANDED) {
       playerViewModel.onEvent(PlayerEvent.Panel.Collapse)
    }
-   
+
    BackHandler(
       enabled =
          playerState.panelMode != PlayerPanelMode.EXPANDED &&
-               (estadoBiblioteca.esModoSeleccion ||
-                     estadoBiblioteca.cuerpoActual != TipoDeCuerpoBiblioteca.CANCIONES)
+            (estadoBiblioteca.esModoSeleccion ||
+               estadoBiblioteca.cuerpoActual != TipoDeCuerpoBiblioteca.CANCIONES)
    ) {
       when {
          estadoBiblioteca.esModoSeleccion -> {
@@ -170,32 +165,28 @@ fun CuerpoBibliotecaGalactico(
          }
       }
    }
-   
+
    LaunchedEffect(lazyListState.isScrollInProgress, playerState.panelMode) {
       if (playerState.panelMode != PlayerPanelMode.EXPANDED) {
-         playerViewModel.onEvent(
-            PlayerEvent.Panel.NotifyScroll(lazyListState.isScrollInProgress)
-         )
+         playerViewModel.onEvent(PlayerEvent.Panel.NotifyScroll(lazyListState.isScrollInProgress))
       }
    }
-   
+
    LaunchedEffect(lazyGridState.isScrollInProgress, playerState.panelMode) {
       if (playerState.panelMode != PlayerPanelMode.EXPANDED) {
-         playerViewModel.onEvent(
-            PlayerEvent.Panel.NotifyScroll(lazyGridState.isScrollInProgress)
-         )
+         playerViewModel.onEvent(PlayerEvent.Panel.NotifyScroll(lazyGridState.isScrollInProgress))
       }
    }
-   
+
    ManejadorDeDialogos(estadoBiblioteca, onBibliotecaEvento)
-   
+
    Box(modifier = Modifier.fillMaxSize()) {
       GalaxyBackground()
-      
+
       BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
          val screenHeightDp = maxHeight
          val density = LocalDensity.current
-         
+
          val alturaPanelActual =
             remember(playerState.panelMode, playerState.currentSong, screenHeightDp) {
                with(density) {
@@ -208,19 +199,16 @@ fun CuerpoBibliotecaGalactico(
                   }
                }
             }
-         
+
          if (playerState.panelMode == PlayerPanelMode.EXPANDED) {
-            PlayerScreen(
-               viewModel = playerViewModel,
-               modifier = Modifier.fillMaxSize(),
-            )
+            PlayerScreen(viewModel = playerViewModel, modifier = Modifier.fillMaxSize())
          } else {
             Column(modifier = Modifier.fillMaxSize()) {
                SeccionEncabezadoConEstado(
                   estadoBiblioteca = estadoBiblioteca,
                   onBibliotecaEvento = onBibliotecaEvento,
                )
-               
+
                Box(modifier = Modifier.weight(1f)) {
                   Column(modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
                      if (debeMostrarBusqueda(estadoBiblioteca.cuerpoActual)) {
@@ -232,14 +220,14 @@ fun CuerpoBibliotecaGalactico(
                         )
                         Spacer(modifier = Modifier.height(5.dp))
                      }
-                     
+
                      Box(
                         modifier =
                            Modifier.weight(1f).pointerInput(estadoBiblioteca.cuerpoActual) {
                               if (puedeNavegarConGestos(estadoBiblioteca.cuerpoActual)) {
                                  var dragDistanciaTotal = 0f
                                  var yaEjecuto = false
-                                 
+
                                  detectHorizontalDragGestures(
                                     onDragStart = {
                                        dragDistanciaTotal = 0f
@@ -260,8 +248,8 @@ fun CuerpoBibliotecaGalactico(
                                              dragDistanciaTotal < -100f -> {
                                                 change.consume()
                                                 obtenerSiguienteSeccion(
-                                                   estadoBiblioteca.cuerpoActual
-                                                )
+                                                      estadoBiblioteca.cuerpoActual
+                                                   )
                                                    ?.let {
                                                       onBibliotecaEvento(
                                                          BibliotecaEvento.CambiarCuerpo(it)
@@ -272,8 +260,8 @@ fun CuerpoBibliotecaGalactico(
                                              dragDistanciaTotal > 100f -> {
                                                 change.consume()
                                                 obtenerSeccionAnterior(
-                                                   estadoBiblioteca.cuerpoActual
-                                                )
+                                                      estadoBiblioteca.cuerpoActual
+                                                   )
                                                    ?.let {
                                                       onBibliotecaEvento(
                                                          BibliotecaEvento.CambiarCuerpo(it)
@@ -296,25 +284,23 @@ fun CuerpoBibliotecaGalactico(
                            onPlayerEvent = playerViewModel::onEvent,
                         )
                      }
-                     
+
                      if (playerState.currentSong != null) {
                         Spacer(modifier = Modifier.height(alturaPanelActual))
                      }
                   }
                }
             }
-            
+
             if (playerState.currentSong != null) {
                Box(
                   modifier =
-                     Modifier.fillMaxWidth()
-                        .height(alturaPanelActual)
-                        .align(Alignment.BottomCenter)
+                     Modifier.fillMaxWidth().height(alturaPanelActual).align(Alignment.BottomCenter)
                ) {
                   PlayerPanel(state = playerState, onEvent = playerViewModel::onEvent)
                }
             }
-            
+
             FabSeleccionBiblioteca(
                modifier =
                   Modifier.align(Alignment.BottomEnd)
@@ -434,37 +420,55 @@ private fun debeMostrarBusqueda(tipo: TipoDeCuerpoBiblioteca): Boolean {
 // FUNCIONES HELPER PARA GESTOS
 // ==========================================
 
+// ✅ Orden completo con navegación circular
 private val ORDEN_NAVEGACION_SECCIONES =
    listOf(
       TipoDeCuerpoBiblioteca.CANCIONES,
+      TipoDeCuerpoBiblioteca.LISTAS,
       TipoDeCuerpoBiblioteca.ALBUMES,
       TipoDeCuerpoBiblioteca.ARTISTAS,
       TipoDeCuerpoBiblioteca.GENEROS,
-      TipoDeCuerpoBiblioteca.LISTAS,
+      TipoDeCuerpoBiblioteca.FAVORITOS,
+   )
+
+// Subsecciones que NO deben permitir gestos horizontales (son contextuales)
+private val SECCIONES_SIN_NAVEGACION =
+   setOf(
+      TipoDeCuerpoBiblioteca.CANCIONES_DE_ALBUM,
+      TipoDeCuerpoBiblioteca.CANCIONES_DE_ARTISTA,
+      TipoDeCuerpoBiblioteca.CANCIONES_DE_GENERO,
+      TipoDeCuerpoBiblioteca.CANCIONES_DE_LISTA,
    )
 
 private fun puedeNavegarConGestos(seccion: TipoDeCuerpoBiblioteca): Boolean {
-   return seccion in ORDEN_NAVEGACION_SECCIONES
+   return seccion !in SECCIONES_SIN_NAVEGACION
 }
 
+// ✅ Navegación circular hacia adelante
 private fun obtenerSiguienteSeccion(
    seccionActual: TipoDeCuerpoBiblioteca
 ): TipoDeCuerpoBiblioteca? {
    if (seccionActual !in ORDEN_NAVEGACION_SECCIONES) return null
+
    val indiceActual = ORDEN_NAVEGACION_SECCIONES.indexOf(seccionActual)
-   val siguienteIndice = indiceActual + 1
-   return if (siguienteIndice < ORDEN_NAVEGACION_SECCIONES.size) {
-      ORDEN_NAVEGACION_SECCIONES[siguienteIndice]
-   } else null
+   val siguienteIndice = (indiceActual + 1) % ORDEN_NAVEGACION_SECCIONES.size
+
+   return ORDEN_NAVEGACION_SECCIONES[siguienteIndice]
 }
 
+// ✅ Navegación circular hacia atrás
 private fun obtenerSeccionAnterior(seccionActual: TipoDeCuerpoBiblioteca): TipoDeCuerpoBiblioteca? {
    if (seccionActual !in ORDEN_NAVEGACION_SECCIONES) return null
+
    val indiceActual = ORDEN_NAVEGACION_SECCIONES.indexOf(seccionActual)
-   val anteriorIndice = indiceActual - 1
-   return if (anteriorIndice >= 0) {
-      ORDEN_NAVEGACION_SECCIONES[anteriorIndice]
-   } else null
+   val anteriorIndice =
+      if (indiceActual == 0) {
+         ORDEN_NAVEGACION_SECCIONES.size - 1
+      } else {
+         indiceActual - 1
+      }
+
+   return ORDEN_NAVEGACION_SECCIONES[anteriorIndice]
 }
 
 @Composable
@@ -732,33 +736,29 @@ private fun PreviewAllPlayerStatesInLibrary() {
          modifier = Modifier.fillMaxSize().background(Color(0xFF05000C)).padding(16.dp),
          verticalArrangement = Arrangement.spacedBy(16.dp),
       ) {
-         listOf(
-            "Sin Reproductor",
-            "Reproductor Minimizado",
-            "Reproductor Normal",
-         )
-            .forEach { label ->
-               Text(
-                  label,
-                  color = Color.White,
-                  style = MaterialTheme.typography.labelMedium,
-                  modifier = Modifier.padding(vertical = 8.dp),
+         listOf("Sin Reproductor", "Reproductor Minimizado", "Reproductor Normal").forEach { label
+            ->
+            Text(
+               label,
+               color = Color.White,
+               style = MaterialTheme.typography.labelMedium,
+               modifier = Modifier.padding(vertical = 8.dp),
+            )
+
+            Surface(
+               modifier = Modifier.fillMaxWidth().height(600.dp),
+               color = MaterialTheme.colorScheme.background,
+            ) {
+               CuerpoBibliotecaGalactico(
+                  estadoBiblioteca = LibraryPreviewMocks.stateSongs,
+                  lazyListState = rememberLazyListState(),
+                  lazyGridState = rememberLazyGridState(),
+                  onBibliotecaEvento = {},
                )
-               
-               Surface(
-                  modifier = Modifier.fillMaxWidth().height(600.dp),
-                  color = MaterialTheme.colorScheme.background,
-               ) {
-                  CuerpoBibliotecaGalactico(
-                     estadoBiblioteca = LibraryPreviewMocks.stateSongs,
-                     lazyListState = rememberLazyListState(),
-                     lazyGridState = rememberLazyGridState(),
-                     onBibliotecaEvento = {},
-                  )
-               }
-               
-               HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
             }
+
+            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+         }
       }
    }
 }
