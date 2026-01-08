@@ -90,7 +90,7 @@ class MainActivity : ComponentActivity() {
             }
             
             Surface(
-               modifier = Modifier.fillMaxSize(),
+               modifier = Modifier.Companion.fillMaxSize(),
                color = MaterialTheme.colorScheme.background
             ) {
                val authState by mainViewModel.authState.collectAsStateWithLifecycle()

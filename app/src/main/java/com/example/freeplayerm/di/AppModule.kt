@@ -6,6 +6,7 @@ import com.example.freeplayerm.core.auth.GoogleAuthUiClient
 import com.example.freeplayerm.data.local.dao.UserDao
 import com.example.freeplayerm.data.remote.genius.scraper.GeniusScraper
 import com.example.freeplayerm.data.repository.SessionRepository
+import com.example.freeplayerm.data.repository.UserPreferencesRepository
 import com.example.freeplayerm.data.repository.UserRepository
 import com.example.freeplayerm.data.repository.UserRepositoryImpl
 import com.google.firebase.auth.FirebaseAuth
@@ -28,16 +29,22 @@ object AppModule {
     ): GeniusScraper {
         return GeniusScraper(okHttpClient)
     }
-
-    @Provides
-    @Singleton
-    fun provideUsuarioRepository(
-        userDao: UserDao,
-        sessionRepository: SessionRepository,
-        firebaseAuth: FirebaseAuth,
-    ): UserRepository {
-        return UserRepositoryImpl(userDao, sessionRepository, firebaseAuth)
-    }
+   
+   @Provides
+   @Singleton
+   fun provideUsuarioRepository(
+      userDao: UserDao,
+      sessionRepository: SessionRepository,
+      firebaseAuth: FirebaseAuth,
+      userPreferencesRepository: UserPreferencesRepository // ← AGREGAR ESTE PARÁMETRO
+   ): UserRepository {
+      return UserRepositoryImpl(
+         userDao = userDao,
+         sessionRepository = sessionRepository,
+         firebaseAuth = firebaseAuth,
+         userPreferencesRepository = userPreferencesRepository // ← PASAR AL CONSTRUCTOR
+      )
+   }
 
     @Provides
     @Singleton

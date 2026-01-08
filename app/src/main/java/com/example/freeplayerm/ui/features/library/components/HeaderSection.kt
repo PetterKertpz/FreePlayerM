@@ -163,29 +163,11 @@ fun HeaderSection(
                            )
                      ),
                )
-            } else {
-               // Barra de búsqueda expandida
-               GalacticSearchBar(
-                  query = textoBusqueda,
-                  onQueryChange = onSearchChange,
-                  onClose = {
-                     mostrarBusqueda = false
-                     onSearchChange("") // Limpiar al cerrar
-                  },
-               )
             }
          },
          actions = {
             if (!mostrarBusqueda) {
-               // 🔍 Botón Buscar
-               IconButton(onClick = { mostrarBusqueda = true }) {
-                  Icon(
-                     imageVector = Icons.Default.Search,
-                     contentDescription = "Buscar",
-                     tint = Color.White,
-                  )
-               }
-
+               
                // 🔄 Botón Refrescar
                IconButton(onClick = onReescanearClick, enabled = !escaneoManualEnProgreso) {
                   if (escaneoManualEnProgreso) {
@@ -255,39 +237,6 @@ fun HeaderSection(
 // ==========================================
 // 🛠️ SUB-COMPONENTES
 // ==========================================
-
-@Composable
-private fun GalacticSearchBar(query: String, onQueryChange: (String) -> Unit, onClose: () -> Unit) {
-   val focusRequester = remember { FocusRequester() }
-   val focusManager = LocalFocusManager.current
-
-   LaunchedEffect(Unit) { focusRequester.requestFocus() }
-
-   Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-      BasicTextField(
-         value = query,
-         onValueChange = onQueryChange,
-         modifier = Modifier.weight(1f).focusRequester(focusRequester),
-         textStyle = TextStyle(color = Color.White, fontSize = 18.sp),
-         cursorBrush = SolidColor(EncabezadoColors.neonPrimario),
-         singleLine = true,
-         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-         keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
-         decorationBox = { innerTextField ->
-            Box(contentAlignment = Alignment.CenterStart) {
-               if (query.isEmpty()) {
-                  Text("Buscar...", color = Color.White.copy(alpha = 0.5f), fontSize = 18.sp)
-               }
-               innerTextField()
-            }
-         },
-      )
-
-      IconButton(onClick = onClose) {
-         Icon(Icons.Default.Close, contentDescription = "Cerrar búsqueda", tint = Color.White)
-      }
-   }
-}
 
 @Composable
 private fun ChipsNavegacion(

@@ -24,6 +24,7 @@ import com.example.freeplayerm.ui.features.library.LibraryScreen
 import com.example.freeplayerm.ui.features.player.viewmodel.PlayerViewModel
 import com.example.freeplayerm.ui.features.profile.ProfileScreen
 import com.example.freeplayerm.ui.features.profile.ProfileViewModel
+import com.example.freeplayerm.ui.features.settings.SettingsRoute
 
 @Composable
 fun NavigationGraph(
@@ -102,18 +103,9 @@ fun NavigationGraph(
       
       // Pantalla de Configuraciones (placeholder)
       composable(Routes.Configuraciones.ruta) {
-         // TODO: Implementar SettingsScreen
-         Box(
-            modifier = Modifier
-               .fillMaxSize()
-               .background(Color(0xFF0F0518)),
-            contentAlignment = Alignment.Center
-         ) {
-            androidx.compose.material3.Text(
-               "Configuraciones - Próximamente",
-               color = Color.White
-            )
-         }
+         SettingsRoute(
+            onNavigateBack = { navController.popBackStack() }
+         )
       }
       
       // Pantalla de Editar Perfil (placeholder)
