@@ -796,6 +796,7 @@ interface SongDao {
       @ColumnInfo(name = "id_cancion") val idCancion: Int,
       @ColumnInfo(name = "archivo_path") val archivoPath: String,
       @ColumnInfo(name = "fecha_modificacion") val fechaModificacion: Long?,
+      @ColumnInfo(name = "hash_archivo") val hashArchivo: String?,
    )
 
    // ==================== QUERIES OPTIMIZADAS PARA ESCANEO ====================
@@ -806,7 +807,7 @@ interface SongDao {
     */
    @Query(
       """
-    SELECT id_cancion, archivo_path, fecha_modificacion
+    SELECT id_cancion, archivo_path, fecha_modificacion, hash_archivo
     FROM canciones
     WHERE archivo_path IS NOT NULL
 """
@@ -866,4 +867,9 @@ interface SongDao {
 
    @Insert(onConflict = OnConflictStrategy.REPLACE)
    suspend fun upsertCanciones(canciones: List<SongEntity>): List<Long>
+   
+   @Transaction
+   suspend fun insertarCancionesEnTransaccion(canciones: List<SongEntity>): List<Long> {
+      return upsertCanciones(canciones)
+   }
 }

@@ -28,10 +28,15 @@ class MusicScannerManager @Inject constructor(
 ) {
    companion object {
       private const val TAG = "MusicScannerManager"
+      private const val MIN_INTERVALO_MANUAL_MS = 15_000L // 15 segundos
+      private const val MIN_INTERVALO_AUTOMATICO_MS = 60_000L // 1 minuto
    }
    
    private var scope: CoroutineScope? = null
    private var observerJob: Job? = null
+   
+   private var ultimoEscaneoTimestamp = 0L
+   private var ultimoEscaneoAutomaticoTimestamp = 0L
    
    private val _estaInicializado = MutableStateFlow(false)
    val estaInicializado: StateFlow<Boolean> = _estaInicializado.asStateFlow()
@@ -105,31 +110,50 @@ class MusicScannerManager @Inject constructor(
       
       Log.d(TAG, "Inicializando sistema de escaneo...")
       
-      // Crear scope
       scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
       
-      // Observar resultados del repositorio
       observarResultadosDelRepositorio()
       
-      // Configurar callback del observer
+      // Configurar callback con rate limiting
       contentObserver.setOnChangeListener {
-         Log.d(TAG, "Cambio detectado, ejecutando escaneo automatico")
-         musicRepository.escanearYGuardarMusica(forceFullScan = false)?.let { resultado ->
-            _ultimoResultado.value = resultado.toResultadoEscaneo()
+         val ahora = System.currentTimeMillis()
+         val tiempoDesdeUltimo = ahora - ultimoEscaneoAutomaticoTimestamp
+         
+         if (tiempoDesdeUltimo < MIN_INTERVALO_AUTOMATICO_MS) {
+            Log.d(TAG, "Escaneo automático omitido por rate limiting")
+            return@setOnChangeListener
+         }
+         
+         ultimoEscaneoAutomaticoTimestamp = ahora
+         Log.d(TAG, "Cambio detectado, ejecutando escaneo automático")
+         
+         try {
+            val resultado = musicRepository.escanearYGuardarMusica(forceFullScan = false)
+            if (resultado != null) {
+               _ultimoResultado.value = resultado.toResultadoEscaneo()
+               Log.d(TAG, "Escaneo automático completado: +${resultado.nuevas}, -${resultado.eliminadas}")
+            }
+         } catch (e: Exception) {
+            Log.e(TAG, "Error en escaneo automático", e)
+            _ultimoResultado.value = ResultadoEscaneo(
+               nuevas = 0,
+               eliminadas = 0,
+               actualizadas = 0,
+               tiempoMs = 0,
+               exitoso = false,
+               error = e.localizedMessage ?: "Error en escaneo automático",
+            )
          }
       }
       
-      // Registrar observer
       contentObserver.registrar()
-      
-      // Programar escaneos periodicos
       MusicScanWorker.programarEscaneosPeriodicos(context)
-      
       _estaInicializado.value = true
       Log.d(TAG, "Sistema de escaneo inicializado")
       
       if (ejecutarEscaneoInicial) {
          Log.d(TAG, "Ejecutando escaneo inicial...")
+         ultimoEscaneoTimestamp = System.currentTimeMillis()
          escanearAhora()
       }
    }
@@ -153,6 +177,26 @@ class MusicScannerManager @Inject constructor(
    }
    
    fun escanearAhora(forzarCompleto: Boolean = false) {
+      val ahora = System.currentTimeMillis()
+      val tiempoDesdeUltimo = ahora - ultimoEscaneoTimestamp
+      
+      if (!forzarCompleto && tiempoDesdeUltimo < MIN_INTERVALO_MANUAL_MS) {
+         val segundosRestantes = ((MIN_INTERVALO_MANUAL_MS - tiempoDesdeUltimo) / 1000).toInt()
+         Log.d(TAG, "Escaneo rechazado por rate limiting. Espera ${segundosRestantes}s")
+         
+         _ultimoResultado.value = ResultadoEscaneo(
+            nuevas = 0,
+            eliminadas = 0,
+            actualizadas = 0,
+            tiempoMs = 0,
+            exitoso = false,
+            error = "Por favor espera $segundosRestantes segundos antes de escanear nuevamente"
+         )
+         return
+      }
+      
+      ultimoEscaneoTimestamp = ahora
+      
       scope?.launch {
          Log.d(TAG, "Iniciando escaneo manual (forzado=$forzarCompleto)")
          try {
@@ -199,6 +243,16 @@ class MusicScannerManager @Inject constructor(
    fun limpiarUltimoResultado() {
       _ultimoResultado.value = null
       musicRepository.reiniciarEstado()
+   }
+   
+   fun tiempoHastaProximoEscaneoPermitido(): Long {
+      val ahora = System.currentTimeMillis()
+      val tiempoRestante = MIN_INTERVALO_MANUAL_MS - (ahora - ultimoEscaneoTimestamp)
+      return maxOf(0, tiempoRestante)
+   }
+   
+   fun puedeEscanearAhora(): Boolean {
+      return tiempoHastaProximoEscaneoPermitido() == 0L
    }
    
    private fun observarResultadosDelRepositorio() {

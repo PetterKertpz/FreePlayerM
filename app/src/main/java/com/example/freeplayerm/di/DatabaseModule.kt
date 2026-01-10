@@ -18,6 +18,7 @@ import com.example.freeplayerm.data.local.dao.SongDao
 import com.example.freeplayerm.data.local.dao.UserDao
 import com.example.freeplayerm.data.local.dao.UserPreferencesDao
 import com.example.freeplayerm.data.local.entity.GenreEntity
+import com.example.freeplayerm.utils.ScanNotificationHelper
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -113,6 +114,14 @@ object DatabaseModule {
             insertarGenerosIniciales(db)
          }
       }
+   }
+   
+   @Provides
+   @Singleton
+   fun provideScanNotificationHelper(
+      @ApplicationContext context: Context
+   ): ScanNotificationHelper {
+      return ScanNotificationHelper(context)
    }
    
    private fun insertarGenerosIniciales(db: SupportSQLiteDatabase) {
