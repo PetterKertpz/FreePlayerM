@@ -1,4 +1,4 @@
-package com.example.freeplayerm.com.example.freeplayerm.ui.features.auth.components
+package com.example.freeplayerm.ui.features.auth.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -57,7 +57,6 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.freeplayerm.R
-import com.example.freeplayerm.ui.features.auth.components.GalaxyBackground
 import com.example.freeplayerm.ui.theme.AppColors
 
 // 5. Título con flotación lenta (Sin cambios)
@@ -135,75 +134,76 @@ fun TextoIniciarSesion() {
 // 1. Logo y Texto "FreePlayer" Estilizado
 // ==========================================
 @Composable
-fun EncabezadoLogoAnimado() {
-    var visible by remember { mutableStateOf(false) }
-
-    // Colores para el texto estilo "WordArt"
-    val colorRellenoMorado = Color(0xFFD500F9) // Morado neón brillante
-    val colorBordeOscuro = Color(0xFF2A0036) // Morado casi negro para contraste
-    val estiloFuente = FontFamily.Serif
-    val tamanioFuente = 58.sp
-
-    LaunchedEffect(Unit) { visible = true }
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top,
-    ) {
-        // --- EL ÍCONO (Justo encima) ---
-        AnimatedVisibility(
-            visible = visible,
-            enter = scaleIn(tween(1000, delayMillis = 200)) + fadeIn(tween(1000)),
-        ) {
-            // REEMPLAZA ESTO CON TU RECURSO REAL SI ES UNA IMAGEN O LOTTIE
-            Image(
-                painter = painterResource(id = R.drawable.free_player), // <-- Tu archivo aquí
-                contentDescription = "Logo FreePlayer",
+fun EncabezadoLogoAnimado(
+   modifier: Modifier = Modifier // Permite control externo del tamaño
+) {
+   var visible by remember { mutableStateOf(false) }
+   
+   val colorRellenoMorado = Color(0xFFD500F9)
+   val colorBordeOscuro = Color(0xFF2A0036)
+   val estiloFuente = FontFamily.Serif
+   val tamanioFuente = 58.sp
+   
+   LaunchedEffect(Unit) { visible = true }
+   
+   Column(
+      horizontalAlignment = Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.Top,
+   ) {
+      // --- EL ÍCONO (Justo encima) ---
+      AnimatedVisibility(
+         visible = visible,
+         enter = scaleIn(tween(1000, delayMillis = 200)) + fadeIn(tween(1000)),
+      ) {
+         Image(
+            painter = painterResource(id = R.drawable.free_player),
+            contentDescription = "Logo FreePlayer",
+            modifier = modifier // Aplica el modifier externo aquí
+         )
+      }
+      
+      // --- EL TEXTO ESTILIZADO (Relleno Morado + Borde Oscuro) ---
+      AnimatedVisibility(
+         visible = visible,
+         enter =
+            slideInVertically(
+               initialOffsetY = { 80 },
+               animationSpec = tween(800, delayMillis = 400),
+            ) + fadeIn(tween(800)),
+      ) {
+         Box {
+            // CAPA 1: El Borde (Stroke)
+            Text(
+               text = "FreePlayer",
+               fontSize = tamanioFuente,
+               fontFamily = estiloFuente,
+               fontWeight = FontWeight.ExtraBold,
+               fontStyle = FontStyle.Italic,
+               style =
+                  LocalTextStyle.current.copy(
+                     drawStyle =
+                        Stroke(
+                           miter = 10f,
+                           width = 12f,
+                           cap = StrokeCap.Round,
+                           join = StrokeJoin.Round,
+                        )
+                  ),
+               color = colorBordeOscuro,
             )
-        }
-        // --- EL TEXTO ESTILIZADO (Relleno Morado + Borde Oscuro) ---
-        AnimatedVisibility(
-            visible = visible,
-            enter =
-                slideInVertically(
-                    initialOffsetY = { 80 },
-                    animationSpec = tween(800, delayMillis = 400),
-                ) + fadeIn(tween(800)),
-        ) {
-            // Usamos un Box para superponer el texto dos veces
-            Box {
-                // CAPA 1: El Borde (Stroke) - Se dibuja atrás y más grueso
-                Text(
-                    text = "FreePlayer",
-                    fontSize = tamanioFuente,
-                    fontFamily = estiloFuente,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontStyle = FontStyle.Italic, // Simula cursiva
-                    style =
-                        LocalTextStyle.current.copy(
-                            drawStyle =
-                                Stroke(
-                                    miter = 10f,
-                                    width = 12f, // Grosor del borde
-                                    cap = StrokeCap.Round,
-                                    join = StrokeJoin.Round,
-                                )
-                        ),
-                    color = colorBordeOscuro,
-                )
-
-                // CAPA 2: El Relleno (Fill) - Se dibuja encima
-                Text(
-                    text = "FreePlayer",
-                    fontSize = tamanioFuente,
-                    fontFamily = estiloFuente,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontStyle = FontStyle.Italic, // Simula cursiva
-                    color = colorRellenoMorado,
-                )
-            }
-        }
-    }
+            
+            // CAPA 2: El Relleno (Fill)
+            Text(
+               text = "FreePlayer",
+               fontSize = tamanioFuente,
+               fontFamily = estiloFuente,
+               fontWeight = FontWeight.ExtraBold,
+               fontStyle = FontStyle.Italic,
+               color = colorRellenoMorado,
+            )
+         }
+      }
+   }
 }
 
 // 7. Botón Google con Zoom suave (Sin cambios importantes)

@@ -4,16 +4,15 @@ import com.example.freeplayerm.core.security.SecurityHelper
 import com.example.freeplayerm.data.local.dao.UserDao
 import com.example.freeplayerm.data.local.entity.UserEntity
 import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.tasks.await
 
 /**
  * 👤 USUARIO REPOSITORY IMPLEMENTATION
  *
- * Implementación del repositorio de usuarios
- * Maneja autenticación local y con Firebase/Google
+ * Implementación del repositorio de usuarios Maneja autenticación local y con Firebase/Google
  *
  * Características:
  * - ✅ Registro local con hash de contraseñas
@@ -31,37 +30,37 @@ constructor(
    private val userDao: UserDao,
    private val sessionRepository: SessionRepository,
    private val firebaseAuth: FirebaseAuth,
-   private val userPreferencesRepository: UserPreferencesRepository
+   private val userPreferencesRepository: UserPreferencesRepository,
 ) : UserRepository {
-   
+
    // ==================== OPERACIONES CRUD BÁSICAS ====================
-   
+
    override suspend fun insertarUsuario(usuario: UserEntity) {
       userDao.insertarUsuario(usuario)
    }
-   
+
    override suspend fun obtenerUsuarioPorCorreo(correo: String): UserEntity? {
       return userDao.obtenerUsuarioPorCorreo(correo)
    }
-   
+
    override suspend fun actualizarUsuario(usuario: UserEntity) {
       userDao.actualizarUsuario(usuario)
    }
-   
+
    override suspend fun eliminarUsuario(usuario: UserEntity) {
       userDao.eliminarUsuario(usuario)
    }
-   
+
    override suspend fun obtenerUsuarioPorId(id: Int): UserEntity? {
       return userDao.obtenerUsuarioPorId(id)
    }
-   
+
    override fun obtenerUsuarioPorIdFlow(id: Int): Flow<UserEntity?> {
       return userDao.obtenerUsuarioPorIdFlow(id)
    }
-   
+
    // ==================== AUTENTICACIÓN LOCAL ====================
-   
+
    override suspend fun registrarUsuarioLocal(
       nombreUsuario: String,
       correo: String,
@@ -72,54 +71,56 @@ constructor(
          if (userDao.existeCorreo(correo)) {
             return Result.failure(Exception("El correo electrónico ya está registrado."))
          }
-         
+
          // Validación: Nombre de usuario duplicado
          if (userDao.existeNombreUsuario(nombreUsuario)) {
             return Result.failure(Exception("El nombre de usuario ya está en uso."))
          }
-         
+
          // Validación: Contraseña débil
          val validacionContrasena = validarContrasena(contrasena)
          if (!validacionContrasena.first) {
             return Result.failure(Exception(validacionContrasena.second))
          }
-         
+
          // Hash de contraseña
          val contrasenaHasheada = SecurityHelper.hashContrasena(contrasena)
-         
+
          // Generar avatar por defecto
          val fotoUrlPredeterminada = generarAvatarUrl(nombreUsuario)
-         
+
          // Crear usuario
-         val nuevoUsuario = UserEntity(
-            nombreUsuario = nombreUsuario,
-            correo = correo,
-            contraseniaHash = contrasenaHasheada,
-            fechaCreacion = System.currentTimeMillis(),
-            fotoPerfil = fotoUrlPredeterminada,
-            tipoAutenticacion = UserEntity.TIPO_LOCAL,
-            activo = true,
-         )
-         
+         val nuevoUsuario =
+            UserEntity(
+               nombreUsuario = nombreUsuario,
+               correo = correo,
+               contraseniaHash = contrasenaHasheada,
+               fechaCreacion = System.currentTimeMillis(),
+               fotoPerfil = fotoUrlPredeterminada,
+               tipoAutenticacion = UserEntity.TIPO_LOCAL,
+               activo = true,
+            )
+
          val nuevoId = userDao.insertarUsuario(nuevoUsuario)
-         val usuarioCreado = userDao.obtenerUsuarioPorId(nuevoId.toInt())
-            ?: throw Exception("Usuario creado pero no se pudo recuperar de la BD")
-         
+         val usuarioCreado =
+            userDao.obtenerUsuarioPorId(nuevoId.toInt())
+               ?: throw Exception("Usuario creado pero no se pudo recuperar de la BD")
+
          // Crear preferencias por defecto
          userPreferencesRepository.crearPreferenciasPorDefecto(usuarioCreado.idUsuario)
-         
+
          android.util.Log.d(
             "UserRepository",
-            "Usuario local registrado exitosamente: ID=${usuarioCreado.idUsuario}, correo=$correo"
+            "Usuario local registrado exitosamente: ID=${usuarioCreado.idUsuario}, correo=$correo",
          )
-         
+
          Result.success(usuarioCreado)
       } catch (e: Exception) {
          android.util.Log.e("UserRepository", "Error en registro local: ${e.message}", e)
          Result.failure(Exception("No se pudo completar el registro. ${e.message}", e))
       }
    }
-   
+
    override suspend fun iniciarSesionLocal(
       identificador: String,
       contrasena: String,
@@ -130,52 +131,53 @@ constructor(
          if (usuario == null) {
             usuario = userDao.obtenerUsuarioPorNombreUsuario(identificador)
          }
-         
+
          // Validación: Usuario no existe
          if (usuario == null) {
             return Result.failure(Exception("Usuario o contraseña incorrectos."))
          }
-         
+
          // Validación: Cuenta desactivada
          if (!usuario.activo) {
             return Result.failure(Exception("Esta cuenta ha sido desactivada."))
          }
-         
+
          // Validación: Usuario social (no tiene contraseña local)
          if (usuario.tipoAutenticacion != UserEntity.TIPO_LOCAL) {
             return Result.failure(
                Exception(
                   "Este usuario se registró usando ${usuario.tipoAutenticacion}. " +
-                        "Por favor, inicia sesión con ese método."
+                     "Por favor, inicia sesión con ese método."
                )
             )
          }
-         
+
          // Verificar contraseña
-         val contrasenaEsValida = SecurityHelper.verificarContrasena(
-            contrasenaPlana = contrasena,
-            contrasenaHasheada = usuario.contraseniaHash,
-         )
-         
+         val contrasenaEsValida =
+            SecurityHelper.verificarContrasena(
+               contrasenaPlana = contrasena,
+               contrasenaHasheada = usuario.contraseniaHash,
+            )
+
          if (contrasenaEsValida) {
             // Generar tokens seguros
             val token = SecurityHelper.generarTokenSesion(usuario.idUsuario)
             val refreshToken = SecurityHelper.generarRefreshToken(usuario.idUsuario)
             val expiracion = SecurityHelper.calcularExpiracion(24)
-            
+
             userDao.actualizarTokens(usuario.idUsuario, token, refreshToken, expiracion)
-            userDao.actualizarUltimaSesion(usuario.idUsuario)
-            
+            userDao.actualizarUltimaSesion(usuario.idUsuario, System.currentTimeMillis())
+
             // Verificar y crear preferencias si no existen
             if (!userPreferencesRepository.existenPreferencias(usuario.idUsuario)) {
                userPreferencesRepository.crearPreferenciasPorDefecto(usuario.idUsuario)
             }
-            
+
             android.util.Log.d(
                "UserRepository",
-               "Login local exitoso: ID=${usuario.idUsuario}, correo=${usuario.correo}"
+               "Login local exitoso: ID=${usuario.idUsuario}, correo=${usuario.correo}",
             )
-            
+
             Result.success(usuario.copy(tokenSesion = token))
          } else {
             Result.failure(Exception("Usuario o contraseña incorrectos."))
@@ -185,46 +187,46 @@ constructor(
          Result.failure(Exception("Ocurrió un error inesperado: ${e.message}", e))
       }
    }
-   
+
    // ==================== RECUPERACIÓN DE CONTRASEÑA ====================
-   
+
    override suspend fun enviarCorreoRecuperacion(correo: String): Result<Unit> {
       return try {
          // Validar que el usuario existe
-         val usuario = userDao.obtenerUsuarioPorCorreo(correo)
-            ?: return Result.failure(
-               Exception("No existe una cuenta registrada con ese correo electrónico.")
-            )
-         
+         val usuario =
+            userDao.obtenerUsuarioPorCorreo(correo)
+               ?: return Result.failure(
+                  Exception("No existe una cuenta registrada con ese correo electrónico.")
+               )
+
          // Validar que es una cuenta local (tiene contraseña)
          if (usuario.tipoAutenticacion != UserEntity.TIPO_LOCAL) {
             return Result.failure(
                Exception(
                   "Esta cuenta fue registrada usando ${usuario.tipoAutenticacion} " +
-                        "y no tiene contraseña local."
+                     "y no tiene contraseña local."
                )
             )
          }
-         
+
          // Enviar email de recuperación vía Firebase
          firebaseAuth.sendPasswordResetEmail(correo).await()
-         
-         android.util.Log.d(
-            "UserRepository",
-            "Correo de recuperación enviado a: $correo"
-         )
-         
+
+         android.util.Log.d("UserRepository", "Correo de recuperación enviado a: $correo")
+
          Result.success(Unit)
       } catch (e: Exception) {
-         android.util.Log.e("UserRepository", "Error al enviar correo de recuperación: ${e.message}", e)
-         Result.failure(
-            Exception("No se pudo enviar el correo de recuperación: ${e.message}", e)
+         android.util.Log.e(
+            "UserRepository",
+            "Error al enviar correo de recuperación: ${e.message}",
+            e,
          )
+         Result.failure(Exception("No se pudo enviar el correo de recuperación: ${e.message}", e))
       }
    }
-   
+
    // ==================== AUTENTICACIÓN SOCIAL (GOOGLE) ====================
-   
+
    override suspend fun buscarOCrearUsuarioGoogle(
       correo: String,
       nombreUsuario: String,
@@ -234,50 +236,48 @@ constructor(
          // Generar URL de foto por defecto si no se proporciona
          val urlFinalParaGuardar =
             fotoUrl?.takeIf { it.isNotBlank() } ?: generarAvatarUrl(nombreUsuario)
-         
+
          val usuarioExistente = userDao.obtenerUsuarioPorCorreo(correo)
-         
+
          if (usuarioExistente == null) {
             // Crear nuevo usuario de Google
-            val nuevoUsuario = UserEntity(
-               nombreUsuario = nombreUsuario,
-               correo = correo,
-               contraseniaHash = "",
-               fechaCreacion = System.currentTimeMillis(),
-               fotoPerfil = urlFinalParaGuardar,
-               tipoAutenticacion = UserEntity.TIPO_GOOGLE,
-               providerId = correo,
-               activo = true,
-            )
-            
+            val nuevoUsuario =
+               UserEntity(
+                  nombreUsuario = nombreUsuario,
+                  correo = correo,
+                  contraseniaHash = "",
+                  fechaCreacion = System.currentTimeMillis(),
+                  fotoPerfil = urlFinalParaGuardar,
+                  tipoAutenticacion = UserEntity.TIPO_GOOGLE,
+                  providerId = correo,
+                  activo = true,
+               )
+
             val nuevoId = userDao.insertarUsuario(nuevoUsuario)
-            val usuarioCreado = userDao.obtenerUsuarioPorId(nuevoId.toInt())
-               ?: throw Exception("Usuario creado pero no se pudo recuperar de la BD")
-            
+            val usuarioCreado =
+               userDao.obtenerUsuarioPorId(nuevoId.toInt())
+                  ?: throw Exception("Usuario creado pero no se pudo recuperar de la BD")
+
             // Generar tokens de sesión
             val token = SecurityHelper.generarTokenSesion(usuarioCreado.idUsuario)
             val refreshToken = SecurityHelper.generarRefreshToken(usuarioCreado.idUsuario)
             val expiracion = SecurityHelper.calcularExpiracion(24)
-            
-            val filasActualizadas = userDao.actualizarTokens(
-               usuarioCreado.idUsuario,
-               token,
-               refreshToken,
-               expiracion
-            )
+
+            val filasActualizadas =
+               userDao.actualizarTokens(usuarioCreado.idUsuario, token, refreshToken, expiracion)
             if (filasActualizadas == 0) {
                throw Exception("No se pudieron actualizar los tokens en la base de datos")
             }
-            userDao.actualizarUltimaSesion(usuarioCreado.idUsuario)
-            
+            userDao.actualizarUltimaSesion(usuarioCreado.idUsuario, System.currentTimeMillis())
+
             // Crear preferencias por defecto
             userPreferencesRepository.crearPreferenciasPorDefecto(usuarioCreado.idUsuario)
-            
+
             android.util.Log.d(
                "UserRepository",
-               "Nuevo usuario Google creado: ID=${usuarioCreado.idUsuario}, correo=$correo"
+               "Nuevo usuario Google creado: ID=${usuarioCreado.idUsuario}, correo=$correo",
             )
-            
+
             // Devolver usuario CON tokens actualizados
             Result.success(
                usuarioCreado.copy(
@@ -288,40 +288,42 @@ constructor(
             )
          } else {
             // Usuario existente: actualizar datos de Google Y tokens
-            val usuarioActualizado = usuarioExistente.copy(
-               nombreUsuario = nombreUsuario,
-               fotoPerfil = urlFinalParaGuardar,
-               tipoAutenticacion = UserEntity.TIPO_GOOGLE,
-            )
-            
+            val usuarioActualizado =
+               usuarioExistente.copy(
+                  nombreUsuario = nombreUsuario,
+                  fotoPerfil = urlFinalParaGuardar,
+                  tipoAutenticacion = UserEntity.TIPO_GOOGLE,
+               )
+
             userDao.actualizarUsuario(usuarioActualizado)
-            
+
             // Generar nuevos tokens para la sesión actual
             val token = SecurityHelper.generarTokenSesion(usuarioActualizado.idUsuario)
             val refreshToken = SecurityHelper.generarRefreshToken(usuarioActualizado.idUsuario)
             val expiracion = SecurityHelper.calcularExpiracion(24)
-            
-            val filasActualizadas = userDao.actualizarTokens(
-               usuarioActualizado.idUsuario,
-               token,
-               refreshToken,
-               expiracion,
-            )
+
+            val filasActualizadas =
+               userDao.actualizarTokens(
+                  usuarioActualizado.idUsuario,
+                  token,
+                  refreshToken,
+                  expiracion,
+               )
             if (filasActualizadas == 0) {
                throw Exception("No se pudieron actualizar los tokens para usuario existente")
             }
-            userDao.actualizarUltimaSesion(usuarioActualizado.idUsuario)
-            
+            userDao.actualizarUltimaSesion(usuarioActualizado.idUsuario, System.currentTimeMillis())
+
             // Verificar y crear preferencias si no existen
             if (!userPreferencesRepository.existenPreferencias(usuarioActualizado.idUsuario)) {
                userPreferencesRepository.crearPreferenciasPorDefecto(usuarioActualizado.idUsuario)
             }
-            
+
             android.util.Log.d(
                "UserRepository",
-               "Usuario Google existente actualizado: ID=${usuarioActualizado.idUsuario}, correo=$correo"
+               "Usuario Google existente actualizado: ID=${usuarioActualizado.idUsuario}, correo=$correo",
             )
-            
+
             // Devolver con tokens
             Result.success(
                usuarioActualizado.copy(
@@ -336,9 +338,9 @@ constructor(
          Result.failure(Exception("Error al sincronizar el usuario de Google: ${e.message}", e))
       }
    }
-   
+
    // ==================== MÉTODOS PRIVADOS ====================
-   
+
    /**
     * Valida que una contraseña cumpla con los requisitos mínimos
     *
@@ -356,7 +358,7 @@ constructor(
          else -> true to ""
       }
    }
-   
+
    /**
     * Genera una URL de avatar usando UI Avatars
     *
@@ -364,17 +366,59 @@ constructor(
     * @return URL del avatar generado
     */
    private fun generarAvatarUrl(nombreUsuario: String): String {
-      val iniciales = nombreUsuario
-         .split(" ")
-         .mapNotNull { it.firstOrNull()?.toString()?.uppercase() }
-         .take(2)
-         .joinToString("")
-      
+      val iniciales =
+         nombreUsuario
+            .split(" ")
+            .mapNotNull { it.firstOrNull()?.toString()?.uppercase() }
+            .take(2)
+            .joinToString("")
+
       return "https://ui-avatars.com/api/" +
-            "?name=$iniciales" +
-            "&background=random" +
-            "&color=fff" +
-            "&size=256" +
-            "&bold=true"
+         "?name=$iniciales" +
+         "&background=random" +
+         "&color=fff" +
+         "&size=256" +
+         "&bold=true"
+   }
+
+   // ==================== GESTIÓN DE ESTADÍSTICAS ====================
+
+   /**
+    * Sincroniza las estadísticas del usuario (favoritos y listas) Las reproducciones se manejan
+    * manualmente con incrementarReproducciones()
+    */
+   override suspend fun sincronizarEstadisticas(userId: Int) {
+      userDao.sincronizarEstadisticas(userId)
+   }
+
+   /** Incrementa el contador de reproducciones del usuario */
+   override suspend fun incrementarReproducciones(userId: Int) {
+      userDao.incrementarReproducciones(userId)
+   }
+
+   /** Actualiza la última sesión del usuario al timestamp actual */
+   override suspend fun actualizarUltimaSesion(userId: Int) {
+      userDao.actualizarUltimaSesion(userId, System.currentTimeMillis())
+   }
+
+   /** Actualiza la foto de perfil del usuario */
+   override suspend fun actualizarFotoPerfil(userId: Int, nuevaFotoUrl: String) {
+      val usuario = userDao.obtenerUsuarioPorId(userId) ?: return
+      userDao.actualizarUsuario(usuario.copy(fotoPerfil = nuevaFotoUrl))
+   }
+
+   /** Actualiza información básica del perfil del usuario */
+   override suspend fun actualizarInformacion(
+      userId: Int,
+      nombreCompleto: String?,
+      biografia: String?,
+   ) {
+      val usuario = userDao.obtenerUsuarioPorId(userId) ?: return
+      userDao.actualizarUsuario(
+         usuario.copy(
+            nombreCompleto = nombreCompleto ?: usuario.nombreCompleto,
+            biografia = biografia ?: usuario.biografia,
+         )
+      )
    }
 }

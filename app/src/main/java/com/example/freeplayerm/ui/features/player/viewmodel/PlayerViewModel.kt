@@ -16,6 +16,7 @@ import com.example.freeplayerm.data.local.dao.SongDao
 import com.example.freeplayerm.data.local.entity.FavoriteEntity
 import com.example.freeplayerm.data.local.entity.relations.SongWithArtist
 import com.example.freeplayerm.data.repository.GeniusRepository
+import com.example.freeplayerm.data.repository.UserRepository
 import com.example.freeplayerm.ui.features.player.model.PlaybackMode
 import com.example.freeplayerm.ui.features.player.model.PlayerEffect
 import com.example.freeplayerm.ui.features.player.model.PlayerEvent
@@ -27,6 +28,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.net.URLEncoder
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -47,7 +49,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import java.util.concurrent.atomic.AtomicLong
 
 // ViewModel unificado del reproductor
 // Gestiona estado UI, MediaController, eventos y efectos one-shot
@@ -61,8 +62,9 @@ constructor(
    private val lyricsDao: LyricsDao,
    private val songDao: SongDao,
    private val mediaItemHelper: MediaItemHelper,
+   private val userRepository: UserRepository,
 ) : ViewModel() {
-   
+
    companion object {
       private const val TAG = "PlayerViewModel"
       private const val PROGRESS_UPDATE_MS = 250L
@@ -72,7 +74,7 @@ constructor(
       private const val MINIMIZE_DELAY_MS = 300L
       private const val RESTORE_DELAY_MS = 400L
       private const val RESTART_THRESHOLD_MS = 3000L
-      
+
       // Messages
       private const val MSG_PLAYER_UNAVAILABLE = "Reproductor no disponible"
       private const val MSG_PLAYER_ERROR = "Error conectando al reproductor"
@@ -121,22 +123,24 @@ constructor(
    // endregion
 
    // region Internal State
-   
+
    // Cola de canciones thread-safe con StateFlow inmutable
    private val _songQueue = MutableStateFlow<Map<String, SongWithArtist>>(emptyMap())
-   
-   private fun updateSongQueue(transform: (Map<String, SongWithArtist>) -> Map<String, SongWithArtist>) {
+
+   private fun updateSongQueue(
+      transform: (Map<String, SongWithArtist>) -> Map<String, SongWithArtist>
+   ) {
       _songQueue.update(transform)
    }
-   
+
    private fun getSongFromQueue(key: String): SongWithArtist? {
       return _songQueue.value[key]
    }
-   
+
    private fun clearSongQueue() {
       _songQueue.value = emptyMap()
    }
-   
+
    private fun addToSongQueue(key: String, song: SongWithArtist) {
       updateSongQueue { current -> current + (key to song) }
    }
@@ -147,7 +151,13 @@ constructor(
    private val _lastEmittedSecond = AtomicLong(-1L)
    private var lastEmittedSecond: Long
       get() = _lastEmittedSecond.get()
-      set(value) { _lastEmittedSecond.set(value) }
+      set(value) {
+         _lastEmittedSecond.set(value)
+      }
+
+   private var playbackTrackingJob: Job? = null
+
+   private val trackedSongs = mutableSetOf<String>()
 
    // endregion
 
@@ -191,11 +201,26 @@ constructor(
          object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                _state.update { it.copy(isPlaying = isPlaying) }
-               if (isPlaying) startProgressUpdater() else stopProgressUpdater()
+
+               if (isPlaying) {
+                  startProgressUpdater()
+                  startPlaybackTracking() // Iniciar tracking al 50%
+               } else {
+                  stopProgressUpdater()
+                  stopPlaybackTracking() // Pausar tracking
+               }
             }
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+               // Cancelar tracking al cambiar de canción
+               stopPlaybackTracking()
+
                updateCurrentSongFromPlayer(mediaItem)
+
+               // Si está reproduciendo, iniciar tracking de la nueva canción
+               if (player?.isPlaying == true) {
+                  startPlaybackTracking()
+               }
             }
 
             override fun onRepeatModeChanged(repeatMode: Int) {
@@ -242,8 +267,7 @@ constructor(
                   },
             )
          }
-         p.currentMediaItem?.let { updateCurrentSongFromPlayer(it)
-         }
+         p.currentMediaItem?.let { updateCurrentSongFromPlayer(it) }
       }
    }
 
@@ -329,6 +353,12 @@ constructor(
                it.copy(isScrubbing = false, scrubPositionMs = null, currentPositionMs = position)
             }
             lastEmittedSecond = -1L
+
+            // ⬅️ AGREGAR: Reiniciar tracking si el usuario salta adelante
+            if (player?.isPlaying == true) {
+               stopPlaybackTracking()
+               startPlaybackTracking()
+            }
          }
       }
    }
@@ -348,86 +378,68 @@ constructor(
    // endregion
 
    // region Panel Events
-   
+
    private fun handlePanelEvent(event: PlayerEvent.Panel) {
       when (event) {
          is PlayerEvent.Panel.SyncGestureState -> {
             // Sincronización explícita solo cuando sea necesario
-            val targetProgress = when (_state.value.panelMode) {
-               PlayerPanelMode.EXPANDED -> 1f
-               PlayerPanelMode.NORMAL-> 0f
-            }
+            val targetProgress =
+               when (_state.value.panelMode) {
+                  PlayerPanelMode.EXPANDED -> 1f
+                  PlayerPanelMode.NORMAL -> 0f
+               }
             _state.update { it.copy(gestureProgress = targetProgress) }
          }
-         
+
          is PlayerEvent.Panel.Expand -> {
-            _state.update {
-               it.copy(
-                  panelMode = PlayerPanelMode.EXPANDED,
-                  isAnimating = false,
-               )
-            }
+            _state.update { it.copy(panelMode = PlayerPanelMode.EXPANDED, isAnimating = false) }
             loadExpandedDataIfNeeded()
          }
-         
+
          is PlayerEvent.Panel.Collapse -> {
-            _state.update {
-               it.copy(
-                  panelMode = PlayerPanelMode.NORMAL,
-                  isAnimating = false,
-               )
-            }
+            _state.update { it.copy(panelMode = PlayerPanelMode.NORMAL, isAnimating = false) }
          }
-         
+
          is PlayerEvent.Panel.SetMode -> {
-            _state.update {
-               it.copy(
-                  panelMode = event.mode,
-                  isAnimating = false,
-               )
-            }
+            _state.update { it.copy(panelMode = event.mode, isAnimating = false) }
             if (event.mode == PlayerPanelMode.EXPANDED) {
                loadExpandedDataIfNeeded()
             }
          }
-         
+
          is PlayerEvent.Panel.ChangeTab -> {
             _state.update { it.copy(activeTab = event.tab) }
          }
-         
+
          is PlayerEvent.Panel.NotifyScroll -> handleScrollNotification(event.isScrolling)
-         
+
          is PlayerEvent.Panel.AnimationCompleted -> {
             _state.update { it.copy(isAnimating = false) }
          }
-         
+
          is PlayerEvent.Panel.Gesture -> handleGestureEvent(event)
       }
    }
-   
+
    private fun handleGestureEvent(event: PlayerEvent.Panel.Gesture) {
       when (event) {
          is PlayerEvent.Panel.Gesture.Started -> {
             _state.update { it.copy(isDragging = true) }
          }
-         
+
          is PlayerEvent.Panel.Gesture.Update -> {
             _state.update { it.copy(gestureProgress = event.progress) }
          }
-         
+
          is PlayerEvent.Panel.Gesture.Ended -> {
             _state.update {
-               it.copy(
-                  isDragging = false,
-                  isAnimating = true,
-                  panelMode = event.targetMode
-               )
+               it.copy(isDragging = false, isAnimating = true, panelMode = event.targetMode)
             }
             if (event.targetMode == PlayerPanelMode.EXPANDED) {
                loadExpandedDataIfNeeded()
             }
          }
-         
+
          is PlayerEvent.Panel.Gesture.Cancelled -> {
             _state.update { it.copy(isDragging = false, isAnimating = false) }
          }
@@ -452,15 +464,17 @@ constructor(
          viewModelScope.launch {
             try {
                when {
-                  isScrolling && currentState.panelMode == PlayerPanelMode.NORMAL && !currentState.isMinimizedByScroll -> {
+                  isScrolling &&
+                     currentState.panelMode == PlayerPanelMode.NORMAL &&
+                     !currentState.isMinimizedByScroll -> {
                      delay(MINIMIZE_DELAY_MS)
                      _state.update { state ->
                         if (
                            state.panelMode == PlayerPanelMode.NORMAL &&
-                           !state.isMinimizedByScroll &&
-                           !state.isGesturing &&
-                           !state.isScrubbing &&
-                           state.hasSong
+                              !state.isMinimizedByScroll &&
+                              !state.isGesturing &&
+                              !state.isScrubbing &&
+                              state.hasSong
                         ) {
                            state.copy(isMinimizedByScroll = true)
                         } else state
@@ -471,9 +485,9 @@ constructor(
                      _state.update { state ->
                         if (
                            state.isMinimizedByScroll &&
-                           !state.isScrubbing &&
-                           !state.isGesturing &&
-                           state.hasSong
+                              !state.isScrubbing &&
+                              !state.isGesturing &&
+                              state.hasSong
                         ) {
                            state.copy(isMinimizedByScroll = false)
                         } else state
@@ -522,52 +536,55 @@ constructor(
    // endregion
 
    // region Playback Logic
-   
+
    private fun setQueueAndPlay(queue: List<SongWithArtist>, startSong: SongWithArtist) {
-      val p = player ?: run {
-         sendEffect(PlayerEffect.ShowToast(MSG_PLAYER_UNAVAILABLE))
-         return
-      }
-      
+      val p =
+         player
+            ?: run {
+               sendEffect(PlayerEffect.ShowToast(MSG_PLAYER_UNAVAILABLE))
+               return
+            }
+
       viewModelScope.launch {
          try {
             // Limpiar la cola al inicio
             clearSongQueue()
-            
-            val (validSongs, invalidSongs) = queue.partition {
-               !it.cancion.archivoPath.isNullOrBlank()
-            }
-            
+
+            val (validSongs, invalidSongs) =
+               queue.partition { !it.cancion.archivoPath.isNullOrBlank() }
+
             if (invalidSongs.isNotEmpty()) {
                Log.w(TAG, "${invalidSongs.size} canciones sin archivo válido")
             }
-            
+
             if (validSongs.isEmpty()) {
                sendEffect(PlayerEffect.ShowError(MSG_NO_PLAYABLE_SONGS))
                return@launch
             }
-            
-            val mediaItems = validSongs.mapNotNull { song ->
-               try {
-                  mediaItemHelper.crearMediaItem(song).also { mediaItem ->
-                     // Usar addToSongQueue en lugar de updateSongQueue directamente
-                     addToSongQueue(mediaItem.mediaId, song)
+
+            val mediaItems =
+               validSongs.mapNotNull { song ->
+                  try {
+                     mediaItemHelper.crearMediaItem(song).also { mediaItem ->
+                        // Usar addToSongQueue en lugar de updateSongQueue directamente
+                        addToSongQueue(mediaItem.mediaId, song)
+                     }
+                  } catch (e: Exception) {
+                     Log.e(TAG, "Error creando MediaItem para '${song.cancion.titulo}'", e)
+                     null
                   }
-               } catch (e: Exception) {
-                  Log.e(TAG, "Error creando MediaItem para '${song.cancion.titulo}'", e)
-                  null
                }
-            }
-            
+
             if (mediaItems.isEmpty()) {
                sendEffect(PlayerEffect.ShowError(MSG_PROCESS_ERROR))
                return@launch
             }
-            
-            val startIndex = mediaItems
-               .indexOfFirst { it.mediaId == startSong.cancion.idCancion.toString() }
-               .let { if (it >= 0) it else 0 }
-            
+
+            val startIndex =
+               mediaItems
+                  .indexOfFirst { it.mediaId == startSong.cancion.idCancion.toString() }
+                  .let { if (it >= 0) it else 0 }
+
             withContext(Dispatchers.Main) {
                try {
                   p.setMediaItems(mediaItems, startIndex, 0L)
@@ -578,7 +595,7 @@ constructor(
                   sendEffect(PlayerEffect.ShowError(MSG_PREPARE_ERROR))
                }
             }
-            
+
             if (invalidSongs.isNotEmpty()) {
                sendEffect(PlayerEffect.ShowToast("${invalidSongs.size} $MSG_SONGS_SKIPPED"))
             }
@@ -592,7 +609,7 @@ constructor(
    private fun togglePlayPause() {
       player?.let { if (it.isPlaying) it.pause() else it.play() }
    }
-   
+
    private fun stopPlayback() {
       player?.let { p ->
          p.stop()
@@ -605,28 +622,29 @@ constructor(
    // endregion
 
    // region Song Update
-   
+
    private fun updateCurrentSongFromPlayer(mediaItem: MediaItem?) {
       if (mediaItem == null) {
          clearSongState()
          return
       }
-      
+
       additionalDataJob?.cancel()
-      
+
       viewModelScope.launch {
          try {
             var song = getSongFromQueue(mediaItem.mediaId)
-            
+
             if (song == null) {
-               song = withContext(Dispatchers.IO) {
-                  mediaItemHelper.mediaItemACancionConArtista(mediaItem, DEFAULT_USER_ID)
-               }
+               song =
+                  withContext(Dispatchers.IO) {
+                     mediaItemHelper.mediaItemACancionConArtista(mediaItem, DEFAULT_USER_ID)
+                  }
                song?.let {
                   addToSongQueue(mediaItem.mediaId, it) // Usar addToSongQueue
                }
             }
-            
+
             if (song != null) {
                _state.update {
                   it.copy(
@@ -646,9 +664,9 @@ constructor(
                      isLoadingInfo = false,
                   )
                }
-               
+
                buildLinks(song)
-               
+
                if (_state.value.panelMode == PlayerPanelMode.EXPANDED) {
                   loadExpandedData(song)
                }
@@ -832,14 +850,14 @@ constructor(
             }
          }
    }
-   
+
    private fun updateProgress() {
       if (_state.value.isScrubbing) return
-      
+
       player?.let { p ->
          val currentPosition = p.currentPosition
          val currentSecond = currentPosition / PROGRESS_EMIT_THRESHOLD_MS
-         
+
          if (currentSecond != lastEmittedSecond) {
             _state.update { it.copy(currentPositionMs = currentPosition) }
             lastEmittedSecond = currentSecond
@@ -959,22 +977,105 @@ constructor(
 
    // endregion
 
+   private fun startPlaybackTracking() {
+      val currentSong = _state.value.currentSong?.cancion ?: return
+      val currentSongId = currentSong.idCancion.toString()
+      val durationMs = _state.value.durationMs
+
+      // Validar que la canción tenga duración válida
+      if (durationMs <= 0) {
+         Log.w(TAG, "No se puede trackear canción sin duración válida")
+         return
+      }
+
+      // Si ya contamos esta canción en esta sesión, no volver a contar
+      if (trackedSongs.contains(currentSongId)) {
+         Log.d(TAG, "Canción $currentSongId ya fue contada en esta sesión")
+         return
+      }
+
+      // Cancelar job anterior si existe
+      playbackTrackingJob?.cancel()
+
+      playbackTrackingJob =
+         viewModelScope.launch {
+            try {
+               val halfwayPoint = durationMs / 2
+               val currentPosition = player?.currentPosition ?: 0L
+               val remainingTime = (halfwayPoint - currentPosition).coerceAtLeast(0L)
+
+               Log.d(
+                  TAG,
+                  "Tracking iniciado: esperar ${remainingTime}ms para alcanzar 50% (${halfwayPoint}ms)",
+               )
+
+               // Esperar hasta alcanzar el 50%
+               delay(remainingTime)
+
+               // Verificar que sigue siendo la misma canción y está reproduciendo
+               val stillPlayingSameSong =
+                  _state.value.currentSong?.cancion?.idCancion?.toString() == currentSongId
+               val isPlaying = _state.value.isPlaying
+               val actualPosition = player?.currentPosition ?: 0L
+
+               // Validar que realmente alcanzamos el 50% (con margen de error de 2 segundos)
+               val reachedHalfway = actualPosition >= (halfwayPoint - 2000L)
+
+               if (stillPlayingSameSong && isPlaying && reachedHalfway) {
+                  withContext(Dispatchers.IO) {
+                     userRepository.incrementarReproducciones(DEFAULT_USER_ID)
+                  }
+
+                  // Marcar como contada para evitar duplicados
+                  trackedSongs.add(currentSongId)
+
+                  Log.d(
+                     TAG,
+                     "✅ Reproducción contada para canción '$currentSongId' al alcanzar 50% (${actualPosition}ms de ${durationMs}ms)",
+                  )
+               } else {
+                  Log.d(
+                     TAG,
+                     "❌ No se contó: sameSong=$stillPlayingSameSong, playing=$isPlaying, halfway=$reachedHalfway",
+                  )
+               }
+            } catch (e: CancellationException) {
+               Log.d(TAG, "Tracking cancelado (usuario pausó o cambió de canción)")
+            } catch (e: Exception) {
+               Log.e(TAG, "Error en tracking de reproducción", e)
+            }
+         }
+   }
+
+   /** Detiene el tracking de reproducción */
+   private fun stopPlaybackTracking() {
+      playbackTrackingJob?.cancel()
+      playbackTrackingJob = null
+   }
+
+   /** Limpia el historial de canciones trackeadas (útil al cerrar sesión o limpiar datos) */
+   private fun clearTrackedSongs() {
+      trackedSongs.clear()
+   }
+
    // region Cleanup
-   
+
    override fun onCleared() {
       additionalDataJob?.cancel()
       progressUpdaterJob?.cancel()
       scrollJob?.cancel()
-      
+      playbackTrackingJob?.cancel()
+
       playerListener?.let { player?.removeListener(it) }
       playerListener = null
-      
+
       runCatching { MediaController.releaseFuture(controllerFuture) }
-      
+
       mediaController = null
-      
+
       clearSongQueue()
-      
+      trackedSongs.clear()
+
       super.onCleared()
    }
 
