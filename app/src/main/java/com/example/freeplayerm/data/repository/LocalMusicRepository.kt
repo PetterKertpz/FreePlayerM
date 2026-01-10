@@ -3,82 +3,71 @@ package com.example.freeplayerm.data.repository
 
 import android.content.ContentUris
 import android.content.Context
+import android.database.Cursor
 import android.provider.MediaStore
 import android.util.Log
 import androidx.core.net.toUri
+import com.example.freeplayerm.data.local.dao.AlbumDao
+import com.example.freeplayerm.data.local.dao.ArtistDao
+import com.example.freeplayerm.data.local.dao.GenreDao
 import com.example.freeplayerm.data.local.dao.SongDao
-import com.example.freeplayerm.data.local.entity.AlbumEntity
-import com.example.freeplayerm.data.local.entity.ArtistEntity
-import com.example.freeplayerm.data.local.entity.GenreEntity
 import com.example.freeplayerm.data.local.entity.SongEntity
 import com.example.freeplayerm.utils.MusicTitleCleaner
 import com.example.freeplayerm.utils.StringSimilarity
 import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import java.io.File
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlin.coroutines.coroutineContext
 
-/**
- * ⚡ REPOSITORIO DE MÚSICA LOCAL - v2.0 OPTIMIZADO
- *
- * Características:
- * - Escaneo eficiente con inserción por batches
- * - Detección de archivos nuevos, modificados y eliminados
- * - Control de concurrencia con Mutex (suspendible)
- * - StateFlow para observar progreso del escaneo
- * - Parseo inteligente de metadatos
- * - Caché en memoria para reducir queries durante escaneo
- * - Limpieza automática de datos huérfanos
- *
- * @author Refactorizado para máximo rendimiento
- * @version 2.0
- */
 @Singleton
-class LocalMusicRepository
-@Inject
-constructor(@ApplicationContext private val context: Context, private val songDao: SongDao) {
+class LocalMusicRepository @Inject constructor(
+   @ApplicationContext private val context: Context,
+   private val songDao: SongDao,
+   private val artistDao: ArtistDao,
+   private val albumDao: AlbumDao,
+   private val genreDao: GenreDao,
+) {
    companion object {
       private const val TAG = "MusicScanner"
       private const val BATCH_SIZE = 50
-      private const val MIN_DURATION_MS = 10_000 // 10 segundos mínimo
+      private const val MIN_DURATION_MS = 10_000
       private const val PROGRESS_UPDATE_INTERVAL = 10
    }
-
-   // ==================== ESTADO DEL ESCANEO ====================
-
+   
    private val escaneoMutex = Mutex()
-
    private val _estadoEscaneo = MutableStateFlow<EstadoEscaneo>(EstadoEscaneo.Inactivo)
    val estadoEscaneo: StateFlow<EstadoEscaneo> = _estadoEscaneo.asStateFlow()
-
+   
+   // Caché persistente durante escaneo
+   private val artistasCache = mutableMapOf<String, Int>()
+   private val albumesCache = mutableMapOf<String, Int>()
+   private val generosCache = mutableMapOf<String, Int>()
+   
    sealed class EstadoEscaneo {
       data object Inactivo : EstadoEscaneo()
-
       data class Escaneando(
          val progreso: Int,
          val total: Int,
          val mensaje: String = "Escaneando...",
       ) : EstadoEscaneo()
-
       data class Completado(
          val nuevas: Int,
          val eliminadas: Int,
          val actualizadas: Int,
          val tiempoMs: Long,
       ) : EstadoEscaneo()
-
       data class Error(val mensaje: String, val excepcion: Throwable? = null) : EstadoEscaneo()
    }
-
-   // ==================== DATOS INTERNOS ====================
-
+   
    private data class DatosCancionEscaneada(
       val uri: String,
       val titulo: String,
@@ -89,691 +78,503 @@ constructor(@ApplicationContext private val context: Context, private val songDa
       val anio: Int,
       val numeroPista: Int?,
       val fechaModificacion: Long,
+      val genero: String?,
+      val tamanioBytes: Long?,
+      val mimeType: String?,
    )
-
+   
    private data class ResultadoParseo(
       val artista: String,
       val titulo: String,
       val versionInfo: String?,
    )
-
-   private data class ExtraccionResultado(
-      val artista: String,
-      val titulo: String,
-      val versionInfo: String?,
-   )
-
-   // ==================== API PÚBLICA ====================
-
-   /**
-    * Ejecuta un escaneo completo de la biblioteca de música.
-    *
-    * @return Resultado del escaneo o null si ya había uno en progreso
-    */
-   suspend fun escanearYGuardarMusica(): EstadoEscaneo.Completado? {
-      // Intentar adquirir el mutex sin bloquear
+   
+   suspend fun escanearYGuardarMusica(forceFullScan: Boolean = false): EstadoEscaneo.Completado? {
       if (!escaneoMutex.tryLock()) {
-         Log.d(TAG, "⚠️ Escaneo ya en progreso, ignorando solicitud")
+         Log.d(TAG, "Escaneo ya en progreso, ignorando")
          return null
       }
-
+      
       val tiempoInicio = System.currentTimeMillis()
-
+      
       return try {
-         withContext(Dispatchers.IO) { ejecutarEscaneoCompleto(tiempoInicio) }
+         withContext(Dispatchers.IO) {
+            ejecutarEscaneo(tiempoInicio, forceFullScan)
+         }
+      } catch (e: CancellationException) {
+         Log.d(TAG, "Escaneo cancelado")
+         _estadoEscaneo.value = EstadoEscaneo.Inactivo
+         null
       } catch (e: Exception) {
-         Log.e(TAG, "❌ Error crítico durante el escaneo", e)
-         val error = EstadoEscaneo.Error("Error al escanear: ${e.localizedMessage}", e)
-         _estadoEscaneo.value = error
+         Log.e(TAG, "Error critico durante el escaneo", e)
+         _estadoEscaneo.value = EstadoEscaneo.Error("Error: ${e.localizedMessage}", e)
          null
       } finally {
+         limpiarCaches()
          escaneoMutex.unlock()
-         Log.d(TAG, "🔓 Mutex de escaneo liberado")
       }
    }
-
-   /** Verifica si hay un escaneo en progreso. */
+   
    fun escaneoEnProgreso(): Boolean = escaneoMutex.isLocked
-
-   /**
-    * Reinicia el estado del escaneo a Inactivo. Útil para limpiar mensajes de error o completado.
-    */
+   
    fun reiniciarEstado() {
       if (!escaneoMutex.isLocked) {
          _estadoEscaneo.value = EstadoEscaneo.Inactivo
       }
    }
-
-   // ==================== LÓGICA DE ESCANEO ====================
-
-   private suspend fun ejecutarEscaneoCompleto(tiempoInicio: Long): EstadoEscaneo.Completado {
+   
+   private suspend fun ejecutarEscaneo(
+      tiempoInicio: Long,
+      forceFullScan: Boolean,
+   ): EstadoEscaneo.Completado {
       var cancionesNuevas = 0
       var cancionesEliminadas = 0
       var cancionesActualizadas = 0
-
-      Log.d(TAG, "🎵 Iniciando escaneo de biblioteca musical...")
+      
+      Log.d(TAG, "Iniciando escaneo (forzado=$forceFullScan)...")
       _estadoEscaneo.value = EstadoEscaneo.Escaneando(0, 0, "Leyendo MediaStore...")
-
-      // 1. Obtener datos de ambas fuentes
+      
+      // Obtener canciones del dispositivo
       val cancionesEnDispositivo = obtenerCancionesDeMediaStore()
-      val cancionesEnBD = songDao.obtenerTodasLasCancionesSnapshot()
-
-      Log.d(TAG, "📊 MediaStore: ${cancionesEnDispositivo.size} | BD: ${cancionesEnBD.size}")
-
-      // 2. Crear índices para búsqueda eficiente O(1)
+      
+      // Query ligera - solo URIs y fechas
+      val cancionesEnBD = if (forceFullScan) {
+         emptyList()
+      } else {
+         songDao.obtenerInfoParaEscaneo()
+      }
+      
+      Log.d(TAG, "MediaStore: ${cancionesEnDispositivo.size} | BD: ${cancionesEnBD.size}")
+      
+      // Crear índices O(1)
       val urisEnDispositivo = cancionesEnDispositivo.associateBy { it.uri }
       val cancionesPorUri = cancionesEnBD.associateBy { it.archivoPath }
-
-      _estadoEscaneo.value =
-         EstadoEscaneo.Escaneando(0, cancionesEnDispositivo.size, "Sincronizando...")
-
-      // 3. Detectar y eliminar canciones huérfanas (ya no existen en dispositivo)
-      val cancionesAEliminar = cancionesEnBD.filter { it.archivoPath !in urisEnDispositivo }
-      if (cancionesAEliminar.isNotEmpty()) {
-         val idsAEliminar = cancionesAEliminar.map { it.idCancion }
-         songDao.eliminarCancionesPorIds(idsAEliminar)
-         cancionesEliminadas = cancionesAEliminar.size
-         Log.d(TAG, "🗑️ Eliminadas $cancionesEliminadas canciones huérfanas")
+      
+      _estadoEscaneo.value = EstadoEscaneo.Escaneando(0, cancionesEnDispositivo.size, "Sincronizando...")
+      
+      // Detectar y eliminar huérfanas
+      coroutineContext.ensureActive()
+      val pathsAEliminar = cancionesEnBD
+         .filter { it.archivoPath !in urisEnDispositivo }
+         .map { it.archivoPath }
+      
+      if (pathsAEliminar.isNotEmpty()) {
+         songDao.eliminarCancionesPorPaths(pathsAEliminar)
+         cancionesEliminadas = pathsAEliminar.size
+         Log.d(TAG, "Eliminadas $cancionesEliminadas canciones huerfanas")
       }
-
-      // 4. Procesar canciones nuevas y modificadas
+      
+      // Clasificar canciones
       val cancionesParaInsertar = mutableListOf<DatosCancionEscaneada>()
-      val cancionesParaActualizar = mutableListOf<Pair<SongEntity, DatosCancionEscaneada>>()
-
+      val cancionesParaActualizar = mutableListOf<Pair<Int, DatosCancionEscaneada>>()
+      
       cancionesEnDispositivo.forEachIndexed { index, datos ->
-         val cancionExistente = cancionesPorUri[datos.uri]
-
+         coroutineContext.ensureActive()
+         
+         val existente = cancionesPorUri[datos.uri]
          when {
-            // Canción nueva
-            cancionExistente == null -> {
-               cancionesParaInsertar.add(datos)
+            existente == null -> cancionesParaInsertar.add(datos)
+            forceFullScan || existente.fechaModificacion != datos.fechaModificacion -> {
+               cancionesParaActualizar.add(existente.idCancion to datos)
             }
-            // Canción modificada (fecha diferente)
-            cancionExistente.fechaModificacion != datos.fechaModificacion -> {
-               cancionesParaActualizar.add(cancionExistente to datos)
-            }
-         // Sin cambios - ignorar
          }
-
-         // Actualizar progreso
+         
          if (index % PROGRESS_UPDATE_INTERVAL == 0) {
-            _estadoEscaneo.value =
-               EstadoEscaneo.Escaneando(
-                  progreso = index + 1,
-                  total = cancionesEnDispositivo.size,
-                  mensaje = "Procesando ${index + 1}/${cancionesEnDispositivo.size}...",
-               )
+            _estadoEscaneo.value = EstadoEscaneo.Escaneando(
+               progreso = index + 1,
+               total = cancionesEnDispositivo.size,
+               mensaje = "Analizando ${index + 1}/${cancionesEnDispositivo.size}...",
+            )
          }
       }
-
-      // 5. Insertar nuevas canciones por batches
+      
+      // Insertar nuevas por batches
       if (cancionesParaInsertar.isNotEmpty()) {
-         Log.d(TAG, "➕ Insertando ${cancionesParaInsertar.size} canciones nuevas...")
-         _estadoEscaneo.value =
-            EstadoEscaneo.Escaneando(
-               progreso = 0,
-               total = cancionesParaInsertar.size,
-               mensaje = "Guardando canciones nuevas...",
-            )
-
+         Log.d(TAG, "Insertando ${cancionesParaInsertar.size} canciones nuevas...")
+         _estadoEscaneo.value = EstadoEscaneo.Escaneando(0, cancionesParaInsertar.size, "Guardando nuevas...")
+         
          cancionesParaInsertar.chunked(BATCH_SIZE).forEachIndexed { batchIndex, batch ->
-            insertarBatchDeCanciones(batch)
-            _estadoEscaneo.value =
-               EstadoEscaneo.Escaneando(
-                  progreso = (batchIndex + 1) * BATCH_SIZE,
-                  total = cancionesParaInsertar.size,
-                  mensaje = "Guardando lote ${batchIndex + 1}...",
-               )
+            coroutineContext.ensureActive()
+            insertarBatch(batch)
+            _estadoEscaneo.value = EstadoEscaneo.Escaneando(
+               progreso = minOf((batchIndex + 1) * BATCH_SIZE, cancionesParaInsertar.size),
+               total = cancionesParaInsertar.size,
+               mensaje = "Guardando lote ${batchIndex + 1}...",
+            )
          }
          cancionesNuevas = cancionesParaInsertar.size
       }
-
-      // 6. Actualizar canciones modificadas
+      
+      // Actualizar modificadas
       if (cancionesParaActualizar.isNotEmpty()) {
-         Log.d(TAG, "🔄 Actualizando ${cancionesParaActualizar.size} canciones modificadas...")
-         cancionesParaActualizar.forEach { (existente, nuevos) ->
-            actualizarCancionExistente(existente, nuevos)
+         Log.d(TAG, "Actualizando ${cancionesParaActualizar.size} canciones...")
+         cancionesParaActualizar.forEach { (idCancion, datos) ->
+            coroutineContext.ensureActive()
+            actualizarCancion(idCancion, datos)
          }
          cancionesActualizadas = cancionesParaActualizar.size
       }
-
-      // 7. Limpiar datos huérfanos (artistas, álbumes, géneros sin canciones)
-      _estadoEscaneo.value = EstadoEscaneo.Escaneando(0, 0, "Limpiando datos huérfanos...")
+      
+      // Limpiar huérfanos
+      coroutineContext.ensureActive()
+      _estadoEscaneo.value = EstadoEscaneo.Escaneando(0, 0, "Limpiando datos...")
       val datosLimpiados = songDao.limpiarDatosHuerfanos()
       if (datosLimpiados > 0) {
-         Log.d(TAG, "🧹 Limpiados $datosLimpiados registros huérfanos")
+         Log.d(TAG, "Limpiados $datosLimpiados registros huerfanos")
       }
-      try {
-         val albumsDebug = songDao.obtenerTodosLosAlbumes().first()
-         albumsDebug.take(5).forEach { album ->
-            Log.e(
-               "ALBUM_DEBUG",
-               """
-            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            📀 Álbum: ${album.titulo}
-            🎨 Portada: ${album.portadaPath}
-            🔢 ID: ${album.idAlbum}
-            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        """
-                  .trimIndent(),
-            )
-         }
-      } catch (e: Exception) {
-         Log.e("ALBUM_DEBUG", "❌ Error: ${e.message}")
-      }
-      // ⬆️ HASTA AQUÍ ⬆️
-
-      // 8. Preparar resultado
+      
       val tiempoTotal = System.currentTimeMillis() - tiempoInicio
-      val resultado =
-         EstadoEscaneo.Completado(
-            nuevas = cancionesNuevas,
-            eliminadas = cancionesEliminadas,
-            actualizadas = cancionesActualizadas,
-            tiempoMs = tiempoTotal,
-         )
-
-      _estadoEscaneo.value = resultado
-      Log.d(
-         TAG,
-         "✅ Escaneo completado en ${tiempoTotal}ms: +$cancionesNuevas, -$cancionesEliminadas, ~$cancionesActualizadas",
+      val resultado = EstadoEscaneo.Completado(
+         nuevas = cancionesNuevas,
+         eliminadas = cancionesEliminadas,
+         actualizadas = cancionesActualizadas,
+         tiempoMs = tiempoTotal,
       )
-
+      
+      _estadoEscaneo.value = resultado
+      Log.d(TAG, "Escaneo completado en ${tiempoTotal}ms: +$cancionesNuevas, -$cancionesEliminadas, ~$cancionesActualizadas")
+      
       return resultado
    }
-
-   // ==================== LECTURA DE MEDIASTORE ====================
-
+   
    private fun obtenerCancionesDeMediaStore(): List<DatosCancionEscaneada> {
       val canciones = mutableListOf<DatosCancionEscaneada>()
-
-      val projection =
-         arrayOf(
-            MediaStore.Audio.Media._ID,
-            MediaStore.Audio.Media.TITLE,
-            MediaStore.Audio.Media.ARTIST,
-            MediaStore.Audio.Media.ALBUM,
-            MediaStore.Audio.Media.ALBUM_ID,
-            MediaStore.Audio.Media.DURATION,
-            MediaStore.Audio.Media.YEAR,
-            MediaStore.Audio.Media.TRACK,
-            MediaStore.Audio.Media.DATE_MODIFIED,
-         )
-
-      val selection = buildString {
-         append("${MediaStore.Audio.Media.IS_MUSIC} != 0")
-         append(" AND ${MediaStore.Audio.Media.DURATION} >= $MIN_DURATION_MS")
-      }
-
+      
+      val projection = arrayOf(
+         MediaStore.Audio.Media._ID,
+         MediaStore.Audio.Media.TITLE,
+         MediaStore.Audio.Media.ARTIST,
+         MediaStore.Audio.Media.ALBUM,
+         MediaStore.Audio.Media.ALBUM_ID,
+         MediaStore.Audio.Media.DURATION,
+         MediaStore.Audio.Media.YEAR,
+         MediaStore.Audio.Media.TRACK,
+         MediaStore.Audio.Media.DATE_MODIFIED,
+         MediaStore.Audio.Media.SIZE,
+         MediaStore.Audio.Media.MIME_TYPE,
+      )
+      
+      val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${MediaStore.Audio.Media.DURATION} >= $MIN_DURATION_MS"
       val sortOrder = "${MediaStore.Audio.Media.DATE_MODIFIED} DESC"
-
-      try {
-         context.contentResolver
-            .query(
-               MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-               projection,
-               selection,
-               null,
-               sortOrder,
-            )
-            ?.use { cursor ->
-               // Obtener índices de columnas una sola vez
-               val colId = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
-               val colTitulo = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
-               val colArtista = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
-               val colAlbum = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
-               val colAlbumId = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
-               val colDuracion = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
-               val colAnio = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
-               val colPista = cursor.getColumnIndex(MediaStore.Audio.Media.TRACK)
-               val colFechaMod = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_MODIFIED)
-
-               while (cursor.moveToNext()) {
-                  try {
-                     val id = cursor.getLong(colId)
-                     val uri =
-                        ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
-                           .toString()
-
-                     val artista =
-                        cursor.getString(colArtista)?.let {
-                           if (it == "<unknown>" || it.isBlank()) null else it.trim()
-                        }
-
-                     val album =
-                        cursor.getString(colAlbum)?.let { if (it.isBlank()) null else it.trim() }
-
-                     canciones.add(
-                        DatosCancionEscaneada(
-                           uri = uri,
-                           titulo = cursor.getString(colTitulo)?.trim() ?: "Título Desconocido",
-                           artista = artista,
-                           album = album,
-                           albumId = cursor.getLong(colAlbumId),
-                           duracionMs = cursor.getInt(colDuracion),
-                           anio = cursor.getInt(colAnio),
-                           numeroPista =
-                              if (colPista >= 0) {
-                                 cursor.getInt(colPista).takeIf { it > 0 }
-                              } else null,
-                           fechaModificacion = cursor.getLong(colFechaMod),
-                        )
-                     )
-                  } catch (e: Exception) {
-                     Log.w(TAG, "⚠️ Error leyendo fila del cursor", e)
-                  }
-               }
-
-               Log.d(TAG, "📂 Leídas ${canciones.size} canciones de MediaStore")
-            } ?: Log.w(TAG, "⚠️ Cursor de MediaStore es null")
-      } catch (e: SecurityException) {
-         Log.e(TAG, "❌ Sin permisos para acceder a MediaStore", e)
-         throw e
-      } catch (e: Exception) {
-         Log.e(TAG, "❌ Error consultando MediaStore", e)
-         throw e
+      
+      // Escanear EXTERNAL e INTERNAL
+      val uris = listOf(
+         MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+         MediaStore.Audio.Media.INTERNAL_CONTENT_URI,
+      )
+      
+      uris.forEach { contentUri ->
+         try {
+            context.contentResolver.query(contentUri, projection, selection, null, sortOrder)?.use { cursor ->
+               canciones.addAll(procesarCursor(cursor, contentUri))
+            }
+         } catch (e: Exception) {
+            Log.w(TAG, "Error leyendo $contentUri: ${e.message}")
+         }
       }
-
+      
+      // Obtener géneros
+      val generosPorCancion = obtenerGenerosDeMediaStore()
+      return canciones.map { cancion ->
+         val genero = generosPorCancion[cancion.uri]
+         cancion.copy(genero = genero)
+      }
+   }
+   
+   private fun procesarCursor(cursor: Cursor, baseUri: android.net.Uri): List<DatosCancionEscaneada> {
+      val canciones = mutableListOf<DatosCancionEscaneada>()
+      
+      val colId = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+      val colTitulo = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
+      val colArtista = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
+      val colAlbum = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
+      val colAlbumId = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
+      val colDuracion = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+      val colAnio = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
+      val colPista = cursor.getColumnIndex(MediaStore.Audio.Media.TRACK)
+      val colFechaMod = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_MODIFIED)
+      val colSize = cursor.getColumnIndex(MediaStore.Audio.Media.SIZE)
+      val colMime = cursor.getColumnIndex(MediaStore.Audio.Media.MIME_TYPE)
+      
+      while (cursor.moveToNext()) {
+         try {
+            val id = cursor.getLong(colId)
+            val uri = ContentUris.withAppendedId(baseUri, id).toString()
+            
+            val artista = cursor.getString(colArtista)?.let {
+               if (it == "<unknown>" || it.isBlank()) null else it.trim()
+            }
+            
+            val album = cursor.getString(colAlbum)?.let {
+               if (it.isBlank()) null else it.trim()
+            }
+            
+            canciones.add(DatosCancionEscaneada(
+               uri = uri,
+               titulo = cursor.getString(colTitulo)?.trim() ?: "Titulo Desconocido",
+               artista = artista,
+               album = album,
+               albumId = cursor.getLong(colAlbumId),
+               duracionMs = cursor.getInt(colDuracion),
+               anio = cursor.getInt(colAnio),
+               numeroPista = if (colPista >= 0) cursor.getInt(colPista).takeIf { it > 0 } else null,
+               fechaModificacion = cursor.getLong(colFechaMod),
+               genero = null,
+               tamanioBytes = if (colSize >= 0) cursor.getLong(colSize) else null,
+               mimeType = if (colMime >= 0) cursor.getString(colMime) else null,
+            ))
+         } catch (e: Exception) {
+            Log.w(TAG, "Error leyendo fila del cursor", e)
+         }
+      }
+      
       return canciones
    }
-
-   // ==================== INSERCIÓN POR BATCHES ====================
-
-   private suspend fun insertarBatchDeCanciones(batch: List<DatosCancionEscaneada>) {
-      // Cachés para evitar queries repetidas dentro del batch
-      val artistasCache = mutableMapOf<String, ArtistEntity>()
-      val albumesCache = mutableMapOf<String, AlbumEntity>()
-      val generoPorDefecto = obtenerOCrearGenero("Género Desconocido")
-
-      val entidades =
-         batch.mapNotNull { datos ->
-            try {
-               val resultado = parsearCancionInteligente(datos.titulo, datos.artista)
-
-               // Obtener o crear artista (con caché)
-               val artista =
-                  artistasCache.getOrPut(resultado.artista.lowercase()) {
-                     obtenerOCrearArtista(resultado.artista)
+   
+   private fun obtenerGenerosDeMediaStore(): Map<String, String> {
+      val generosPorCancion = mutableMapOf<String, String>()
+      
+      try {
+         val genresUri = MediaStore.Audio.Genres.EXTERNAL_CONTENT_URI
+         context.contentResolver.query(genresUri, arrayOf(MediaStore.Audio.Genres._ID, MediaStore.Audio.Genres.NAME), null, null, null)?.use { genresCursor ->
+            val colGenreId = genresCursor.getColumnIndexOrThrow(MediaStore.Audio.Genres._ID)
+            val colGenreName = genresCursor.getColumnIndexOrThrow(MediaStore.Audio.Genres.NAME)
+            
+            while (genresCursor.moveToNext()) {
+               val genreId = genresCursor.getLong(colGenreId)
+               val genreName = genresCursor.getString(colGenreName) ?: continue
+               
+               val membersUri = MediaStore.Audio.Genres.Members.getContentUri("external", genreId)
+               context.contentResolver.query(membersUri, arrayOf(MediaStore.Audio.Genres.Members._ID), null, null, null)?.use { membersCursor ->
+                  val colMemberId = membersCursor.getColumnIndexOrThrow(MediaStore.Audio.Genres.Members._ID)
+                  while (membersCursor.moveToNext()) {
+                     val audioId = membersCursor.getLong(colMemberId)
+                     val audioUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, audioId).toString()
+                     generosPorCancion[audioUri] = genreName
                   }
-
-               // Obtener o crear álbum (con caché por nombre+artista)
-               val albumNombre = datos.album ?: "Álbum Desconocido"
-               val albumKey = "${albumNombre.lowercase()}_${artista.idArtista}"
-               val album =
-                  albumesCache.getOrPut(albumKey) {
-                     obtenerOCrearAlbum(
-                        albumNombre,
-                        artista.idArtista,
-                        datos.anio,
-                        datos.albumId.toInt(),
-                        datos.uri, // Pasar URI del audio para fallback
-                     )
-                  }
-
-               SongEntity(
-                  idArtista = artista.idArtista,
-                  idAlbum = album.idAlbum,
-                  idGenero = generoPorDefecto.idGenero,
-                  titulo = resultado.titulo,
-                  duracionSegundos = datos.duracionMs / 1000,
-                  origen = SongEntity.ORIGEN_LOCAL,
-                  archivoPath = datos.uri,
-                  numeroPista = datos.numeroPista,
-                  anio = datos.anio.takeIf { it > 0 },
-                  fechaAgregado = System.currentTimeMillis(),
-                  fechaModificacion = datos.fechaModificacion,
-               )
-            } catch (e: Exception) {
-               Log.w(TAG, "⚠️ Error procesando: ${datos.titulo}", e)
-               null
+               }
             }
          }
-
-      if (entidades.isNotEmpty()) {
-         songDao.insertarCanciones(entidades)
-      }
-   }
-
-   // ==================== ACTUALIZACIÓN DE CANCIONES ====================
-
-   private suspend fun actualizarCancionExistente(
-      existente: SongEntity,
-      nuevos: DatosCancionEscaneada,
-   ) {
-      try {
-         val resultado = parsearCancionInteligente(nuevos.titulo, nuevos.artista)
-         val artista = obtenerOCrearArtista(resultado.artista)
-         val album =
-            obtenerOCrearAlbum(
-               nuevos.album ?: "Álbum Desconocido",
-               artista.idArtista,
-               nuevos.anio,
-               nuevos.albumId.toInt(),
-               nuevos.uri,
-            )
-
-         val cancionActualizada =
-            existente.copy(
-               titulo = resultado.titulo,
-               idArtista = artista.idArtista,
-               idAlbum = album.idAlbum,
-               duracionSegundos = nuevos.duracionMs / 1000,
-               numeroPista = nuevos.numeroPista,
-               anio = nuevos.anio.takeIf { it > 0 },
-               fechaModificacion = nuevos.fechaModificacion,
-            )
-
-         songDao.actualizarCancion(cancionActualizada)
       } catch (e: Exception) {
-         Log.w(TAG, "⚠️ Error actualizando: ${existente.titulo}", e)
+         Log.w(TAG, "Error obteniendo generos: ${e.message}")
+      }
+      
+      return generosPorCancion
+   }
+   
+   private suspend fun insertarBatch(batch: List<DatosCancionEscaneada>) {
+      val entidades = batch.mapNotNull { datos ->
+         try {
+            crearSongEntity(datos)
+         } catch (e: Exception) {
+            Log.w(TAG, "Error procesando: ${datos.titulo}", e)
+            null
+         }
+      }
+      
+      if (entidades.isNotEmpty()) {
+         songDao.upsertCanciones(entidades)
       }
    }
-
-   // ==================== PARSEO INTELIGENTE DE METADATOS ====================
-
-   private fun parsearCancionInteligente(
-      tituloCrudo: String,
-      artistaCrudo: String?,
-   ): ResultadoParseo {
-      // Normalizar separadores comunes
-      val textoNormalizado =
-         tituloCrudo.replace(Regex("""[|\\/]"""), " - ").replace(Regex("""\s+"""), " ").trim()
-
-      // Limpiar artista de metadatos
-      val artistaDeMetadatos =
-         artistaCrudo
-            ?.takeIf { it.isNotBlank() && it != "<unknown>" }
-            ?.let { MusicTitleCleaner.cleanArtistName(it.trim()) }
-
-      val resultadoExtraccion = extraerArtistaYTitulo(textoNormalizado, artistaDeMetadatos)
-
-      val artistaLimpio = MusicTitleCleaner.cleanArtistName(resultadoExtraccion.artista)
-      val tituloLimpio = MusicTitleCleaner.cleanTitle(resultadoExtraccion.titulo)
-
-      return ResultadoParseo(
-         artista = capitalizarNombrePropio(artistaLimpio),
-         titulo = capitalizarNombrePropio(tituloLimpio),
-         versionInfo = resultadoExtraccion.versionInfo,
+   
+   private suspend fun actualizarCancion(idCancion: Int, datos: DatosCancionEscaneada) {
+      try {
+         val resultado = parsearCancionInteligente(datos.titulo, datos.artista)
+         val artistaId = obtenerOCrearArtistaId(resultado.artista)
+         val albumId = obtenerOCrearAlbumId(datos.album ?: "Album Desconocido", artistaId, datos.anio, datos.albumId, datos.uri)
+         val generoId = obtenerOCrearGeneroId(datos.genero ?: "Genero Desconocido")
+         
+         songDao.actualizarMetadatosEscaneo(
+            idCancion = idCancion,
+            titulo = resultado.titulo,
+            idArtista = artistaId,
+            idAlbum = albumId,
+            idGenero = generoId,
+            duracion = datos.duracionMs / 1000,
+            numeroPista = datos.numeroPista,
+            anio = datos.anio.takeIf { it > 0 },
+            fechaModificacion = datos.fechaModificacion,
+            tamanioBytes = datos.tamanioBytes,
+            mimeType = datos.mimeType,
+         )
+      } catch (e: Exception) {
+         Log.w(TAG, "Error actualizando cancion $idCancion", e)
+      }
+   }
+   
+   private suspend fun crearSongEntity(datos: DatosCancionEscaneada): SongEntity {
+      val resultado = parsearCancionInteligente(datos.titulo, datos.artista)
+      val artistaId = obtenerOCrearArtistaId(resultado.artista)
+      val albumId = obtenerOCrearAlbumId(datos.album ?: "Album Desconocido", artistaId, datos.anio, datos.albumId, datos.uri)
+      val generoId = obtenerOCrearGeneroId(datos.genero ?: "Genero Desconocido")
+      
+      return SongEntity(
+         idArtista = artistaId,
+         idAlbum = albumId,
+         idGenero = generoId,
+         titulo = resultado.titulo,
+         duracionSegundos = datos.duracionMs / 1000,
+         origen = SongEntity.ORIGEN_LOCAL,
+         archivoPath = datos.uri,
+         numeroPista = datos.numeroPista,
+         anio = datos.anio.takeIf { it > 0 },
+         fechaAgregado = System.currentTimeMillis(),
+         fechaModificacion = datos.fechaModificacion,
+         tamanioBytes = datos.tamanioBytes,
+         mimeType = datos.mimeType,
       )
    }
-
-   private fun extraerArtistaYTitulo(
-      texto: String,
-      artistaDeMetadatos: String?,
-   ): ExtraccionResultado {
-      // Patrones de separadores ordenados por prioridad
-      val patronesSeparadores =
-         listOf(
-            Regex("""\s+-\s+"""), // " - "
-            Regex("""\s+–\s+"""), // " – " (en dash)
-            Regex("""\s+—\s+"""), // " — " (em dash)
-            Regex("""\s+\|\|\s+"""), // " || "
-            Regex("""\s+\|\s+"""), // " | "
-            Regex("""\s+//\s+"""), // " // "
-            Regex("""\s+::\s+"""), // " :: "
-         )
-
+   
+   // Funciones de obtener/crear con caché
+   private suspend fun obtenerOCrearArtistaId(nombre: String): Int {
+      val nombreKey = nombre.lowercase().trim()
+      artistasCache[nombreKey]?.let { return it }
+      
+      val artista = artistDao.obtenerOCrearArtista(nombre)
+      artistasCache[nombreKey] = artista.idArtista
+      return artista.idArtista
+   }
+   
+   private suspend fun obtenerOCrearAlbumId(
+      titulo: String,
+      artistaId: Int,
+      anio: Int,
+      albumIdMediaStore: Long,
+      audioUri: String?,
+   ): Int {
+      val albumKey = "${titulo.lowercase()}_$artistaId"
+      albumesCache[albumKey]?.let { return it }
+      
+      val album = albumDao.obtenerOCrearAlbum(titulo, artistaId, anio.toLong().takeIf { it > 0 })
+      
+      // Actualizar portada si no tiene
+      if (album.portadaPath == null) {
+         val portada = obtenerPortadaAlbum(albumIdMediaStore.toInt(), audioUri, titulo)
+         if (portada != null) {
+            albumDao.actualizarInformacionBasica(album.idAlbum, album.titulo, album.descripcion, portada)
+         }
+      }
+      
+      albumesCache[albumKey] = album.idAlbum
+      return album.idAlbum
+   }
+   
+   private suspend fun obtenerOCrearGeneroId(nombre: String): Int {
+      val nombreKey = nombre.lowercase().trim()
+      generosCache[nombreKey]?.let { return it }
+      
+      val genero = genreDao.obtenerOCrearGenero(nombre)
+      generosCache[nombreKey] = genero.idGenero
+      return genero.idGenero
+   }
+   
+   private fun limpiarCaches() {
+      artistasCache.clear()
+      albumesCache.clear()
+      generosCache.clear()
+   }
+   
+   private fun parsearCancionInteligente(tituloCrudo: String, artistaCrudo: String?): ResultadoParseo {
+      val textoNormalizado = tituloCrudo
+         .replace(Regex("""[|\\/]"""), " - ")
+         .replace(Regex("""\s+"""), " ")
+         .trim()
+      
+      val artistaDeMetadatos = artistaCrudo
+         ?.takeIf { it.isNotBlank() && it != "<unknown>" }
+         ?.let { MusicTitleCleaner.cleanArtistName(it.trim()) }
+      
+      val (artista, titulo, version) = extraerArtistaYTitulo(textoNormalizado, artistaDeMetadatos)
+      
+      return ResultadoParseo(
+         artista = capitalizarNombrePropio(MusicTitleCleaner.cleanArtistName(artista)),
+         titulo = capitalizarNombrePropio(MusicTitleCleaner.cleanTitle(titulo)),
+         versionInfo = version,
+      )
+   }
+   
+   private fun extraerArtistaYTitulo(texto: String, artistaDeMetadatos: String?): Triple<String, String, String?> {
+      val patronesSeparadores = listOf(
+         Regex("""\s+-\s+"""),
+         Regex("""\s+–\s+"""),
+         Regex("""\s+—\s+"""),
+         Regex("""\s+\|\|\s+"""),
+         Regex("""\s+\|\s+"""),
+      )
+      
       for (patron in patronesSeparadores) {
          if (texto.contains(patron)) {
             val partes = texto.split(patron, limit = 2)
             if (partes.size == 2) {
-               val posibleArtista = partes[0].trim()
-               val posibleTitulo = partes[1].trim()
-
-               // Calcular confianza de cada lado
-               val confianzaIzquierda = calcularConfianzaArtista(posibleArtista, artistaDeMetadatos)
-               val confianzaDerecha = calcularConfianzaArtista(posibleTitulo, artistaDeMetadatos)
-
-               return if (confianzaIzquierda > confianzaDerecha || confianzaIzquierda > 0.6) {
-                  val parsedTitle = MusicTitleCleaner.parseTitle(posibleTitulo)
-                  ExtraccionResultado(
-                     artista = posibleArtista,
-                     titulo = parsedTitle.mainTitle,
-                     versionInfo = parsedTitle.version?.name,
-                  )
+               val izquierda = partes[0].trim()
+               val derecha = partes[1].trim()
+               
+               val confianzaIzq = calcularConfianzaArtista(izquierda, artistaDeMetadatos)
+               val confianzaDer = calcularConfianzaArtista(derecha, artistaDeMetadatos)
+               
+               return if (confianzaIzq > confianzaDer || confianzaIzq > 0.6) {
+                  val parsed = MusicTitleCleaner.parseTitle(derecha)
+                  Triple(izquierda, parsed.mainTitle, parsed.version?.name)
                } else {
-                  val parsedTitle = MusicTitleCleaner.parseTitle(posibleArtista)
-                  ExtraccionResultado(
-                     artista = posibleTitulo,
-                     titulo = parsedTitle.mainTitle,
-                     versionInfo = parsedTitle.version?.name,
-                  )
+                  val parsed = MusicTitleCleaner.parseTitle(izquierda)
+                  Triple(derecha, parsed.mainTitle, parsed.version?.name)
                }
             }
          }
       }
-
-      // Si hay artista en metadatos, usarlo directamente
+      
       if (artistaDeMetadatos != null) {
-         var tituloLimpio = texto
-         patronesSeparadores.forEach { patron -> tituloLimpio = patron.replace(tituloLimpio, " ") }
-         val parsedTitle = MusicTitleCleaner.parseTitle(tituloLimpio.trim())
-         return ExtraccionResultado(
-            artista = artistaDeMetadatos,
-            titulo = parsedTitle.mainTitle,
-            versionInfo = parsedTitle.version?.name,
-         )
+         val parsed = MusicTitleCleaner.parseTitle(texto)
+         return Triple(artistaDeMetadatos, parsed.mainTitle, parsed.version?.name)
       }
-
-      // Fallback: sin artista identificable
-      val parsedTitle = MusicTitleCleaner.parseTitle(texto)
-      return ExtraccionResultado(
-         artista = "Artista Desconocido",
-         titulo = parsedTitle.mainTitle,
-         versionInfo = parsedTitle.version?.name,
-      )
+      
+      val parsed = MusicTitleCleaner.parseTitle(texto)
+      return Triple("Artista Desconocido", parsed.mainTitle, parsed.version?.name)
    }
-
-   private fun calcularConfianzaArtista(
-      textoCandidata: String,
-      artistaReferencia: String?,
-   ): Double {
-      if (artistaReferencia == null) return 0.3
-
-      val similitud = StringSimilarity.calculateSimilarity(textoCandidata, artistaReferencia)
-
+   
+   private fun calcularConfianzaArtista(texto: String, referencia: String?): Double {
+      if (referencia == null) return 0.3
+      val similitud = StringSimilarity.calculateSimilarity(texto, referencia)
       return when {
          similitud > 0.8 -> 1.0
          similitud > 0.5 -> 0.7
          similitud > 0.3 -> 0.4
          else -> {
-            val similitudTokenizada =
-               StringSimilarity.calculateTokenizedSimilarity(textoCandidata, artistaReferencia)
-            if (similitudTokenizada > 0.4) 0.6 else 0.2
+            val tokenizada = StringSimilarity.calculateTokenizedSimilarity(texto, referencia)
+            if (tokenizada > 0.4) 0.6 else 0.2
          }
       }
    }
-
+   
    private fun capitalizarNombrePropio(texto: String): String {
       if (texto.isBlank()) return texto
-
-      val palabrasMinusculas =
-         setOf(
-            "de",
-            "del",
-            "la",
-            "las",
-            "el",
-            "los",
-            "y",
-            "e",
-            "o",
-            "u",
-            "a",
-            "vs",
-            "ft",
-            "feat",
-            "con",
-            "en",
-            "por",
-            "para",
-            "the",
-            "of",
-            "and",
-            "or",
-            "to",
-            "in",
-            "on",
-            "at",
-            "for",
-         )
-
-      return texto
-         .split(" ")
-         .mapIndexed { index, palabra ->
-            when {
-               // Preservar acrónimos (TODO, DJ, etc.)
-               palabra.matches(Regex("""^[A-Z0-9$#]+$""")) -> palabra
-               // Preservar URLs/dominios
-               palabra.contains(".") && !palabra.endsWith(".") -> palabra
-               // Primera palabra siempre capitalizada
-               index == 0 -> palabra.lowercase().replaceFirstChar { it.uppercase() }
-               // Palabras funcionales en minúscula
-               palabra.lowercase() in palabrasMinusculas -> palabra.lowercase()
-               // Resto capitalizado
-               else -> palabra.lowercase().replaceFirstChar { it.uppercase() }
-            }
+      val palabrasMenores = setOf("de", "del", "la", "las", "el", "los", "y", "e", "o", "the", "of", "and", "or", "to", "in", "on", "at", "for")
+      return texto.split(" ").mapIndexed { index, palabra ->
+         when {
+            palabra.matches(Regex("""^[A-Z0-9$#]+$""")) -> palabra
+            palabra.contains(".") && !palabra.endsWith(".") -> palabra
+            index == 0 -> palabra.lowercase().replaceFirstChar { it.uppercase() }
+            palabra.lowercase() in palabrasMenores -> palabra.lowercase()
+            else -> palabra.lowercase().replaceFirstChar { it.uppercase() }
          }
-         .joinToString(" ")
-   }
-
-   // ==================== GESTIÓN DE ENTIDADES RELACIONADAS ====================
-
-   private suspend fun obtenerOCrearArtista(nombre: String): ArtistEntity {
-      val nombreNormalizado = nombre.trim()
-
-      return songDao.obtenerArtistaPorNombre(nombreNormalizado)
-         ?: run {
-            val nuevoArtista =
-               ArtistEntity(nombre = nombreNormalizado, paisOrigen = null, descripcion = null)
-            songDao.insertarArtista(nuevoArtista)
-            // Re-obtener para tener el ID generado
-            songDao.obtenerArtistaPorNombre(nombreNormalizado)
-               ?: throw IllegalStateException("No se pudo crear el artista: $nombreNormalizado")
-         }
+      }.joinToString(" ")
    }
    
-   private suspend fun obtenerOCrearAlbum(
-      titulo: String,
-      artistaId: Int,
-      anio: Int,
-      albumIdMediaStore: Int,
-      audioUri: String? = null,
-   ): AlbumEntity {
-      val tituloNormalizado = titulo.trim()
-      
-      return songDao.obtenerAlbumPorNombreYArtista(tituloNormalizado, artistaId)
-         ?: run {
-            Log.d(TAG, "🆕 Creando álbum: $tituloNormalizado (MediaStore ID: $albumIdMediaStore)")
-            
-            val portadaPath = obtenerPortadaAlbum(albumIdMediaStore, audioUri, tituloNormalizado)
-            
-            val nuevoAlbum = AlbumEntity(
-               idArtista = artistaId,
-               titulo = tituloNormalizado,
-               anio = anio.takeIf { it > 0 }?.toLong(),
-               portadaPath = portadaPath,
-            )
-            
-            songDao.insertarAlbum(nuevoAlbum)
-            
-            songDao.obtenerAlbumPorNombreYArtista(tituloNormalizado, artistaId)
-               ?: throw IllegalStateException("No se pudo crear el álbum: $tituloNormalizado")
-         }
-   }
-
-   private suspend fun obtenerOCrearGenero(nombre: String): GenreEntity {
-      val nombreNormalizado = nombre.trim()
-
-      return songDao.obtenerGeneroPorNombre(nombreNormalizado)
-         ?: run {
-            songDao.insertarGenero(GenreEntity(nombre = nombreNormalizado))
-            songDao.obtenerGeneroPorNombre(nombreNormalizado)
-               ?: throw IllegalStateException("No se pudo crear el género: $nombreNormalizado")
-         }
-   }
-
-   // ==================== VALIDACIÓN DE PORTADAS ====================
-   
-   private fun obtenerPortadaAlbum(
-      albumIdMediaStore: Int,
-      audioUri: String?,
-      albumTitulo: String,
-   ): String? {
-      // Método 1: URI de albumart de MediaStore
+   private fun obtenerPortadaAlbum(albumIdMediaStore: Int, audioUri: String?, albumTitulo: String): String? {
       if (albumIdMediaStore > 0) {
-         val albumArtUri = ContentUris.withAppendedId(
-            "content://media/external/audio/albumart".toUri(),
-            albumIdMediaStore.toLong()
-         )
-         
+         val albumArtUri = ContentUris.withAppendedId("content://media/external/audio/albumart".toUri(), albumIdMediaStore.toLong())
          if (validarUriAccesible(albumArtUri)) {
-            Log.d(TAG, "✅ Portada MediaStore válida para: $albumTitulo")
             return albumArtUri.toString()
          }
       }
-      
-      // Método 2: Extraer artwork embebido del archivo de audio
-      audioUri?.let { uri ->
-         val embeddedArt = extraerArtworkEmbebido(uri, albumTitulo)
-         if (embeddedArt != null) {
-            Log.d(TAG, "✅ Artwork embebido extraído para: $albumTitulo")
-            return embeddedArt
-         }
-      }
-      
-      Log.d(TAG, "📷 Sin portada disponible para: $albumTitulo")
       return null
    }
    
    private fun validarUriAccesible(uri: android.net.Uri): Boolean {
       return try {
-         context.contentResolver.openInputStream(uri)?.use { stream ->
-            stream.read() != -1
-         } ?: false
-      } catch (e: java.io.FileNotFoundException) {
-         false
-      } catch (e: SecurityException) {
-         Log.w(TAG, "🚫 Sin permisos para: $uri")
-         false
+         context.contentResolver.openInputStream(uri)?.use { it.read() != -1 } ?: false
       } catch (e: Exception) {
          false
-      }
-   }
-   
-   private fun extraerArtworkEmbebido(audioUri: String, albumTitulo: String): String? {
-      val retriever = android.media.MediaMetadataRetriever()
-      
-      return try {
-         retriever.setDataSource(context, audioUri.toUri())
-         val artworkBytes = retriever.embeddedPicture
-         
-         if (artworkBytes != null && artworkBytes.isNotEmpty()) {
-            // Guardar artwork en cache
-            val cacheDir = File(context.filesDir, "album_artwork")
-            if (!cacheDir.exists()) cacheDir.mkdirs()
-            
-            val safeFileName = albumTitulo
-               .replace(Regex("[^a-zA-Z0-9]"), "_")
-               .take(50)
-            val artworkFile = File(cacheDir, "${safeFileName}_${System.currentTimeMillis()}.jpg")
-            
-            artworkFile.outputStream().use { output ->
-               output.write(artworkBytes)
-            }
-            
-            Log.d(TAG, "💾 Artwork guardado: ${artworkFile.absolutePath}")
-            artworkFile.absolutePath
-         } else {
-            null
-         }
-      } catch (e: Exception) {
-         Log.w(TAG, "⚠️ Error extrayendo artwork de $audioUri: ${e.message}")
-         null
-      } finally {
-         try {
-            retriever.release()
-         } catch (e: Exception) { /* Ignorar */ }
       }
    }
 }
