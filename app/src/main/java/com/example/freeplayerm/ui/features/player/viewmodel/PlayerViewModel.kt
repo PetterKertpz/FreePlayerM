@@ -15,6 +15,7 @@ import com.example.freeplayerm.data.local.dao.LyricsDao
 import com.example.freeplayerm.data.local.dao.SongDao
 import com.example.freeplayerm.data.local.entity.FavoriteEntity
 import com.example.freeplayerm.data.local.entity.relations.SongWithArtist
+import com.example.freeplayerm.data.purification.PlaybackEnrichmentHelper // ✅ NUEVO IMPORT
 import com.example.freeplayerm.data.repository.GeniusRepository
 import com.example.freeplayerm.data.repository.UserRepository
 import com.example.freeplayerm.ui.features.player.model.PlaybackMode
@@ -38,12 +39,14 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted // ✅ NUEVO IMPORT
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn // ✅ NUEVO IMPORT
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -52,6 +55,7 @@ import kotlinx.coroutines.withTimeout
 
 // ViewModel unificado del reproductor
 // Gestiona estado UI, MediaController, eventos y efectos one-shot
+// ✅ ACTUALIZADO: Integración con sistema de enriquecimiento de metadata
 @HiltViewModel
 class PlayerViewModel
 @Inject
@@ -63,8 +67,9 @@ constructor(
    private val songDao: SongDao,
    private val mediaItemHelper: MediaItemHelper,
    private val userRepository: UserRepository,
+   private val enrichmentHelper: PlaybackEnrichmentHelper, // ✅ NUEVO: Inyectar helper
 ) : ViewModel() {
-
+   
    companion object {
       private const val TAG = "PlayerViewModel"
       private const val PROGRESS_UPDATE_MS = 250L
@@ -74,7 +79,7 @@ constructor(
       private const val MINIMIZE_DELAY_MS = 300L
       private const val RESTORE_DELAY_MS = 400L
       private const val RESTART_THRESHOLD_MS = 3000L
-
+      
       // Messages
       private const val MSG_PLAYER_UNAVAILABLE = "Reproductor no disponible"
       private const val MSG_PLAYER_ERROR = "Error conectando al reproductor"
@@ -96,55 +101,67 @@ constructor(
       private const val MSG_REPEAT_ALL = "Repetir lista"
       private const val MSG_REPEAT_ONE = "Repetir canción"
    }
-
+   
    // region State
-
+   
    private val _state = MutableStateFlow(PlayerState())
    val state: StateFlow<PlayerState> = _state.asStateFlow()
-
+   
+   // ✅ NUEVO: Estado de enriquecimiento observable (opcional para UI)
+   val enrichmentState = enrichmentHelper.state
+      .stateIn(
+         viewModelScope,
+         SharingStarted.Lazily,
+         PlaybackEnrichmentHelper.EnrichmentState.Idle
+      )
+   
+   // ✅ NUEVO: Indicador de enriquecimiento en progreso
+   val isEnriching = enrichmentHelper.isEnriching
+      .stateIn(viewModelScope, SharingStarted.Lazily, false)
+   
    // endregion
-
+   
    // region Effects (One-Shot)
-
+   
    private val _effects = Channel<PlayerEffect>(Channel.BUFFERED)
    val effects = _effects.receiveAsFlow()
-
+   
    // endregion
-
+   
    // region Media Controller
-
+   
    private var mediaController: MediaController? = null
    private lateinit var controllerFuture: ListenableFuture<MediaController>
    private var playerListener: Player.Listener? = null
-
+   
    private val player: Player?
       get() = mediaController
-
+   
    // endregion
-
+   
    // region Internal State
-
+   
    // Cola de canciones thread-safe con StateFlow inmutable
    private val _songQueue = MutableStateFlow<Map<String, SongWithArtist>>(emptyMap())
-
+   
    private fun updateSongQueue(
       transform: (Map<String, SongWithArtist>) -> Map<String, SongWithArtist>
    ) {
       _songQueue.update(transform)
    }
-
+   
    private fun getSongFromQueue(key: String): SongWithArtist? {
       return _songQueue.value[key]
    }
-
+   
    private fun clearSongQueue() {
       _songQueue.value = emptyMap()
    }
-
+   
    private fun addToSongQueue(key: String, song: SongWithArtist) {
       updateSongQueue { current -> current + (key to song) }
    }
-
+   
    private var progressUpdaterJob: Job? = null
    private var additionalDataJob: Job? = null
    private var scrollJob: Job? = null
@@ -154,25 +171,25 @@ constructor(
       set(value) {
          _lastEmittedSecond.set(value)
       }
-
+   
    private var playbackTrackingJob: Job? = null
-
+   
    private val trackedSongs = mutableSetOf<String>()
-
+   
    // endregion
-
+   
    // region Initialization
-
+   
    init {
       connectToService()
       observeFavoriteState()
    }
-
+   
    private fun connectToService() {
       try {
          val sessionToken = SessionToken(context, serviceComponentName)
          controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
-
+         
          controllerFuture.addListener(
             {
                try {
@@ -193,15 +210,15 @@ constructor(
          sendEffect(PlayerEffect.ShowError("Error crítico en reproductor"))
       }
    }
-
+   
    private fun setupPlayerListeners() {
       playerListener?.let { player?.removeListener(it) }
-
+      
       playerListener =
          object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                _state.update { it.copy(isPlaying = isPlaying) }
-
+               
                if (isPlaying) {
                   startProgressUpdater()
                   startPlaybackTracking() // Iniciar tracking al 50%
@@ -210,19 +227,19 @@ constructor(
                   stopPlaybackTracking() // Pausar tracking
                }
             }
-
+            
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                // Cancelar tracking al cambiar de canción
                stopPlaybackTracking()
-
+               
                updateCurrentSongFromPlayer(mediaItem)
-
+               
                // Si está reproduciendo, iniciar tracking de la nueva canción
                if (player?.isPlaying == true) {
                   startPlaybackTracking()
                }
             }
-
+            
             override fun onRepeatModeChanged(repeatMode: Int) {
                val newMode =
                   when (repeatMode) {
@@ -233,13 +250,13 @@ constructor(
                   }
                _state.update { it.copy(repeatMode = newMode) }
             }
-
+            
             override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
                val newMode =
                   if (shuffleModeEnabled) PlaybackMode.SHUFFLE else PlaybackMode.SEQUENTIAL
                _state.update { it.copy(playbackMode = newMode) }
             }
-
+            
             override fun onPlayerErrorChanged(error: PlaybackException?) {
                error?.let {
                   Log.e(TAG, "Player error: ${it.message}", it)
@@ -247,10 +264,10 @@ constructor(
                }
             }
          }
-
+      
       player?.addListener(playerListener!!)
    }
-
+   
    private fun syncInitialState() {
       player?.let { p ->
          _state.update {
@@ -270,11 +287,11 @@ constructor(
          p.currentMediaItem?.let { updateCurrentSongFromPlayer(it) }
       }
    }
-
+   
    // endregion
-
+   
    // region Event Handling
-
+   
    fun onEvent(event: PlayerEvent) {
       when (event) {
          is PlayerEvent.Playback -> handlePlaybackEvent(event)
@@ -285,11 +302,11 @@ constructor(
          is PlayerEvent.Links -> handleLinksEvent(event)
       }
    }
-
+   
    // endregion
-
+   
    // region Playback Events
-
+   
    private fun handlePlaybackEvent(event: PlayerEvent.Playback) {
       val p =
          player
@@ -297,7 +314,7 @@ constructor(
                sendEffect(PlayerEffect.ShowToast("Reproductor no disponible"))
                return
             }
-
+      
       when (event) {
          is PlayerEvent.Playback.SetQueueAndPlay -> {
             setQueueAndPlay(event.queue, event.startSong)
@@ -330,11 +347,11 @@ constructor(
          }
       }
    }
-
+   
    // endregion
-
+   
    // region Seek Events
-
+   
    private fun handleSeekEvent(event: PlayerEvent.Seek) {
       when (event) {
          is PlayerEvent.Seek.Start -> {
@@ -353,7 +370,7 @@ constructor(
                it.copy(isScrubbing = false, scrubPositionMs = null, currentPositionMs = position)
             }
             lastEmittedSecond = -1L
-
+            
             // ⬅️ AGREGAR: Reiniciar tracking si el usuario salta adelante
             if (player?.isPlaying == true) {
                stopPlaybackTracking()
@@ -362,11 +379,11 @@ constructor(
          }
       }
    }
-
+   
    // endregion
-
+   
    // region Settings Events
-
+   
    private fun handleSettingsEvent(event: PlayerEvent.Settings) {
       when (event) {
          is PlayerEvent.Settings.TogglePlaybackMode -> togglePlaybackMode()
@@ -374,11 +391,11 @@ constructor(
          is PlayerEvent.Settings.ToggleFavorite -> toggleFavorite()
       }
    }
-
+   
    // endregion
-
+   
    // region Panel Events
-
+   
    private fun handlePanelEvent(event: PlayerEvent.Panel) {
       when (event) {
          is PlayerEvent.Panel.SyncGestureState -> {
@@ -390,47 +407,47 @@ constructor(
                }
             _state.update { it.copy(gestureProgress = targetProgress) }
          }
-
+         
          is PlayerEvent.Panel.Expand -> {
             _state.update { it.copy(panelMode = PlayerPanelMode.EXPANDED, isAnimating = false) }
             loadExpandedDataIfNeeded()
          }
-
+         
          is PlayerEvent.Panel.Collapse -> {
             _state.update { it.copy(panelMode = PlayerPanelMode.NORMAL, isAnimating = false) }
          }
-
+         
          is PlayerEvent.Panel.SetMode -> {
             _state.update { it.copy(panelMode = event.mode, isAnimating = false) }
             if (event.mode == PlayerPanelMode.EXPANDED) {
                loadExpandedDataIfNeeded()
             }
          }
-
+         
          is PlayerEvent.Panel.ChangeTab -> {
             _state.update { it.copy(activeTab = event.tab) }
          }
-
+         
          is PlayerEvent.Panel.NotifyScroll -> handleScrollNotification(event.isScrolling)
-
+         
          is PlayerEvent.Panel.AnimationCompleted -> {
             _state.update { it.copy(isAnimating = false) }
          }
-
+         
          is PlayerEvent.Panel.Gesture -> handleGestureEvent(event)
       }
    }
-
+   
    private fun handleGestureEvent(event: PlayerEvent.Panel.Gesture) {
       when (event) {
          is PlayerEvent.Panel.Gesture.Started -> {
             _state.update { it.copy(isDragging = true) }
          }
-
+         
          is PlayerEvent.Panel.Gesture.Update -> {
             _state.update { it.copy(gestureProgress = event.progress) }
          }
-
+         
          is PlayerEvent.Panel.Gesture.Ended -> {
             _state.update {
                it.copy(isDragging = false, isAnimating = true, panelMode = event.targetMode)
@@ -439,42 +456,42 @@ constructor(
                loadExpandedDataIfNeeded()
             }
          }
-
+         
          is PlayerEvent.Panel.Gesture.Cancelled -> {
             _state.update { it.copy(isDragging = false, isAnimating = false) }
          }
       }
    }
-
+   
    private fun handleScrollNotification(isScrolling: Boolean) {
       val currentState = _state.value
-
+      
       // No minimizar si está expandido o no hay canción
       if (currentState.panelMode == PlayerPanelMode.EXPANDED) return
       if (!currentState.hasSong) return
-
+      
       // No minimizar durante gesture period después de cambio de canción
       val currentTimeMs = System.currentTimeMillis()
       if (!currentState.canMinimizeByScroll(currentTimeMs)) return
-
+      
       // Cancelar job anterior para evitar race conditions
       scrollJob?.cancel()
-
+      
       scrollJob =
          viewModelScope.launch {
             try {
                when {
                   isScrolling &&
-                     currentState.panelMode == PlayerPanelMode.NORMAL &&
-                     !currentState.isMinimizedByScroll -> {
+                        currentState.panelMode == PlayerPanelMode.NORMAL &&
+                        !currentState.isMinimizedByScroll -> {
                      delay(MINIMIZE_DELAY_MS)
                      _state.update { state ->
                         if (
                            state.panelMode == PlayerPanelMode.NORMAL &&
-                              !state.isMinimizedByScroll &&
-                              !state.isGesturing &&
-                              !state.isScrubbing &&
-                              state.hasSong
+                           !state.isMinimizedByScroll &&
+                           !state.isGesturing &&
+                           !state.isScrubbing &&
+                           state.hasSong
                         ) {
                            state.copy(isMinimizedByScroll = true)
                         } else state
@@ -485,9 +502,9 @@ constructor(
                      _state.update { state ->
                         if (
                            state.isMinimizedByScroll &&
-                              !state.isScrubbing &&
-                              !state.isGesturing &&
-                              state.hasSong
+                           !state.isScrubbing &&
+                           !state.isGesturing &&
+                           state.hasSong
                         ) {
                            state.copy(isMinimizedByScroll = false)
                         } else state
@@ -499,11 +516,11 @@ constructor(
             }
          }
    }
-
+   
    // endregion
-
+   
    // region Swipe Events
-
+   
    private fun handleSwipeEvent(event: PlayerEvent.Swipe) {
       when (event) {
          is PlayerEvent.Swipe.Horizontal -> {
@@ -512,11 +529,11 @@ constructor(
          }
       }
    }
-
+   
    // endregion
-
+   
    // region Links Events
-
+   
    private fun handleLinksEvent(event: PlayerEvent.Links) {
       val currentState = _state.value
       val url =
@@ -525,18 +542,18 @@ constructor(
             is PlayerEvent.Links.OpenYoutube -> currentState.youtubeUrl
             is PlayerEvent.Links.OpenGoogle -> currentState.googleUrl
          }
-
+      
       if (url.isNullOrBlank()) {
          sendEffect(PlayerEffect.ShowToast("Enlace no disponible"))
       } else {
          sendEffect(PlayerEffect.OpenUrl(url))
       }
    }
-
+   
    // endregion
-
+   
    // region Playback Logic
-
+   
    private fun setQueueAndPlay(queue: List<SongWithArtist>, startSong: SongWithArtist) {
       val p =
          player
@@ -544,24 +561,24 @@ constructor(
                sendEffect(PlayerEffect.ShowToast(MSG_PLAYER_UNAVAILABLE))
                return
             }
-
+      
       viewModelScope.launch {
          try {
             // Limpiar la cola al inicio
             clearSongQueue()
-
+            
             val (validSongs, invalidSongs) =
                queue.partition { !it.cancion.archivoPath.isNullOrBlank() }
-
+            
             if (invalidSongs.isNotEmpty()) {
                Log.w(TAG, "${invalidSongs.size} canciones sin archivo válido")
             }
-
+            
             if (validSongs.isEmpty()) {
                sendEffect(PlayerEffect.ShowError(MSG_NO_PLAYABLE_SONGS))
                return@launch
             }
-
+            
             val mediaItems =
                validSongs.mapNotNull { song ->
                   try {
@@ -574,17 +591,17 @@ constructor(
                      null
                   }
                }
-
+            
             if (mediaItems.isEmpty()) {
                sendEffect(PlayerEffect.ShowError(MSG_PROCESS_ERROR))
                return@launch
             }
-
+            
             val startIndex =
                mediaItems
                   .indexOfFirst { it.mediaId == startSong.cancion.idCancion.toString() }
                   .let { if (it >= 0) it else 0 }
-
+            
             withContext(Dispatchers.Main) {
                try {
                   p.setMediaItems(mediaItems, startIndex, 0L)
@@ -595,7 +612,7 @@ constructor(
                   sendEffect(PlayerEffect.ShowError(MSG_PREPARE_ERROR))
                }
             }
-
+            
             if (invalidSongs.isNotEmpty()) {
                sendEffect(PlayerEffect.ShowToast("${invalidSongs.size} $MSG_SONGS_SKIPPED"))
             }
@@ -605,11 +622,11 @@ constructor(
          }
       }
    }
-
+   
    private fun togglePlayPause() {
       player?.let { if (it.isPlaying) it.pause() else it.play() }
    }
-
+   
    private fun stopPlayback() {
       player?.let { p ->
          p.stop()
@@ -618,23 +635,23 @@ constructor(
          _state.update { PlayerState() }
       }
    }
-
+   
    // endregion
-
+   
    // region Song Update
-
+   
    private fun updateCurrentSongFromPlayer(mediaItem: MediaItem?) {
       if (mediaItem == null) {
          clearSongState()
          return
       }
-
+      
       additionalDataJob?.cancel()
-
+      
       viewModelScope.launch {
          try {
             var song = getSongFromQueue(mediaItem.mediaId)
-
+            
             if (song == null) {
                song =
                   withContext(Dispatchers.IO) {
@@ -644,7 +661,7 @@ constructor(
                   addToSongQueue(mediaItem.mediaId, it) // Usar addToSongQueue
                }
             }
-
+            
             if (song != null) {
                _state.update {
                   it.copy(
@@ -664,9 +681,14 @@ constructor(
                      isLoadingInfo = false,
                   )
                }
-
+               
                buildLinks(song)
-
+               
+               // ✅ NUEVO: Trigger enriquecimiento automático al cambiar de canción
+               // Este es el punto clave de integración - se ejecuta SIEMPRE que cambia la canción
+               // El helper internamente verifica si necesita enriquecimiento
+               triggerEnrichmentOnPlay(song)
+               
                if (_state.value.panelMode == PlayerPanelMode.EXPANDED) {
                   loadExpandedData(song)
                }
@@ -682,7 +704,20 @@ constructor(
          }
       }
    }
-
+   
+   // ✅ NUEVO: Método para trigger de enriquecimiento
+   private fun triggerEnrichmentOnPlay(song: SongWithArtist) {
+      // El helper maneja internamente:
+      // - Rate limiting (no spamear API)
+      // - Verificación de si necesita enriquecimiento
+      // - Verificación de si puede reintentar
+      // - Ejecución en background (no bloquea reproducción)
+      enrichmentHelper.onSongPlay(song.cancion)
+      
+      Log.d(TAG, "🎵 Enrichment triggered for: '${song.cancion.titulo}' " +
+            "(status=${song.cancion.metadataStatus}, score=${song.cancion.confidenceScore})")
+   }
+   
    private fun clearSongState() {
       _state.update {
          it.copy(
@@ -697,11 +732,11 @@ constructor(
          )
       }
    }
-
+   
    // endregion
-
+   
    // region Expanded Data Loading
-
+   
    private fun loadExpandedDataIfNeeded() {
       _state.value.currentSong?.let { song ->
          if (_state.value.lyrics == null && !_state.value.isLoadingLyrics) {
@@ -709,31 +744,42 @@ constructor(
          }
       }
    }
-
+   
    private fun loadExpandedData(song: SongWithArtist) {
       // Cancelar job anterior
       additionalDataJob?.cancel()
-
+      
       additionalDataJob =
          viewModelScope.launch {
             val songId = song.cancion.idCancion
-
+            
             // Verificar que sigue siendo la canción actual
             if (!isCurrentSong(songId)) return@launch
-
+            
             _state.update { it.copy(isLoadingLyrics = true, isLoadingInfo = true) }
-
+            
             try {
                coroutineScope {
-                  // Sincronización con Genius en background
+                  // ✅ MODIFICADO: Ya no necesitamos llamar a sincronizarCancionAlReproducir aquí
+                  // porque ya se llama en updateCurrentSongFromPlayer via triggerEnrichmentOnPlay
+                  // Esto evita llamadas duplicadas a la API
+                  
+                  // Sin embargo, si el panel se expande DESPUÉS de que pasó el rate limit,
+                  // podemos forzar un intento de enriquecimiento si aún lo necesita
                   launch(Dispatchers.IO) {
-                     runCatching { geniusRepository.sincronizarCancionAlReproducir(song.cancion) }
-                        .onFailure { e -> Log.w(TAG, "Error syncing with Genius", e) }
+                     // Solo forzar si la canción aún necesita enriquecimiento
+                     if (song.cancion.necesitaEnriquecimiento()) {
+                        runCatching {
+                           enrichmentHelper.forceEnrich(song.cancion)
+                        }.onFailure { e ->
+                           Log.w(TAG, "Error in forced enrichment", e)
+                        }
+                     }
                   }
-
+                  
                   // Cargar lyrics
                   launch(Dispatchers.IO) { loadLyrics(songId) }
-
+                  
                   // Cargar info del artista
                   launch(Dispatchers.IO) { loadArtistInfo(song) }
                }
@@ -745,7 +791,7 @@ constructor(
             }
          }
    }
-
+   
    private suspend fun loadLyrics(songId: Int) {
       try {
          withTimeout(TIMEOUT_DATA_MS) {
@@ -769,33 +815,33 @@ constructor(
          _state.update { it.copy(lyrics = null, isLoadingLyrics = false) }
       }
    }
-
+   
    private suspend fun loadArtistInfo(song: SongWithArtist) {
       val artistId = song.cancion.idArtista?.toLong()
       if (artistId == null) {
          _state.update { it.copy(artistInfo = null, isLoadingInfo = false) }
          return
       }
-
+      
       try {
          withTimeout(TIMEOUT_DATA_MS) {
             songDao.obtenerArtistaPorIdFlow(artistId.toInt()).firstOrNull()?.let { artistEntity ->
                if (isCurrentSong(song.cancion.idCancion)) {
                   val info =
                      buildString {
-                           appendLine("🎤 ${artistEntity.nombre}")
-                           artistEntity.paisOrigen?.let { appendLine("📍 $it") }
-                           artistEntity.descripcion
-                              ?.trim()
-                              ?.takeIf { it.isNotBlank() }
-                              ?.let {
-                                 appendLine()
-                                 append(it)
-                              }
-                        }
+                        appendLine("🎤 ${artistEntity.nombre}")
+                        artistEntity.paisOrigen?.let { appendLine("📍 $it") }
+                        artistEntity.descripcion
+                           ?.trim()
+                           ?.takeIf { it.isNotBlank() }
+                           ?.let {
+                              appendLine()
+                              append(it)
+                           }
+                     }
                         .trim()
                         .ifBlank { null }
-
+                  
                   _state.update { it.copy(artistInfo = info, isLoadingInfo = false) }
                }
             } ?: run { _state.update { it.copy(artistInfo = null, isLoadingInfo = false) } }
@@ -809,15 +855,15 @@ constructor(
          _state.update { it.copy(artistInfo = null, isLoadingInfo = false) }
       }
    }
-
+   
    private fun buildLinks(song: SongWithArtist) {
       val title = song.cancion.titulo
       val artist = song.artistaNombre ?: "Unknown"
-
+      
       try {
          val query = URLEncoder.encode("$title $artist", "UTF-8")
          val artistQuery = URLEncoder.encode("$artist artist", "UTF-8")
-
+         
          _state.update {
             it.copy(
                geniusUrl = "https://genius.com/search?q=$query",
@@ -829,19 +875,19 @@ constructor(
          Log.e(TAG, "Error building links", e)
       }
    }
-
+   
    private fun isCurrentSong(songId: Int): Boolean {
       return _state.value.currentSong?.cancion?.idCancion == songId
    }
-
+   
    // endregion
-
+   
    // region Progress Updater
-
+   
    private fun startProgressUpdater() {
       stopProgressUpdater()
       lastEmittedSecond = -1L
-
+      
       progressUpdaterJob =
          viewModelScope.launch {
             while (isActive) {
@@ -850,36 +896,36 @@ constructor(
             }
          }
    }
-
+   
    private fun updateProgress() {
       if (_state.value.isScrubbing) return
-
+      
       player?.let { p ->
          val currentPosition = p.currentPosition
          val currentSecond = currentPosition / PROGRESS_EMIT_THRESHOLD_MS
-
+         
          if (currentSecond != lastEmittedSecond) {
             _state.update { it.copy(currentPositionMs = currentPosition) }
             lastEmittedSecond = currentSecond
          }
       }
    }
-
+   
    private fun stopProgressUpdater() {
       progressUpdaterJob?.cancel()
       progressUpdaterJob = null
    }
-
+   
    // endregion
-
+   
    // region Playback Mode / Repeat Mode
-
+   
    private fun togglePlaybackMode() {
       player?.let { p ->
          val newMode = _state.value.playbackMode.toggle()
          p.shuffleModeEnabled = newMode == PlaybackMode.SHUFFLE
          _state.update { it.copy(playbackMode = newMode) }
-
+         
          val message =
             if (newMode == PlaybackMode.SHUFFLE) {
                "Modo aleatorio activado"
@@ -889,20 +935,20 @@ constructor(
          sendEffect(PlayerEffect.ShowToast(message))
       }
    }
-
+   
    private fun toggleRepeatMode() {
       player?.let { p ->
          val newMode = _state.value.repeatMode.next()
-
+         
          p.repeatMode =
             when (newMode) {
                RepeatMode.OFF -> Player.REPEAT_MODE_OFF
                RepeatMode.ALL -> Player.REPEAT_MODE_ALL
                RepeatMode.ONE -> Player.REPEAT_MODE_ONE
             }
-
+         
          _state.update { it.copy(repeatMode = newMode) }
-
+         
          val message =
             when (newMode) {
                RepeatMode.OFF -> "Repetición desactivada"
@@ -912,11 +958,11 @@ constructor(
          sendEffect(PlayerEffect.ShowToast(message))
       }
    }
-
+   
    // endregion
-
+   
    // region Favorites
-
+   
    private fun observeFavoriteState() {
       viewModelScope.launch {
          _state
@@ -925,7 +971,7 @@ constructor(
             .collect { songId -> songId?.let { updateFavoriteState(it.toLong()) } }
       }
    }
-
+   
    private suspend fun updateFavoriteState(songId: Long) {
       runCatching {
          songDao.obtenerCancionConArtistaPorId(songId.toInt(), DEFAULT_USER_ID)?.let { song ->
@@ -933,12 +979,12 @@ constructor(
          }
       }
    }
-
+   
    private fun toggleFavorite() {
       viewModelScope.launch {
          val song = _state.value.currentSong?.cancion ?: return@launch
          val newState = !_state.value.isFavorite
-
+         
          try {
             if (newState) {
                songDao.agregarAFavoritos(FavoriteEntity(DEFAULT_USER_ID, song.idCancion))
@@ -954,81 +1000,84 @@ constructor(
          }
       }
    }
-
+   
    // endregion
-
+   
    // region Public Utilities
-
+   
    fun playSong(song: SongWithArtist) {
       setQueueAndPlay(listOf(song), song)
    }
-
+   
    fun isConnected(): Boolean = mediaController != null
-
+   
    fun hasSong(): Boolean = _state.value.hasSong
-
+   
+   // ✅ NUEVO: Método público para obtener estadísticas de enriquecimiento de sesión
+   fun getEnrichmentStats() = enrichmentHelper.getSessionStats()
+   
    // endregion
-
+   
    // region Effect Helper
-
+   
    private fun sendEffect(effect: PlayerEffect) {
       viewModelScope.launch { _effects.send(effect) }
    }
-
+   
    // endregion
-
+   
    private fun startPlaybackTracking() {
       val currentSong = _state.value.currentSong?.cancion ?: return
       val currentSongId = currentSong.idCancion.toString()
       val durationMs = _state.value.durationMs
-
+      
       // Validar que la canción tenga duración válida
       if (durationMs <= 0) {
          Log.w(TAG, "No se puede trackear canción sin duración válida")
          return
       }
-
+      
       // Si ya contamos esta canción en esta sesión, no volver a contar
       if (trackedSongs.contains(currentSongId)) {
          Log.d(TAG, "Canción $currentSongId ya fue contada en esta sesión")
          return
       }
-
+      
       // Cancelar job anterior si existe
       playbackTrackingJob?.cancel()
-
+      
       playbackTrackingJob =
          viewModelScope.launch {
             try {
                val halfwayPoint = durationMs / 2
                val currentPosition = player?.currentPosition ?: 0L
                val remainingTime = (halfwayPoint - currentPosition).coerceAtLeast(0L)
-
+               
                Log.d(
                   TAG,
                   "Tracking iniciado: esperar ${remainingTime}ms para alcanzar 50% (${halfwayPoint}ms)",
                )
-
+               
                // Esperar hasta alcanzar el 50%
                delay(remainingTime)
-
+               
                // Verificar que sigue siendo la misma canción y está reproduciendo
                val stillPlayingSameSong =
                   _state.value.currentSong?.cancion?.idCancion?.toString() == currentSongId
                val isPlaying = _state.value.isPlaying
                val actualPosition = player?.currentPosition ?: 0L
-
+               
                // Validar que realmente alcanzamos el 50% (con margen de error de 2 segundos)
                val reachedHalfway = actualPosition >= (halfwayPoint - 2000L)
-
+               
                if (stillPlayingSameSong && isPlaying && reachedHalfway) {
                   withContext(Dispatchers.IO) {
                      userRepository.incrementarReproducciones(DEFAULT_USER_ID)
                   }
-
+                  
                   // Marcar como contada para evitar duplicados
                   trackedSongs.add(currentSongId)
-
+                  
                   Log.d(
                      TAG,
                      "✅ Reproducción contada para canción '$currentSongId' al alcanzar 50% (${actualPosition}ms de ${durationMs}ms)",
@@ -1046,38 +1095,41 @@ constructor(
             }
          }
    }
-
+   
    /** Detiene el tracking de reproducción */
    private fun stopPlaybackTracking() {
       playbackTrackingJob?.cancel()
       playbackTrackingJob = null
    }
-
+   
    /** Limpia el historial de canciones trackeadas (útil al cerrar sesión o limpiar datos) */
    private fun clearTrackedSongs() {
       trackedSongs.clear()
    }
-
+   
    // region Cleanup
-
+   
    override fun onCleared() {
       additionalDataJob?.cancel()
       progressUpdaterJob?.cancel()
       scrollJob?.cancel()
       playbackTrackingJob?.cancel()
-
+      
+      // ✅ NUEVO: Cancelar enriquecimiento en progreso
+      enrichmentHelper.cancel()
+      
       playerListener?.let { player?.removeListener(it) }
       playerListener = null
-
+      
       runCatching { MediaController.releaseFuture(controllerFuture) }
-
+      
       mediaController = null
-
+      
       clearSongQueue()
       trackedSongs.clear()
-
+      
       super.onCleared()
    }
-
+   
    // endregion
 }

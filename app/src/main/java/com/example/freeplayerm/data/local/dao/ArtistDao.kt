@@ -415,4 +415,39 @@ interface ArtistDao {
                 nuevoArtista.copy(idArtista = id.toInt()) // Convertir Long a Int
             }
     }
+   @Transaction
+   suspend fun actualizarEstadisticasMasivas() {
+      // 1. Resetear contadores para evitar datos fantasma
+      resetearContadores()
+      
+      // 2. Calcular y actualizar canciones reales
+      actualizarTotalCancionesDesdeCanciones()
+      
+      // 3. Calcular y actualizar álbumes reales
+      actualizarTotalAlbumesDesdeCanciones()
+   }
+   
+   @Query("UPDATE artistas SET total_canciones = 0, total_albumes = 0")
+   suspend fun resetearContadores()
+   
+   @Query("""
+        UPDATE artistas
+        SET total_canciones = (
+            SELECT COUNT(*) FROM canciones
+            WHERE canciones.id_artista = artistas.id_artista
+        )
+        WHERE EXISTS (SELECT 1 FROM canciones WHERE canciones.id_artista = artistas.id_artista)
+    """)
+   suspend fun actualizarTotalCancionesDesdeCanciones()
+   
+   @Query("""
+        UPDATE artistas
+        SET total_albumes = (
+            SELECT COUNT(DISTINCT id_album) FROM canciones
+            WHERE canciones.id_artista = artistas.id_artista
+            AND id_album IS NOT NULL
+        )
+        WHERE EXISTS (SELECT 1 FROM canciones WHERE canciones.id_artista = artistas.id_artista)
+    """)
+   suspend fun actualizarTotalAlbumesDesdeCanciones()
 }

@@ -47,7 +47,9 @@ constructor(
       // Directorios
       private const val CACHE_IMAGES_DIR = "image_cache"
       private const val USER_COVERS_DIR = "covers"
-
+      
+      private const val MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024L // 10MB
+      
       // Límites
       private const val MAX_CACHE_AGE_DAYS = 30
       private const val MAX_CACHE_SIZE_MB = 50L
@@ -91,6 +93,11 @@ constructor(
 
             if (!response.isSuccessful) {
                Log.w(tag, "❌ Error al descargar imagen: ${response.code}")
+               return@withContext null
+            }
+            val contentLength = response.headers["Content-Length"]?.toLongOrNull() ?: 0L
+            if (contentLength > MAX_IMAGE_SIZE_BYTES) {
+               Log.w(tag, "⚠️ Imagen muy grande ($contentLength bytes), omitiendo")
                return@withContext null
             }
 

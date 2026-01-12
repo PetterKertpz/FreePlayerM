@@ -18,6 +18,7 @@ import androidx.work.workDataOf
 import com.example.freeplayerm.data.repository.LocalMusicRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -28,7 +29,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.concurrent.TimeUnit
 
 @HiltWorker
 class MusicScanWorker
@@ -89,7 +89,7 @@ constructor(
                .setRequiresBatteryNotLow(true)
                .apply {
                   if (requiresCharging) setRequiresCharging(true)
-                  if (requiresIdle && android.os.Build.VERSION.SDK_INT >= 23) {
+                  if (requiresIdle) {
                      setRequiresDeviceIdle(true)
                   }
                }
@@ -199,30 +199,36 @@ constructor(
    override suspend fun doWork(): Result {
       val scanType = inputData.getString(KEY_SCAN_TYPE) ?: SCAN_TYPE_IMMEDIATE
       val forceFullScan = inputData.getBoolean(KEY_FORCE_FULL_SCAN, false)
-      
-      Log.d(TAG, "Iniciando escaneo [$scanType] (intento ${runAttemptCount + 1}/$MAX_RETRY_ATTEMPTS)")
-      
+
+      Log.d(
+         TAG,
+         "Iniciando escaneo [$scanType] (intento ${runAttemptCount + 1}/$MAX_RETRY_ATTEMPTS)",
+      )
       reportarProgreso(0, 0, "Iniciando escaneo...")
-      
+
       return try {
          withContext(Dispatchers.IO) {
             // ✅ Usar coroutineScope para cancelación estructurada
             coroutineScope {
                val progressJob = launch { observarProgresoRepositorio() }
-               
+
                try {
                   val resultado = musicRepository.escanearYGuardarMusica(forceFullScan)
-                  
+
                   if (resultado != null) {
-                     Log.d(TAG, "Escaneo completado: +${resultado.nuevas}, -${resultado.eliminadas}, ~${resultado.actualizadas}")
-                     
-                     val outputData = workDataOf(
-                        KEY_RESULT_NEW to resultado.nuevas,
-                        KEY_RESULT_DELETED to resultado.eliminadas,
-                        KEY_RESULT_UPDATED to resultado.actualizadas,
-                        KEY_RESULT_TIME_MS to resultado.tiempoMs,
+                     Log.d(
+                        TAG,
+                        "Escaneo completado: +${resultado.nuevas}, -${resultado.eliminadas}, ~${resultado.actualizadas}",
                      )
-                     
+
+                     val outputData =
+                        workDataOf(
+                           KEY_RESULT_NEW to resultado.nuevas,
+                           KEY_RESULT_DELETED to resultado.eliminadas,
+                           KEY_RESULT_UPDATED to resultado.actualizadas,
+                           KEY_RESULT_TIME_MS to resultado.tiempoMs,
+                        )
+
                      Result.success(outputData)
                   } else {
                      Log.d(TAG, "Escaneo omitido - ya en progreso")
@@ -238,14 +244,15 @@ constructor(
          Result.failure(workDataOf(KEY_ERROR_MESSAGE to "Sin permisos de almacenamiento"))
       } catch (e: Exception) {
          Log.e(TAG, "Error durante el escaneo (intento ${runAttemptCount + 1})", e)
-         
-         val esErrorRecuperable = when (e) {
-            is java.io.IOException,
-            is android.database.sqlite.SQLiteException,
-            is kotlinx.coroutines.TimeoutCancellationException -> true
-            else -> false
-         }
-         
+
+         val esErrorRecuperable =
+            when (e) {
+               is java.io.IOException,
+               is android.database.sqlite.SQLiteException,
+               is kotlinx.coroutines.TimeoutCancellationException -> true
+               else -> false
+            }
+
          if (esErrorRecuperable && runAttemptCount < MAX_RETRY_ATTEMPTS - 1) {
             val backoffSeconds = calculateBackoff(runAttemptCount)
             Log.d(TAG, "Programando reintento en ${backoffSeconds}s...")
@@ -261,7 +268,7 @@ constructor(
          }
       }
    }
-   
+
    // ✅ Cambiar observarProgresoRepositorio para no retornar Job
    private suspend fun observarProgresoRepositorio() {
       musicRepository.estadoEscaneo.collect { estado ->
@@ -269,27 +276,19 @@ constructor(
             is LocalMusicRepository.EstadoEscaneo.Escaneando -> {
                reportarProgreso(estado.progreso, estado.total, estado.mensaje)
             }
-            else -> { /* Ignorar */ }
+            else -> {
+               /* Ignorar */
+            }
          }
       }
    }
+
    private fun calculateBackoff(attemptCount: Int): Long {
       val backoff = INITIAL_BACKOFF_SECONDS * (1 shl attemptCount) // 2^attemptCount
       return backoff.coerceAtMost(MAX_BACKOFF_SECONDS)
    }
-   private fun CoroutineScope.observarProgresoRepositorio(): Job =
-      launch(Dispatchers.IO) {
-         musicRepository.estadoEscaneo.collect { estado ->
-            when (estado) {
-               is LocalMusicRepository.EstadoEscaneo.Escaneando -> {
-                  reportarProgreso(estado.progreso, estado.total, estado.mensaje)
-               }
-               else -> {
-                  /* Ignorar */
-               }
-            }
-         }
-      }
+
+   
 
    private suspend fun reportarProgreso(current: Int, total: Int, message: String) {
       setProgress(

@@ -71,7 +71,7 @@ import com.example.freeplayerm.data.local.entity.relations.SongWithArtist
          PlaylistCollaboratorEntity::class,
       ],
    views = [SongWithArtist::class],
-   version = 1,
+   version = 2,
    exportSchema = false, // ✅ Habilitado para documentar cambios de esquema
 )
 @TypeConverters(Converters::class)

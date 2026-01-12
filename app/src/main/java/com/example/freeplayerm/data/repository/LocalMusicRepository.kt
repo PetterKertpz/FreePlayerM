@@ -20,7 +20,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.Collections
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
@@ -32,6 +31,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import com.example.freeplayerm.data.purification.MetadataPipelineConfig
+import com.example.freeplayerm.data.purification.QualityScorer
+import com.google.gson.Gson
+
 
 @Singleton
 class LocalMusicRepository
@@ -43,6 +46,7 @@ constructor(
    private val albumDao: AlbumDao,
    private val genreDao: GenreDao,
    private val notificationHelper: ScanNotificationHelper,
+   
 ) {
    companion object {
       private const val TAG = "MusicScanner"
@@ -52,7 +56,7 @@ constructor(
       private const val MAX_CACHE_SIZE = 500
       private const val SCAN_TIMEOUT_MS = 5 * 60 * 1000L
    }
-
+   private val gson = Gson()
    private val escaneoMutex = Mutex()
    private val _estadoEscaneo = MutableStateFlow<EstadoEscaneo>(EstadoEscaneo.Inactivo)
    val estadoEscaneo: StateFlow<EstadoEscaneo> = _estadoEscaneo.asStateFlow()
@@ -278,7 +282,7 @@ constructor(
 
       // FASE 4: Detectar y eliminar huérfanas
       reportarFase(FaseEscaneo.ELIMINANDO_HUERFANAS, 0, 1, fasesCompletadas)
-      coroutineContext.ensureActive()
+      currentCoroutineContext().ensureActive()
 
       val pathsAEliminar =
          cancionesEnBD.filter { it.archivoPath !in urisEnDispositivo }.map { it.archivoPath }
@@ -317,7 +321,7 @@ constructor(
          Log.d(TAG, "Actualizando ${cancionesParaActualizar.size} canciones...")
 
          cancionesParaActualizar.forEachIndexed { index, (idCancion, datos) ->
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             if (index % PROGRESS_UPDATE_INTERVAL == 0) {
                reportarFase(
                   FaseEscaneo.ACTUALIZANDO_EXISTENTES,
@@ -333,7 +337,7 @@ constructor(
       fasesCompletadas.add(FaseEscaneo.ACTUALIZANDO_EXISTENTES)
 
       // FASE 7: Limpiar huérfanos
-      coroutineContext.ensureActive()
+      currentCoroutineContext().ensureActive()
       reportarFase(FaseEscaneo.LIMPIANDO_DATOS, 0, 1, fasesCompletadas)
       val datosLimpiados = songDao.limpiarDatosHuerfanos()
       if (datosLimpiados > 0) {
@@ -358,7 +362,7 @@ constructor(
 
       return resultado
    }
-   
+
    private fun reportarFase(
       fase: FaseEscaneo,
       progreso: Int,
@@ -369,21 +373,22 @@ constructor(
       val progresoGlobal = fase.progresoGlobal(progresoFase, fasesCompletadas)
       val progresoInt = (progresoGlobal * 100).toInt()
       val mensaje = "${fase.descripcion}... ${if (total > 0) "$progreso/$total" else ""}".trim()
-      
-      _estadoEscaneo.value = EstadoEscaneo.Escaneando(
-         fase = fase,
-         progreso = progresoInt,
-         total = 100,
-         mensaje = mensaje,
-      )
-      
+
+      _estadoEscaneo.value =
+         EstadoEscaneo.Escaneando(
+            fase = fase,
+            progreso = progresoInt,
+            total = 100,
+            mensaje = mensaje,
+         )
+
       // Actualizar notificación cada 10% o cada fase
       if (progresoInt % 10 == 0 || progreso == 0) {
          notificationHelper.actualizarProgreso(
             progreso = progresoInt,
             total = 100,
             mensaje = if (total > 0) "$progreso/$total" else "Procesando...",
-            fase = fase.descripcion
+            fase = fase.descripcion,
          )
       }
    }
@@ -600,22 +605,38 @@ constructor(
          }
       }
    }
-
+   
    private suspend fun actualizarCancion(idCancion: Int, datos: DatosCancionEscaneada) {
       try {
          val resultado = parsearCancionInteligente(datos.titulo, datos.artista)
          val artistaId = obtenerOCrearArtistaId(resultado.artista)
-         val albumId =
-            obtenerOCrearAlbumId(
-               datos.album ?: "Album Desconocido",
-               artistaId,
-               datos.anio,
-               datos.albumId,
-               datos.uri,
-            )
+         val albumId = obtenerOCrearAlbumId(
+            datos.album ?: "Album Desconocido",
+            artistaId,
+            datos.anio,
+            datos.albumId,
+            datos.uri
+         )
          val generoId = obtenerOCrearGeneroId(datos.genero ?: "Genero Desconocido")
-
-         songDao.actualizarMetadatosEscaneo(
+         
+         // ✅ NUEVO: Parsear título
+         val parsedTitle = MusicTitleCleaner.parseTitle(datos.titulo)
+         val featuredArtistsJson = if (parsedTitle.featuredArtists.isNotEmpty()) {
+            gson.toJson(parsedTitle.featuredArtists)
+         } else null
+         
+         // ✅ NUEVO: Recalcular score
+         val musicConfidence = MusicTitleCleaner.calculateMusicConfidence(datos.titulo, datos.artista)
+         val newScore = calcularScoreInicial(
+            tieneArtista = datos.artista != null,
+            tieneAlbum = datos.album != null,
+            tieneGenero = datos.genero != null,
+            tieneAnio = datos.anio > 0,
+            musicConfidence = musicConfidence
+         )
+         
+         // ✅ MODIFICADO: Actualizar con campos adicionales
+         songDao.actualizarMetadatosEscaneoCompleto(
             idCancion = idCancion,
             titulo = resultado.titulo,
             idArtista = artistaId,
@@ -627,25 +648,49 @@ constructor(
             fechaModificacion = datos.fechaModificacion,
             tamanioBytes = datos.tamanioBytes,
             mimeType = datos.mimeType,
+            // Nuevos campos
+            tituloOriginal = datos.titulo,
+            artistaOriginal = datos.artista,
+            featuredArtistsJson = featuredArtistsJson,
+            versionType = parsedTitle.version?.name,
+            confidenceScore = newScore,
+            metadataStatus = SongEntity.STATUS_CLEANED_LOCAL
          )
       } catch (e: Exception) {
          Log.w(TAG, "Error actualizando cancion $idCancion", e)
       }
    }
-
+   
    private suspend fun crearSongEntity(datos: DatosCancionEscaneada): SongEntity {
       val resultado = parsearCancionInteligente(datos.titulo, datos.artista)
       val artistaId = obtenerOCrearArtistaId(resultado.artista)
-      val albumId =
-         obtenerOCrearAlbumId(
-            datos.album ?: "Album Desconocido",
-            artistaId,
-            datos.anio,
-            datos.albumId,
-            datos.uri,
-         )
+      val albumId = obtenerOCrearAlbumId(
+         datos.album ?: "Album Desconocido",
+         artistaId,
+         datos.anio,
+         datos.albumId,
+         datos.uri
+      )
       val generoId = obtenerOCrearGeneroId(datos.genero ?: "Genero Desconocido")
-
+      
+      // ✅ NUEVO: Parsear título para extraer featured artists y versión
+      val parsedTitle = MusicTitleCleaner.parseTitle(datos.titulo)
+      
+      // ✅ NUEVO: Calcular confidence score inicial (solo local)
+      val musicConfidence = MusicTitleCleaner.calculateMusicConfidence(datos.titulo, datos.artista)
+      val initialScore = calcularScoreInicial(
+         tieneArtista = datos.artista != null,
+         tieneAlbum = datos.album != null,
+         tieneGenero = datos.genero != null,
+         tieneAnio = datos.anio > 0,
+         musicConfidence = musicConfidence
+      )
+      
+      // ✅ NUEVO: Serializar featured artists a JSON
+      val featuredArtistsJson = if (parsedTitle.featuredArtists.isNotEmpty()) {
+         gson.toJson(parsedTitle.featuredArtists)
+      } else null
+      
       return SongEntity(
          idArtista = artistaId,
          idAlbum = albumId,
@@ -661,7 +706,43 @@ constructor(
          tamanioBytes = datos.tamanioBytes,
          mimeType = datos.mimeType,
          hashArchivo = datos.hashRapido,
+         
+         // ✅ NUEVO: Datos originales para auditoría
+         tituloOriginal = datos.titulo,
+         artistaOriginal = datos.artista,
+         
+         // ✅ NUEVO: Featured artists y versión
+         featuredArtistsJson = featuredArtistsJson,
+         versionType = parsedTitle.version?.name,
+         
+         // ✅ NUEVO: Sistema de purificación
+         metadataStatus = SongEntity.STATUS_CLEANED_LOCAL,  // Ya limpiada localmente
+         confidenceScore = initialScore,
+         metadataSource = SongEntity.SOURCE_FILE
       )
+   }
+   private fun calcularScoreInicial(
+      tieneArtista: Boolean,
+      tieneAlbum: Boolean,
+      tieneGenero: Boolean,
+      tieneAnio: Boolean,
+      musicConfidence: Double
+   ): Int {
+      var score = 50 // Base
+      
+      // Bonificaciones por campos presentes
+      if (tieneArtista) score += 8
+      if (tieneAlbum) score += 5
+      if (tieneGenero) score += 5
+      if (tieneAnio) score += 3
+      
+      // Penalización si no parece música
+      if (musicConfidence < 0.7) {
+         score -= 5
+      }
+      
+      // Score máximo sin API es 71
+      return score.coerceIn(0, 75)
    }
 
    // Funciones de obtener/crear con caché
@@ -864,8 +945,6 @@ constructor(
          false
       }
    }
-
-   fun EstadoEscaneo.Completado.toResultadoEscaneo() = this
 
    private fun calcularHashRapido(uri: String, tamanio: Long?, fechaMod: Long): String {
       // ✅ Usar hashCode proper y combinar con XOR para mejor distribución

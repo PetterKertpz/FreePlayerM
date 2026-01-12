@@ -28,7 +28,9 @@ import com.example.freeplayerm.ui.features.nav.Routes
 import com.example.freeplayerm.ui.features.player.viewmodel.PlayerViewModel
 import com.example.freeplayerm.ui.features.splash.PantallaDeCarga
 import com.example.freeplayerm.ui.theme.FreePlayerMTheme
+import com.example.freeplayerm.ui.theme.ThemeManager
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -36,12 +38,19 @@ class MainActivity : ComponentActivity() {
    private val mainViewModel: MainViewModel by viewModels()
    private val reproductorViewModel: PlayerViewModel by viewModels()
    
+   @Inject
+   lateinit var themeManager: ThemeManager
+   
    @RequiresApi(Build.VERSION_CODES.R)
    override fun onCreate(savedInstanceState: Bundle?) {
       enableEdgeToEdge()
       super.onCreate(savedInstanceState)
       setContent {
-         FreePlayerMTheme {
+         FreePlayerMTheme(
+            themeManager = themeManager,
+            darkTheme = themeManager.isDarkTheme,
+            animationsEnabled = themeManager.animationsEnabled
+         ) {
             val context = LocalContext.current
             
             // Permiso de almacenamiento
@@ -90,7 +99,7 @@ class MainActivity : ComponentActivity() {
             }
             
             Surface(
-               modifier = Modifier.Companion.fillMaxSize(),
+               modifier = Modifier.fillMaxSize(),
                color = MaterialTheme.colorScheme.background
             ) {
                val authState by mainViewModel.authState.collectAsStateWithLifecycle()

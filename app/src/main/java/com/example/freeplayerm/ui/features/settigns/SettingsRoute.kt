@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.freeplayerm.ui.features.settigns.SettingsViewModel
 
 // Colores consistentes con SettingsScreen
 private val FondoScreen = Color(0xFF0F0518)

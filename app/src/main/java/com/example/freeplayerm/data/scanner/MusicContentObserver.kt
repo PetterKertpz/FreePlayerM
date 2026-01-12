@@ -72,7 +72,10 @@ class MusicContentObserver @Inject constructor(
          return
       }
       
-      // Crear scope antes del try para poder limpiarlo en caso de error
+      // Limpiar scope anterior si existe
+      scope?.cancel()
+      scope = null
+      
       val nuevoScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
       
       try {
@@ -84,14 +87,13 @@ class MusicContentObserver @Inject constructor(
             )
          }
          
-         // Solo asignar scope si el registro fue exitoso
          scope = nuevoScope
          isRegistered = true
          _estado.value = Estado.Registrado
          Log.d(TAG, "ContentObserver registrado para ${URIS_A_OBSERVAR.size} URIs")
       } catch (e: Exception) {
          Log.e(TAG, "Error registrando ContentObserver", e)
-         nuevoScope.cancel() // Limpiar scope si falla
+         nuevoScope.cancel()
          _estado.value = Estado.Inactivo
       }
    }

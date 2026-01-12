@@ -22,22 +22,6 @@ import com.example.freeplayerm.data.local.entity.TopItemEstadistica
 import com.example.freeplayerm.data.local.entity.relations.SongWithArtist
 import kotlinx.coroutines.flow.Flow
 
-/**
- * ⚡ CANCION DAO - OPTIMIZADO Y MULTIUSO v4.0
- *
- * Características:
- * - Operaciones CRUD completas para todas las entidades
- * - Queries optimizadas con índices apropiados
- * - Flow para observables + suspend para snapshots
- * - Búsqueda y filtrado avanzado
- * - Transacciones para operaciones complejas
- * - Paginación ready
- * - Sorting flexible
- * - Data classes específicas para estadísticas (FIX: Map<String, Any> removido)
- *
- * @author Android Data Layer Manager
- * @version 4.0 - Production Ready - Bug Fixes
- */
 @Dao
 interface SongDao {
 
@@ -65,6 +49,40 @@ interface SongDao {
             LEFT JOIN favoritos f ON c.id_cancion = f.id_cancion AND f.id_usuario = :usuarioId
         """
    }
+
+   @Transaction
+   suspend fun safeUpsertCancion(cancion: SongEntity): Long {
+      // 1. Buscamos si ya existe por su ruta (índice único)
+      val idExistente = obtenerIdPorPath(cancion.archivoPath ?: "")
+
+      return if (idExistente != null) {
+         // 2. Si existe, actualizamos manteniendo el ID original
+         val cancionAActualizar =
+            cancion.copy(
+               idCancion = idExistente,
+               fechaAgregado =
+                  obtenerFechaAgregado(idExistente)
+                     ?: System.currentTimeMillis(), // Preservar fecha original
+            )
+         actualizarCancion(cancionAActualizar)
+         idExistente.toLong()
+      } else {
+         // 3. Si no existe, insertamos nueva
+         insertarCancion(cancion)
+      }
+   }
+
+   @Transaction
+   suspend fun safeUpsertCanciones(canciones: List<SongEntity>) {
+      canciones.forEach { safeUpsertCancion(it) }
+   }
+
+   // Queries auxiliares ligeras para el safeUpsert
+   @Query("SELECT id_cancion FROM canciones WHERE archivo_path = :path LIMIT 1")
+   suspend fun obtenerIdPorPath(path: String): Int?
+
+   @Query("SELECT fecha_agregado FROM canciones WHERE id_cancion = :id LIMIT 1")
+   suspend fun obtenerFechaAgregado(id: Int): Long?
 
    // ==================== ARTISTAS ====================
 
@@ -867,9 +885,94 @@ interface SongDao {
 
    @Insert(onConflict = OnConflictStrategy.REPLACE)
    suspend fun upsertCanciones(canciones: List<SongEntity>): List<Long>
-   
+
    @Transaction
    suspend fun insertarCancionesEnTransaccion(canciones: List<SongEntity>): List<Long> {
       return upsertCanciones(canciones)
    }
+
+   @Query(
+      """
+    UPDATE canciones SET
+        titulo = :titulo,
+        id_artista = :idArtista,
+        id_album = :idAlbum,
+        id_genero = :idGenero,
+        duracion_segundos = :duracion,
+        numero_pista = :numeroPista,
+        anio = :anio,
+        fecha_modificacion = :fechaModificacion,
+        tamanio_bytes = :tamanioBytes,
+        mime_type = :mimeType,
+        titulo_original = :tituloOriginal,
+        artista_original = :artistaOriginal,
+        featured_artists_json = :featuredArtistsJson,
+        version_type = :versionType,
+        confidence_score = :confidenceScore,
+        metadata_status = :metadataStatus
+    WHERE id_cancion = :idCancion
+"""
+   )
+   suspend fun actualizarMetadatosEscaneoCompleto(
+      idCancion: Int,
+      titulo: String,
+      idArtista: Int,
+      idAlbum: Int,
+      idGenero: Int,
+      duracion: Int,
+      numeroPista: Int?,
+      anio: Int?,
+      fechaModificacion: Long,
+      tamanioBytes: Long?,
+      mimeType: String?,
+      tituloOriginal: String?,
+      artistaOriginal: String?,
+      featuredArtistsJson: String?,
+      versionType: String?,
+      confidenceScore: Int,
+      metadataStatus: String,
+   )
+   @Query("""
+    SELECT * FROM canciones
+    WHERE metadata_status IN ('DIRTY', 'CLEANED_LOCAL')
+    AND enrichment_attempts < :maxAttempts
+    ORDER BY fecha_agregado DESC
+    LIMIT :limit
+""")
+   suspend fun obtenerCancionesParaEnriquecer(
+      maxAttempts: Int = 3,
+      limit: Int = 50
+   ): List<SongEntity>
+   
+   @Query("SELECT * FROM canciones WHERE metadata_status = :status")
+   suspend fun obtenerCancionesPorEstado(status: String): List<SongEntity>
+   
+   @Query("SELECT metadata_status, COUNT(*) as count FROM canciones GROUP BY metadata_status")
+   suspend fun contarPorEstado(): List<MetadataStatusCount>
+   
+   data class MetadataStatusCount(
+      @ColumnInfo(name = "metadata_status") val status: String,
+      @ColumnInfo(name = "count") val count: Int
+   )
+   
+   @Query("""
+    SELECT
+        AVG(confidence_score) as avgScore,
+        MIN(confidence_score) as minScore,
+        MAX(confidence_score) as maxScore,
+        COUNT(CASE WHEN confidence_score >= 80 THEN 1 END) as verified,
+        COUNT(CASE WHEN confidence_score >= 60 AND confidence_score < 80 THEN 1 END) as partial,
+        COUNT(CASE WHEN confidence_score < 60 THEN 1 END) as unverified
+    FROM canciones
+""")
+   suspend fun obtenerEstadisticasCalidad(): QualityStats
+   
+   data class QualityStats(
+      val avgScore: Double,
+      val minScore: Int,
+      val maxScore: Int,
+      val verified: Int,
+      val partial: Int,
+      val unverified: Int
+   )
 }

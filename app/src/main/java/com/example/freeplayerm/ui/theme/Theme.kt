@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -233,51 +234,53 @@ val LocalExtendedColors = staticCompositionLocalOf { DarkExtendedColors }
 
 @Composable
 fun FreePlayerMTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false, // false = usa tu identidad de marca
-    content: @Composable () -> Unit
+   themeManager: ThemeManager? = null,
+   darkTheme: Boolean = themeManager?.isDarkTheme ?: isSystemInDarkTheme(),
+   animationsEnabled: Boolean = themeManager?.animationsEnabled ?: true,
+   dynamicColor: Boolean = false,
+   content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context)
-            else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
-    val extendedColors = if (darkTheme) DarkExtendedColors else LightExtendedColors
-
-    // Configuración de System Bars
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as Activity).window
-
-            // Status Bar
-            window.statusBarColor = colorScheme.background.toArgb()
-
-            // Navigation Bar (importante para inmersión)
-            window.navigationBarColor = colorScheme.background.toArgb()
-
-            // Iconos claros/oscuros según tema
-            val insetsController = WindowCompat.getInsetsController(window, view)
-            insetsController.isAppearanceLightStatusBars = !darkTheme
-            insetsController.isAppearanceLightNavigationBars = !darkTheme
-        }
-    }
-
-    CompositionLocalProvider(
-        LocalExtendedColors provides extendedColors,
-        LocalExtendedTypography provides extendedTypography
-    ) {
-        MaterialTheme(
-            colorScheme = colorScheme,
-            typography = Typography,
-            content = content
-        )
-    }
+   val colorScheme = when {
+      dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+         val context = LocalContext.current
+         if (darkTheme) dynamicDarkColorScheme(context)
+         else dynamicLightColorScheme(context)
+      }
+      darkTheme -> DarkColorScheme
+      else -> LightColorScheme
+   }
+   
+   val extendedColors = if (darkTheme) DarkExtendedColors else LightExtendedColors
+   
+   val view = LocalView.current
+   if (!view.isInEditMode) {
+      SideEffect {
+         val window = (view.context as Activity).window
+         window.statusBarColor = colorScheme.background.toArgb()
+         window.navigationBarColor = colorScheme.background.toArgb()
+         val insetsController = WindowCompat.getInsetsController(window, view)
+         insetsController.isAppearanceLightStatusBars = !darkTheme
+         insetsController.isAppearanceLightNavigationBars = !darkTheme
+      }
+   }
+   
+   // Usar ThemeManager proporcionado o crear uno para previews
+   val effectiveThemeManager = themeManager ?: remember {
+      PreviewThemeManager(darkTheme, animationsEnabled)
+   }
+   
+   CompositionLocalProvider(
+      LocalExtendedColors provides extendedColors,
+      LocalExtendedTypography provides extendedTypography,
+      LocalAnimationsEnabled provides animationsEnabled,
+      LocalThemeManager provides effectiveThemeManager
+   ) {
+      MaterialTheme(
+         colorScheme = colorScheme,
+         typography = Typography,
+         content = content
+      )
+   }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
